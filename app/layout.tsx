@@ -1,4 +1,3 @@
-import AuthSession from '@/components/provider/AuthSession';
 import type { Metadata } from 'next';
 import './globals.css';
 
@@ -15,8 +14,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {/* TODO: useSession 훅 사용 검토 후 provider 유지 결정 */}
-        <AuthSession>{children}</AuthSession>
+        {/* TODO: useSession 훅 사용 시 AuthSession으로 감싸기 */}
+        {children}
       </body>
     </html>
   );
