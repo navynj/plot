@@ -22,6 +22,6 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "files": ["app/types/types.d.ts"],
+  "files": ["types/prisma.d.ts", "types/next-auth.d.ts"],
   "exclude": ["node_modules"]
 }
