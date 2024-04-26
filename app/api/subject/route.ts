@@ -13,6 +13,9 @@ export async function GET(req: Request) {
   try {
     const data = await prisma.subject.findMany({
       where: { userId: session.user.id },
+      include: {
+        category: true,
+      }
     });
 
     return new Response(JSON.stringify(data), { status: 201 });
