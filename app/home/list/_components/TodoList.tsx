@@ -12,7 +12,7 @@ import { useAtom } from 'jotai';
 const TodoList = () => {
   const [{ data, isPending, isError }] = useAtom(todosAtom);
   return (
-    <ol className="flex flex-col items-center">
+    <ol className="flex flex-col items-center px-4 py-6 space-y-3">
       {isPending && (
         <div className="p-16">
           <Loader />
@@ -36,10 +36,7 @@ const TodoList = () => {
           );
 
           return (
-            <li
-              key={id}
-              className="w-full flex space-x-4 p-4 justify-between items-center"
-            >
+            <li key={id} className="w-full flex space-x-4 justify-between items-center">
               <span>=</span>
               <div className="flex w-full justify-between items-center">
                 <div className="flex items-center gap-2">
