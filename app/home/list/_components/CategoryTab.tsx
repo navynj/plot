@@ -15,7 +15,7 @@ const CategoryTab = () => {
         id="category-tab"
         tabs={[
           { label: 'All', value: 'all', checked: true },
-          isPending ? <Loader key="loader" size={4} /> : undefined,
+          isPending ? <Loader key="loader" className="w-4 h-4" /> : undefined,
           ...(data?.map((category, i) => ({
             label: category.title,
             value: category.id,

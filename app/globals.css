@@ -16,3 +16,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   color: #313338;
 }
+
+input[type='checkbox'] {
+  accent-color: #313338;
+}
