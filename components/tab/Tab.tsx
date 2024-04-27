@@ -4,6 +4,7 @@ interface TabItemType {
   label: string;
   value: string;
   checked?: boolean;
+  onClick?: () => void;
 }
 
 interface TabProps {
@@ -36,7 +37,11 @@ const Tab = ({ id, tabs }: TabProps) => {
               defaultChecked={tabData.checked}
               hidden
             />
-            <label htmlFor={`${id}-${tabData.value}`} className="cursor-pointer">
+            <label
+              htmlFor={`${id}-${tabData.value}`}
+              onClick={tabData.onClick}
+              className="cursor-pointer"
+            >
               {tabData.label}
             </label>
           </div>
