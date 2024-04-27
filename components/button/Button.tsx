@@ -1,8 +1,8 @@
-import { cn } from '@/lib/cn';
-import { className } from '@/types/className';
+import { ClassNameType } from '@/types/className';
+import { cn } from '@/util/cn';
 import { PropsWithChildren } from 'react';
 
-interface ButtonProps extends className {
+interface ButtonProps extends ClassNameType {
   type?: 'submit' | 'reset' | 'button';
   onClick?: () => void;
 }
