@@ -5,7 +5,11 @@ import Tab from '@/components/tab/Tab';
 import { categoriesAtom } from '@/store/category';
 import { useAtom } from 'jotai';
 
-const CategoryTab = () => {
+interface CategoryTabProps {
+  setCategory: React.Dispatch<React.SetStateAction<string>>;
+}
+
+const CategoryTab = ({ setCategory }: CategoryTabProps) => {
   const [{ data, isPending, isError }] = useAtom(categoriesAtom);
 
   return (
@@ -14,13 +18,29 @@ const CategoryTab = () => {
       <Tab
         id="category-tab"
         tabs={[
-          { label: 'All', value: 'all', checked: true },
+          {
+            label: 'All',
+            value: 'all',
+            checked: true,
+            onClick: () => {
+              setCategory('all');
+            },
+          },
           isPending ? <Loader key="loader" className="w-4 h-4" /> : undefined,
           ...(data?.map((category, i) => ({
             label: category.title,
             value: category.id,
+            onClick: () => {
+              setCategory(category.id);
+            },
           })) || []),
-          { label: 'etc.', value: 'etc' },
+          {
+            label: 'etc.',
+            value: 'etc',
+            onClick: () => {
+              setCategory('etc');
+            },
+          },
         ]}
       />
     </div>

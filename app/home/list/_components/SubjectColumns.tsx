@@ -6,7 +6,11 @@ import Loader from '@/components/loader/Loader';
 import { subjectsAtom } from '@/store/subject';
 import { useAtom } from 'jotai';
 
-const SubjectColumns = () => {
+interface SubjectColumnsProps {
+  category: string;
+}
+
+const SubjectColumns = ({ category }: SubjectColumnsProps) => {
   const [{ data, isPending, isError }] = useAtom(subjectsAtom);
 
   return (
@@ -16,21 +20,28 @@ const SubjectColumns = () => {
       }`}
     >
       {isPending && <Loader />}
-      {data?.map((subject) => (
-        <div
-          key={subject.title}
-          className="flex flex-col items-center justify-between w-28 lg:w-36 shrink-0 space-y-4 px-2 py-4 border-gray-200 border-r"
-        >
-          <div className="flex flex-col space-y-2 items-center">
-            <IconHolder isCircle={true}>{subject.icon}</IconHolder>
-            <div className="text-center">
-              <p className="text-sm font-semibold">{subject.category.title}</p>
-              <p className="text-lg font-extrabold leading-tight">{subject.title}</p>
+      {data
+        ?.filter(
+          (subject) =>
+            category === 'all' ||
+            subject.categoryId === category ||
+            (category === 'etc' && !subject.categoryId)
+        )
+        .map((subject) => (
+          <div
+            key={subject.title}
+            className="flex flex-col items-center justify-between w-28 lg:w-36 shrink-0 space-y-4 px-2 py-4 border-gray-200 border-r"
+          >
+            <div className="flex flex-col space-y-2 items-center">
+              <IconHolder isCircle={true}>{subject.icon}</IconHolder>
+              <div className="text-center">
+                <p className="text-sm font-semibold">{subject.category.title}</p>
+                <p className="text-lg font-extrabold leading-tight">{subject.title}</p>
+              </div>
             </div>
+            <Button className="px-2 py-1 text-sm rounded-md">Add Todo</Button>
           </div>
-          <Button className="px-2 py-1 text-sm rounded-md">Add Todo</Button>
-        </div>
-      ))}
+        ))}
     </div>
   );
 };
