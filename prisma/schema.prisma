@@ -88,32 +88,39 @@ model Subject {
 }
 
 model Tag {
-  id     String  @id @default(cuid())
-  name   String
-  Todo   Todo?   @relation(fields: [todoId], references: [id])
-  todoId String?
+  id          String  @id @default(cuid())
+  name        String
+  Todo        Todo?   @relation(fields: [todoId], references: [id])
+  todoId      String?
+  repeatingId String?
 }
 
 model Todo {
-  id            String    @id @default(cuid())
-  title         String
-  content       String?
-  icon          String?
-  thumbnail     String?
-  subject       Subject?  @relation(fields: [subjectTitle, subjectIcon], references: [title, icon])
-  subjectTitle  String?
-  subjectIcon   String?
-  tags          Tag[]
-  repeatingDays Int[]     @default([])
-  scheduleStart DateTime?
-  scheduleEnd   DateTime?
-  history       History[]
-  isDone        Boolean   @default(false)
-  date          DateTime  @default(now()) @db.Date
-  user          User      @relation(fields: [userId], references: [id])
-  userId        String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String     @id @default(cuid())
+  title          String
+  content        String?
+  icon           String?
+  thumbnail      String?
+  subject        Subject?   @relation(fields: [subjectTitle, subjectIcon], references: [title, icon])
+  subjectTitle   String?
+  subjectIcon    String?
+  tags           Tag[]
+  scheduleStart  DateTime?
+  scheduleEnd    DateTime?
+  history        History[]
+  isDone         Boolean    @default(false)
+  isRepeating    Boolean?   @default(false)
+  repeatingDays  Int[]
+  repeatingDates Int[]
+  repeatingStart DateTime?
+  repeatingEnd   DateTime?
+  excludeDates   DateTime[]
+  date           DateTime?  @default(now()) @db.Date
+  user           User       @relation(fields: [userId], references: [id])
+  userId         String
+  rank           String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 }
 
 model History {
