@@ -1,8 +1,8 @@
-import { ClassNameType } from '@/types/className';
+import { ClassNameProps } from '@/types/className';
 import { cn } from '@/util/cn';
 import { useEffect, useState } from 'react';
 
-interface CheckButtonProps extends ClassNameType {
+interface CheckButtonProps extends ClassNameProps {
   defaultChecked?: boolean;
   onChecked?: (checked: boolean) => void;
 }

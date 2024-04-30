@@ -1,7 +1,7 @@
-import { ClassNameType } from '@/types/className';
+import { ClassNameProps } from '@/types/className';
 import { cn } from '@/util/cn';
 
-const Loader = ({ className }: ClassNameType) => {
+const Loader = ({ className }: ClassNameProps) => {
   return (
     <div role="status">
       <svg
