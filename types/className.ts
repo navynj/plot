@@ -1,3 +1,3 @@
-export interface ClassNameType {
+export interface ClassNameProps {
   className?: string;
 }
