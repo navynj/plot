@@ -2,10 +2,11 @@
 
 import { MONTHS } from '@/constants/date';
 import { todayAtom } from '@/store/todo';
+import { cn } from '@/util/cn';
 import { useAtom } from 'jotai';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { useState } from 'react';
 import Overlay from '../overlay/Overlay';
 
 const ID = 'year-month-nav';
@@ -42,43 +43,45 @@ const YearMonthNav = () => {
           {today.toLocaleDateString('en-US', { month: 'long' })}
         </button>
       </Link>
-      <Suspense>
-        <Overlay id={ID}>
-          {/* year select */}
-          <div className="flex justify-between items-center mb-4">
-            <select
-              className="content-box w-auto bg-transparent font-black text-3xl"
-              onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
-                setYear(+event.target.value);
-              }}
-              defaultValue={year}
+      <Overlay
+        id={ID}
+        fromTop={true}
+        isLeft={true}
+        title={
+          <select
+            className="content-box w-auto bg-transparent font-black text-3xl"
+            onChange={(event: React.ChangeEvent<HTMLSelectElement>) => {
+              setYear(+event.target.value);
+            }}
+            defaultValue={year}
+          >
+            {YEARS.map((year) => {
+              return (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              );
+            })}
+          </select>
+        }
+      >
+        <div className="grid grid-cols-3 gap-4">
+          {MONTHS.map((month, i) => (
+            <button
+              key={month}
+              onClick={todayHandler.bind(null, i)}
+              className={cn(
+                'flex justify-center p-4 font-semibold border rounded-lg',
+                today.getMonth() === i && today.getFullYear() === year
+                  ? 'bg-primary text-white border-none'
+                  : ''
+              )}
             >
-              {YEARS.map((year) => {
-                return (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                );
-              })}
-            </select>
-            <button onClick={closeHandler} className="p-4 text-sm font-extrabold">
-              Close
+              {month}
             </button>
-          </div>
-          {/* month grid */}
-          <div className="grid grid-cols-3 gap-4">
-            {MONTHS.map((month, i) => (
-              <button
-                key={month}
-                onClick={todayHandler.bind(null, i)}
-                className="flex justify-center p-4 font-semibold border rounded-lg"
-              >
-                {month}
-              </button>
-            ))}
-          </div>
-        </Overlay>
-      </Suspense>
+          ))}
+        </div>
+      </Overlay>
     </div>
   );
 };

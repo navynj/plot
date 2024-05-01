@@ -4,13 +4,12 @@ import Button from '@/components/button/Button';
 import IconHolder from '@/components/holder/IconHolder';
 import Loader from '@/components/loader/Loader';
 import { subjectsAtom } from '@/store/subject';
-import { useAtom } from 'jotai';
+import { categoryAtom } from '@/store/ui';
+import { useAtom, useAtomValue } from 'jotai';
+import Link from 'next/link';
 
-interface SubjectColumnsProps {
-  category: string;
-}
-
-const SubjectColumns = ({ category }: SubjectColumnsProps) => {
+const SubjectColumns = () => {
+  const category = useAtomValue(categoryAtom);
   const [{ data, isPending, isError }] = useAtom(subjectsAtom);
 
   return (
@@ -39,7 +38,9 @@ const SubjectColumns = ({ category }: SubjectColumnsProps) => {
                 <p className="text-lg font-extrabold leading-tight">{subject.title}</p>
               </div>
             </div>
-            <Button className="px-2 py-1 text-sm rounded-md">Add Todo</Button>
+            <Link href={`/home/list?todo-input=show&subject=${subject.id}`}>
+              <Button className="px-2 py-1 text-sm rounded-md">Add Todo</Button>
+            </Link>
           </div>
         ))}
     </div>

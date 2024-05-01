@@ -3,7 +3,7 @@ import { getDashDate } from '@/util/date';
 import { atom } from 'jotai';
 import { atomWithQuery } from 'jotai-tanstack-query';
 
-export const todayAtom = atom(new Date(2024, 3, 25));
+export const todayAtom = atom(new Date(2024, 4, 1));
 
 export const todosAtom = atomWithQuery<TodoType[]>((get) => {
   return {

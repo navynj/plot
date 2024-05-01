@@ -1,11 +1,12 @@
+import { SubjectType } from "./subject";
+
 export interface TodoType {
   id: string;
   title: string;
   content?: string;
   icon?: string;
   thumbnail?: string;
-  subjectTitle?: string;
-  subjectIcon?: string;
+  subject?: SubjectType;
   tags?: TagType[];
   repeatingDays?: number[];
   scheduleStart?: Date;

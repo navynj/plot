@@ -51,6 +51,9 @@ export async function GET(req: NextRequest) {
           },
         ],
       },
+      include: {
+        subject: true,
+      },
       orderBy: { rank: 'asc' },
     });
 

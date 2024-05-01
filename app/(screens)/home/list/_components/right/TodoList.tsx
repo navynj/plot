@@ -24,8 +24,7 @@ const TodoList = () => {
           title,
           icon,
           thumbnail,
-          subjectIcon,
-          subjectTitle,
+          subject,
           scheduleStart,
           scheduleEnd,
           history,
@@ -42,9 +41,9 @@ const TodoList = () => {
                 <div className="flex items-center gap-2">
                   <PlayButton />
                   {icon && !thumbnail && <IconHolder>{icon}</IconHolder>}
-                  {!icon && !thumbnail && <IconHolder>{subjectIcon}</IconHolder>}
+                  {!icon && !thumbnail && <IconHolder>{subject?.icon}</IconHolder>}
                   <div>
-                    <p className="text-xs font-semibold">{subjectTitle}</p>
+                    <p className="text-xs font-semibold">{subject?.title}</p>
                     <p className="text-sm lg:text-base">{title}</p>
                   </div>
                 </div>
