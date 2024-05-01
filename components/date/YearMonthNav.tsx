@@ -38,8 +38,10 @@ const YearMonthNav = () => {
         href={`?${ID}=show`}
         className="pl-4 flex flex-col items-start font-extrabold leading-tight"
       >
-        <button className="text-lg">{today.getFullYear()}</button>
-        <button className="text-4xl">
+        <button type="button" className="text-lg">
+          {today.getFullYear()}
+        </button>
+        <button type="button" className="text-4xl">
           {today.toLocaleDateString('en-US', { month: 'long' })}
         </button>
       </Link>

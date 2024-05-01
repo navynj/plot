@@ -48,6 +48,7 @@ const OptionButton = ({
       {isShowMenu && outside}
       <div className="relative">
         <button
+          type="button"
           className={`font-extrabold`}
           onClick={() => {
             setIsShowMenu(true);

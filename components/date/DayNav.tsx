@@ -23,14 +23,18 @@ const DayNav = () => {
 
   return (
     <div className="flex gap-4 items-center font-extrabold">
-      <button onClick={goPrevDay}>&lt;</button>
+      <button type="button" onClick={goPrevDay}>
+        &lt;
+      </button>
       <div className="text-center">
         <p className="text-xs leading-3">
           {today.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
         </p>
         <p className="text-2xl">{today.getDate()}</p>
       </div>
-      <button onClick={goNextDay}>&gt;</button>
+      <button type="button" onClick={goNextDay}>
+        &gt;
+      </button>
     </div>
   );
 };

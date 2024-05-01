@@ -23,6 +23,7 @@ const CheckButton = ({ defaultChecked, onChecked, className }: CheckButtonProps)
 
   return (
     <button
+      type="button"
       className={cn(
         'flex justify-center items-center font-extrabold w-4 h-4 text-xs rounded-[0.25rem] shrink-0',
         checked ? 'text-white bg-primary' : 'text-gray-300 bg-gray-100',

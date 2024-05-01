@@ -3,17 +3,17 @@ import React from 'react';
 interface TabItemType {
   label: string;
   value: string;
-  checked?: boolean;
-  onClick?: () => void;
 }
 
 interface TabProps {
   id: string;
+  value: string;
+  setValue: any;
   tabs: (TabItemType | React.ReactNode)[];
 }
-const Tab = ({ id, tabs }: TabProps) => {
+const Tab = ({ id, value, setValue, tabs }: TabProps) => {
   return (
-    <div className="flex items-center flex-wrap space-x-4">
+    <ul className="flex items-center flex-wrap space-x-4">
       {tabs.map((tab) => {
         if (!tab) {
           return;
@@ -24,8 +24,13 @@ const Tab = ({ id, tabs }: TabProps) => {
         }
 
         const tabData = tab as TabItemType;
+
+        const changeHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
+          setValue && setValue(event.target.value);
+        };
+
         return (
-          <div
+          <li
             key={tabData.value}
             className="font-extrabold text-gray-300 [&>input:checked+label]:text-primary"
           >
@@ -33,21 +38,18 @@ const Tab = ({ id, tabs }: TabProps) => {
               id={`${id}-${tabData.value}`}
               type="radio"
               value={tabData.value}
-              name="id"
-              defaultChecked={tabData.checked}
+              name={id}
+              checked={value === tabData.value}
+              onChange={changeHandler}
               hidden
             />
-            <label
-              htmlFor={`${id}-${tabData.value}`}
-              onClick={tabData.onClick}
-              className="cursor-pointer"
-            >
+            <label htmlFor={`${id}-${tabData.value}`} className="cursor-pointer">
               {tabData.label}
             </label>
-          </div>
+          </li>
         );
       })}
-    </div>
+    </ul>
   );
 };
 
