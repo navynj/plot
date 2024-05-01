@@ -1,9 +1,10 @@
 'use client';
 
-import React, { PropsWithChildren } from 'react';
-import ConfirmCancelButton from './ConfirmCancelButton';
-import Overlay, { OverlayProps } from './Overlay';
 import { useRouter } from 'next/navigation';
+import { PropsWithChildren } from 'react';
+import ConfirmCancelButton from './ConfirmCancelButton';
+import Overlay from './Overlay';
+import { OverlayProps } from './OverlayContent';
 
 const OverlayForm = ({ children, ...props }: PropsWithChildren<OverlayProps>) => {
   const router = useRouter();
@@ -16,9 +17,9 @@ const OverlayForm = ({ children, ...props }: PropsWithChildren<OverlayProps>) =>
   };
 
   return (
-    <Overlay {...props}>
-      <form onSubmit={submitHandler}>
-        <div>{children}</div>
+    <Overlay hideX={true} {...props}>
+      <form onSubmit={submitHandler} className="w-full">
+        {children}
         <ConfirmCancelButton onCancel={closeHandler} />
       </form>
     </Overlay>
