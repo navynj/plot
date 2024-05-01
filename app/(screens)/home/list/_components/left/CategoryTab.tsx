@@ -3,13 +3,11 @@
 import Loader from '@/components/loader/Loader';
 import Tab from '@/components/tab/Tab';
 import { categoriesAtom } from '@/store/category';
-import { useAtom } from 'jotai';
+import { categoryAtom } from '@/store/ui';
+import { useAtom, useSetAtom } from 'jotai';
 
-interface CategoryTabProps {
-  setCategory: React.Dispatch<React.SetStateAction<string>>;
-}
-
-const CategoryTab = ({ setCategory }: CategoryTabProps) => {
+const CategoryTab = () => {
+  const setCategory = useSetAtom(categoryAtom);
   const [{ data, isPending, isError }] = useAtom(categoriesAtom);
 
   return (

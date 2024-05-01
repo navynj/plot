@@ -1,13 +1,18 @@
 import { ClassNameProps } from '@/types/className';
 import { cn } from '@/util/cn';
 
-const Loader = ({ className }: ClassNameProps) => {
+interface LoaderProps extends ClassNameProps {
+  isDark?: boolean;
+}
+
+const Loader = ({ isDark, className }: LoaderProps) => {
   return (
     <div role="status">
       <svg
         aria-hidden="true"
         className={cn(
-          'w-8 h-8 text-gray-200 animate-spin dark:text-gray-600 fill-primary',
+          'w-8 h-8 text-gray-200 fill-primary animate-spin',
+          isDark ? 'text-gray-600 fill-white' : '',
           className
         )}
         viewBox="0 0 100 101"

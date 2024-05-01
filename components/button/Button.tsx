@@ -1,22 +1,12 @@
-import { ClassNameProps } from '@/types/className';
 import { cn } from '@/util/cn';
-import { PropsWithChildren } from 'react';
+import React, { PropsWithChildren } from 'react';
 
-interface ButtonProps extends ClassNameProps {
-  type?: 'submit' | 'reset' | 'button';
-  onClick?: () => void;
-}
-
-const Button = ({
-  type,
-  onClick,
-  className,
-  children,
-}: PropsWithChildren<ButtonProps>) => {
+const Button = (
+  {className, children, ...props}: PropsWithChildren<React.ButtonHTMLAttributes<HTMLButtonElement>>
+) => {
   return (
     <button
-      type={type}
-      onClick={onClick}
+      {...props}
       className={cn(
         'px-8 py-4 rounded-lg bg-primary text-white font-extrabold',
         className

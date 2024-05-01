@@ -25,9 +25,13 @@ const NAV_DATA: { [key: string]: any } = {
       { path: 'statistics', icon: <FaChartBar />, title: 'Statistics' },
       {
         icon: (
-          <div key="add" className="bg-primary w-9 h-9 rounded-md">
+          <Link
+            href="/home/list?subject-select=show"
+            key="add"
+            className="bg-primary w-9 h-9 rounded-md"
+          >
             <FaPlus className="text-base text-white" />
-          </div>
+          </Link>
         ),
       },
     ],
@@ -40,30 +44,32 @@ const Nav = ({ className }: ClassNameProps) => {
   const pathname = usePathname();
 
   return (
-    <nav
-      className={cn(
-        'flex justify-center items-center gap-10 text-xl text-gray-300 bg-white',
-        '[&>a]:flex [&>a]:flex-col [&>a]:space-y-1 [&>a]:justify-center [&>a]:items-center',
-        '[&>div]:flex [&>div]:flex-col [&>div]:space-y-1 [&>div]:justify-center [&>div]:items-center',
-        '[&_span]:text-xs [&_span]:font-bold',
-        className
-      )}
-    >
-      {NAV_DATA.sub[pathname.split('/')[1]].map((nav: any) =>
-        nav.path ? (
-          <Link
-            href={nav.path}
-            key={nav.path}
-            className={pathname.split('/')[2] === nav.path ? 'text-primary' : undefined}
-          >
-            {nav.icon}
-            <span>{nav.title}</span>
-          </Link>
-        ) : (
-          nav.icon
-        )
-      )}
-    </nav>
+    pathname.split('/').length === 3 && (
+      <nav
+        className={cn(
+          'flex justify-center items-center gap-10 text-xl text-gray-300 bg-white',
+          '[&>a]:flex [&>a]:flex-col [&>a]:space-y-1 [&>a]:justify-center [&>a]:items-center',
+          '[&>div]:flex [&>div]:flex-col [&>div]:space-y-1 [&>div]:justify-center [&>div]:items-center',
+          '[&_span]:text-xs [&_span]:font-bold',
+          className
+        )}
+      >
+        {NAV_DATA.sub[pathname.split('/')[1]].map((nav: any) =>
+          nav.path ? (
+            <Link
+              href={nav.path}
+              key={nav.path}
+              className={pathname.split('/')[2] === nav.path ? 'text-primary' : undefined}
+            >
+              {nav.icon}
+              <span>{nav.title}</span>
+            </Link>
+          ) : (
+            nav.icon
+          )
+        )}
+      </nav>
+    )
   );
 };
 
