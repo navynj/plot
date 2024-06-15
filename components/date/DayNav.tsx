@@ -2,6 +2,7 @@
 
 import { todayAtom } from '@/store/todo';
 import { useAtom } from 'jotai';
+import DayDate from './DayDate';
 
 const DayNav = () => {
   const [today, setToday] = useAtom(todayAtom);
@@ -26,12 +27,7 @@ const DayNav = () => {
       <button type="button" onClick={goPrevDay}>
         &lt;
       </button>
-      <div className="text-center">
-        <p className="text-xs leading-3">
-          {today.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
-        </p>
-        <p className="text-2xl">{today.getDate()}</p>
-      </div>
+      <DayDate date={today} />
       <button type="button" onClick={goNextDay}>
         &gt;
       </button>
