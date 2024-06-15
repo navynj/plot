@@ -65,12 +65,12 @@ const OverlayContent = ({
                 animate={{ opacity: 0.7 }}
                 exit={{ opacity: 0 }}
               />
-              {/* Overaly */}
+              {/* Overlay */}
               <motion.div
                 className={cn(
                   'absolute bottom-0 w-full max-w-[640px] p-8 rounded-tl-3xl rounded-tr-3xl bg-white z-[100] shadow-[0_4px_60px_0_rgba(99,99,99,0.2)] lg:shadow-none',
                   fromTop ? 'top-0 bottom-auto rounded-[0_0_1.5rem_1.5rem]' : '',
-                  className
+                  className,
                 )}
                 layout
                 initial={{
@@ -84,7 +84,7 @@ const OverlayContent = ({
                 }}
               >
                 {(title || !hideX) && (
-                  <div className="w-full mb-4 flex justify-between items-center font-extrabold text-lg">
+                  <div className={cn("w-full mb-4 flex justify-between items-center font-extrabold text-lg", title ? '' : ' flex-row-reverse')}>
                     {title && <h3 className="w-full text-left">{title}</h3>}
                     {!hideX && (
                       <button type="button" onClick={closeHandler}>

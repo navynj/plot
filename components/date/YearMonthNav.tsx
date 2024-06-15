@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Overlay from '../overlay/Overlay';
+import YearMonth from './YearMonth';
 
 const ID = 'year-month-nav';
 const YEARS = Array.from({ length: 2000 }, (v, i) => 2000 + i);
@@ -34,16 +35,8 @@ const YearMonthNav = () => {
 
   return (
     <div>
-      <Link
-        href={`?${ID}=show`}
-        className="pl-4 flex flex-col items-start font-extrabold leading-tight"
-      >
-        <button type="button" className="text-lg">
-          {today.getFullYear()}
-        </button>
-        <button type="button" className="text-4xl">
-          {today.toLocaleDateString('en-US', { month: 'long' })}
-        </button>
+      <Link href={`?${ID}=show`}>
+        <YearMonth date={today} />
       </Link>
       <Overlay
         id={ID}

@@ -5,6 +5,7 @@ import SubjectSelectOverlay from './_components/overlays/subject/SubjectSelectOv
 import TodoInputOverlay from './_components/overlays/todo/TodoInputOverlay';
 import TodoList from './_components/right/TodoList';
 import CategoryTab from './_components/ui/CategoryTab';
+import EmojiOverlay from '@/components/emoji/EmojiOverlay';
 
 const page = () => {
   return (
@@ -24,6 +25,7 @@ const page = () => {
       <Suspense>
         <TodoInputOverlay />
       </Suspense>
+      <EmojiOverlay />
     </>
   );
 };
