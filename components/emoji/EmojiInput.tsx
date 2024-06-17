@@ -2,10 +2,10 @@ import { emojiAtom } from '@/store/emoji';
 import { ClassNameProps } from '@/types/className';
 import { cn } from '@/util/cn';
 import { useAtomValue } from 'jotai';
-import React from 'react';
 import Link from 'next/link';
+import { PropsWithChildren } from 'react';
 
-const EmojiInput = ({ className }: ClassNameProps) => {
+const EmojiInput = ({ children, className }: PropsWithChildren<ClassNameProps>) => {
   const emoji = useAtomValue(emojiAtom);
   return (
     <Link
@@ -16,6 +16,7 @@ const EmojiInput = ({ className }: ClassNameProps) => {
       href="/home/list?emoji-select=show"
     >
       {emoji}
+      {children}
     </Link>
   );
 };

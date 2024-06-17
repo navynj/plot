@@ -10,12 +10,14 @@ import { OverlayProps } from './OverlayContent';
 interface OverlayFormProps<T extends FieldValues> extends OverlayProps {
   form: UseFormReturn<T, any, undefined>;
   onSubmit: (values: T) => Promise<void>;
+  disableReset?: boolean;
 }
 
 const OverlayForm = <T extends FieldValues>({
   children,
   form,
   onSubmit,
+  disableReset,
   onClose,
   ...props
 }: PropsWithChildren<OverlayFormProps<T>>) => {
@@ -33,7 +35,7 @@ const OverlayForm = <T extends FieldValues>({
 
   const closeHandler = () => {
     onClose && onClose();
-    form.reset();
+    !disableReset && form.reset();
     router.back();
   };
 

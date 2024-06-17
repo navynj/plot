@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
+import { emojiAtom } from '@/store/emoji';
 import data from '@emoji-mart-kr/data';
 import Picker from '@emoji-mart/react';
-import Overlay from '../overlay/Overlay';
 import { useSetAtom } from 'jotai';
-import { emojiAtom, isEmojiSelectedAtom } from '@/store/emoji';
 import { useRouter } from 'next/navigation';
+import Overlay from '../overlay/Overlay';
 
 interface EmojiValueType {
   id: string;
@@ -19,13 +19,11 @@ interface EmojiValueType {
 const EmojiOverlay = () => {
   const router = useRouter();
   const setEmoji = useSetAtom(emojiAtom);
-  const setEmojiSelect = useSetAtom(isEmojiSelectedAtom);
- 
+
   const emojiSelectHandler = (value: EmojiValueType) => {
     setEmoji(value.native);
-    setEmojiSelect(true);
     router.back();
-  }
+  };
 
   return (
     <Overlay

@@ -8,11 +8,16 @@ import Loader from '@/components/loader/Loader';
 import { todosAtom } from '@/store/todo';
 import { getTime, getTimestamp } from '@/util/date';
 import { useAtom } from 'jotai';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 const TodoList = () => {
-  const [{ data, isPending, isFetching, isError }] = useAtom(todosAtom);
+  const router = useRouter();
+  const [{ data, isPending, isFetching, refetch, isError }] = useAtom(todosAtom);
+  const [deletedTodoId, setDeletedTodoId] = useState('');
+
   return (
-    <ol className="flex flex-col items-center px-4 py-6 space-y-3">
+    <ol className="flex flex-col items-center px-4 py-6 space-y-3 pb-16">
       {data?.map(
         ({
           id,
@@ -29,9 +34,12 @@ const TodoList = () => {
             0
           );
 
+          if (id === deletedTodoId) {
+            return;
+          }
+
           return (
             <li key={id} className="w-full flex space-x-2 justify-between items-center">
-              <span className="text-xs">=</span>
               <div className="flex w-full justify-between items-center">
                 <div className="flex items-center gap-2">
                   <PlayButton />
@@ -60,8 +68,23 @@ const TodoList = () => {
               <CheckButton />
               <OptionButton
                 menu={[
-                  { name: 'Edit Todo', action: () => {} },
-                  { name: 'Delete Todo', action: () => {} },
+                  {
+                    name: 'Edit Todo',
+                    action: () => {
+                      router.push(`/home/list?todo-input=show&todoId=${id}`);
+                    },
+                  },
+                  {
+                    name: 'Delete Todo',
+                    action: async () => {
+                      setDeletedTodoId(id);
+                      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/todo/${id}`, {
+                        method: 'DELETE',
+                      });
+                      await refetch();
+                      setDeletedTodoId('');
+                    },
+                  },
                 ]}
               />
             </li>

@@ -27,7 +27,7 @@ const SubjectSelectItem = ({ id, title, icon, category }: Partial<SubjectType>) 
           <p className="text-lg font-extrabold leading-tight">{title}</p>
         </div>
       </div>
-      <Link href={`/home/list?todo-input=show&subject=${id}`}>
+      <Link href={`/home/list?todo-input=show&subjectId=${id}`}>
         <Button className="px-2 py-1 text-xs rounded-md">Add Todo</Button>
       </Link>
     </li>
