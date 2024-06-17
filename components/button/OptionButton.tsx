@@ -31,11 +31,11 @@ const OptionButton = ({
   );
 
   const contextMenu = (
-    <ul className="absolute top-[0.5rem] right-0 min-w-[7.5rem] p-[0.5rem] bg-white rounded-lg shadow-[0_4px_60px_0_rgba(99,99,99,0.2)]">
+    <ul className="absolute top-[0.5rem] right-0 min-w-[7.5rem] p-[0.5rem] bg-white rounded-lg shadow-[0_4px_20px_0_rgba(99,99,99,0.2)] z-10">
       {menu.map((item) => {
         const { name, action } = item;
         return (
-          <li key={name} onClick={clickHandler(action)} className="text-md p-sm">
+          <li key={name} onClick={clickHandler(action)} className="text-sm p-1">
             {name}
           </li>
         );

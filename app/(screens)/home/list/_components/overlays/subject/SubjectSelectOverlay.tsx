@@ -35,7 +35,7 @@ const SubjectSelectItem = ({ id, title, icon, category }: Partial<SubjectType>) 
   const router = useRouter();
 
   const selectSubjectHandler = () => {
-    router.replace(`/home/list?todo-input=show&subject=${id}`);
+    router.replace(`/home/list?todo-input=show&subjectId=${id}`);
   };
 
   return (

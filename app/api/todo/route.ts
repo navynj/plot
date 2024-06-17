@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
       include: {
         subject: true,
       },
-      orderBy: { rank: 'asc' },
+      orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
     });
 
     return new Response(JSON.stringify(data), { status: 200 });
@@ -74,10 +74,6 @@ export async function POST(req: Request) {
   }
 
   const reqData = await req.json();
-  console.log({
-    ...reqData,
-    userId: session.user.id,
-  });
   try {
     const data = await prisma.todo.create({
       data: {

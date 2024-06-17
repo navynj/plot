@@ -1,8 +1,8 @@
-import { SubjectType } from "./subject";
+import { SubjectType } from './subject';
 
 export interface TodoType {
   id: string;
-  title: string;
+  title?: string;
   content?: string;
   icon?: string;
   thumbnail?: string;
@@ -18,7 +18,6 @@ export interface TodoType {
   createdAt: Date;
   updatedAt: Date;
 }
-
 export interface TagType {
   id: string;
   name: string;
