@@ -57,10 +57,10 @@ export async function GET(req: NextRequest) {
       orderBy: { rank: 'asc' },
     });
 
-    return new Response(JSON.stringify(data), { status: 201 });
+    return new Response(JSON.stringify(data), { status: 200 });
   } catch (error) {
-    console.log(error);
-    return new Response('Failed to fetch', { status: 500 });
+    console.error(error);
+    return new Response('Failed to fetch todos', { status: 500 });
   }
 }
 
@@ -73,17 +73,22 @@ export async function POST(req: Request) {
     });
   }
 
-  const { title } = await req.json();
+  const reqData = await req.json();
+  console.log({
+    ...reqData,
+    userId: session.user.id,
+  });
   try {
     const data = await prisma.todo.create({
       data: {
-        title,
+        ...reqData,
         userId: session.user.id,
       },
     });
 
     return new Response(JSON.stringify(data), { status: 201 });
   } catch (error) {
+    console.error(error);
     return new Response('Failed to create todo', { status: 500 });
   }
 }
