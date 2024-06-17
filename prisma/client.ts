@@ -6,7 +6,7 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-const neon = new Pool({ connectionString: process.env.POSTGRES_PRISMA_URL });
+const neon = new Pool({ connectionString: process.env.DIRECT_URL });
 const adapter = new PrismaNeon(neon);
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
 
