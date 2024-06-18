@@ -36,6 +36,10 @@ const OverlayForm = <T extends FieldValues>({
   const closeHandler = () => {
     onClose && onClose();
     !disableReset && form.reset();
+  };
+
+  const cancleHandler = () => {
+    closeHandler();
     router.back();
   };
 
@@ -44,7 +48,7 @@ const OverlayForm = <T extends FieldValues>({
       <form onSubmit={form.handleSubmit(submitHandler)} className="w-full">
         {children}
         <ConfirmCancelButton
-          onCancel={closeHandler}
+          onCancel={cancleHandler}
           isPending={form.formState.isSubmitting}
         />
       </form>

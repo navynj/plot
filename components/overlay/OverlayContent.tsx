@@ -46,6 +46,7 @@ const OverlayContent = ({
 
   const closeHandler = () => {
     onClose && onClose();
+    router.back();
   };
 
   return (

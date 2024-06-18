@@ -1,11 +1,12 @@
+import EmojiOverlay from '@/components/emoji/EmojiOverlay';
 import DailyHeader from '@/components/layout/DailyHeader';
 import { Suspense } from 'react';
 import SubjectColumns from './_components/left/SubjectColumns';
+import SubjectListEditOverlay from './_components/overlays/subject/SubjectListEditOverlay';
 import SubjectSelectOverlay from './_components/overlays/subject/SubjectSelectOverlay';
 import TodoInputOverlay from './_components/overlays/todo/TodoInputOverlay';
 import TodoList from './_components/right/TodoList';
 import CategoryTab from './_components/ui/CategoryTab';
-import EmojiOverlay from '@/components/emoji/EmojiOverlay';
 
 const page = () => {
   return (
@@ -22,6 +23,7 @@ const page = () => {
       </div>
       {/* overlays */}
       <SubjectSelectOverlay />
+      <SubjectListEditOverlay />
       <Suspense>
         <TodoInputOverlay />
       </Suspense>

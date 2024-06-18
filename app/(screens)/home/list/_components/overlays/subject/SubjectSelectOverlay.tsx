@@ -6,6 +6,7 @@ import Overlay from '@/components/overlay/Overlay';
 import { SubjectType } from '@/types/subject';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { FaPencil, FaPlus } from 'react-icons/fa6';
 import CategoryTab from '../../ui/CategoryTab';
 import SubjectListWrapper from '../../ui/SubjectListWrapper';
 
@@ -18,15 +19,25 @@ const SubjectSelectOverlay = () => {
       className="flex flex-col items-center"
     >
       <CategoryTab id="subject-select-overlay-category" className="mt-4 text-xs" />
-      <SubjectListWrapper className="flex flex-col items-center mt-6 space-y-5 max-h-[60vh] overflow-scroll">
+      <SubjectListWrapper className="flex flex-col items-center my-6 space-y-5 max-h-[60vh] overflow-scroll">
         <SubjectSelectItem />
+      </SubjectListWrapper>
+      <div className="flex justify-center gap-16">
         <Link
           href="/home/list?subject-edit=show"
-          className="block mt-6 w-full text-sm text-center font-extrabold"
+          className="w-full p-4 flex gap-1 justify-center items-center text-xs text-center font-extrabold"
         >
-          카테고리 편집
+          <FaPlus />
+          Add subject
         </Link>
-      </SubjectListWrapper>
+        <Link
+          href="/home/list?subject-list-edit=show"
+          className="w-full p-4 flex gap-1 justify-center items-center text-xs text-center font-extrabold"
+        >
+          <FaPencil />
+          Edit subject
+        </Link>
+      </div>
     </Overlay>
   );
 };
