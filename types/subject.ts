@@ -1,3 +1,4 @@
+import { LexoRank } from 'lexorank';
 import { CategoryType } from './category';
 
 export interface SubjectType {
@@ -5,6 +6,7 @@ export interface SubjectType {
   title: string;
   icon: string;
   categoryId: string;
-  userId: string;
   category: CategoryType;
+  rank: LexoRank;
+  userId: string;
 }

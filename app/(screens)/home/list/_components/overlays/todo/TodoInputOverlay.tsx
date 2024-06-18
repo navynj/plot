@@ -91,7 +91,6 @@ const TodoInputOverlay = () => {
   const subjectId = form.watch('subjectId');
 
   useEffect(() => {
-    console.log(isSubjectEmoji, subjectId);
     if (isSubjectEmoji) {
       const subject = subjects.data?.find((item) => item.id === subjectId);
       form.setValue('icon', subject?.icon || '');
