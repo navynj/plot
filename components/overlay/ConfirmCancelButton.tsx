@@ -8,7 +8,7 @@ interface ConfirmCancelButtonProps {
 
 const ConfirmCancelButton = ({ isPending, onCancel }: ConfirmCancelButtonProps) => {
   return (
-    <div className="flex gap-4 mt-8 font-extrabold">
+    <div className="w-full flex gap-4 mt-8 font-extrabold">
       <button type="button" className="px-4" onClick={onCancel}>
         Cancel
       </button>

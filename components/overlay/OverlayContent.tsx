@@ -14,6 +14,8 @@ export interface OverlayProps {
   isRight?: boolean;
   fromTop?: boolean;
   hideX?: boolean;
+  backdropOpacity?: number;
+  backdropZindex?: number;
   className?: string;
 }
 
@@ -23,6 +25,8 @@ const OverlayContent = ({
   onClose,
   fromTop,
   hideX,
+  backdropOpacity,
+  backdropZindex,
   className,
   children,
 }: PropsWithChildren<OverlayProps>) => {
@@ -58,11 +62,11 @@ const OverlayContent = ({
               {/* backdrop */}
               <motion.div
                 onClick={closeHandler}
-                className={
-                  'fixed top-0 bottom-0 left-0 right-0 z-[99] bg-black lg:bg-white'
-                }
+                className={`fixed top-0 bottom-0 left-0 right-0 z-[${
+                  backdropZindex === 0 ? 0 : backdropZindex || 99
+                }] bg-black lg:bg-white`}
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 0.7 }}
+                animate={{ opacity: backdropOpacity === 0 ? 0 : backdropOpacity || 0.7 }}
                 exit={{ opacity: 0 }}
               />
               {/* Overlay */}
