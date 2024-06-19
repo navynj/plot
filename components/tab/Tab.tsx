@@ -1,19 +1,28 @@
+import { ClassNameProps } from '@/types/className';
+import { cn } from '@/util/cn';
 import React from 'react';
+import { FieldValues } from 'react-hook-form';
 
 interface TabItemType {
   label: string;
   value: string;
 }
 
-interface TabProps {
+interface TabProps<T extends FieldValues> extends ClassNameProps {
   id: string;
   value: string;
   setValue: any;
   tabs: (TabItemType | React.ReactNode)[];
 }
-const Tab = ({ id, value, setValue, tabs }: TabProps) => {
+const Tab = <T extends FieldValues>({
+  id,
+  value,
+  setValue,
+  tabs,
+  className,
+}: TabProps<T>) => {
   return (
-    <ul className="flex items-center flex-wrap space-x-4">
+    <ul className={cn('flex items-center flex-wrap gap-x-4', className)}>
       {tabs.map((tab) => {
         if (!tab) {
           return;

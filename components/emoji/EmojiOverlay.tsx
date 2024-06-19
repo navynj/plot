@@ -29,7 +29,9 @@ const EmojiOverlay = () => {
     <Overlay
       id="emoji-select"
       isRight={true}
-      className="p-4 flex flex-col items-center [&_em-emoji-picker]:w-full [&_em-emoji-picker]:shadow-none [&>div]:w-full"
+      backdropOpacity={0.2}
+      backdropZindex={101}
+      className="z-[102] p-4 flex flex-col items-center [&_em-emoji-picker]:w-full [&_em-emoji-picker]:shadow-none [&>div]:w-full"
     >
       <Picker
         data={data}

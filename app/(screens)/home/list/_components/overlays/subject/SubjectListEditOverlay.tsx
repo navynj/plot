@@ -17,10 +17,13 @@ const SubjectListEditOverlay = () => {
 
   const [{ data: subjects, refetch: refetchSubjects }] = useAtom(subjectsAtom);
 
-  const removeHandler = async () => {
-    alert('정말 삭제할까요?');
-    // await fetch(`${url}/${todoId}`, { method: 'PATCH', body });
-    // refetchSubjects();
+  const removeHandler = async (id: string) => {
+    if (confirm('정말 삭제할까요?')) {
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/subject/${id}`, {
+        method: 'DELETE',
+      });
+      refetchSubjects();
+    }
   };
 
   const dragEndHandler = async (from: number, to: number) => {
@@ -55,7 +58,7 @@ const SubjectListEditOverlay = () => {
   };
 
   return (
-    <Overlay title="Edit Subject" id="subject-list-edit" isRight={true} hideX={true}>
+    <Overlay title="Edit subject list" id="subject-list-edit" isRight={true} hideX={true}>
       <DraggableList id="draggable-subject-list" onDragEnd={dragEndHandler}>
         {subjects?.map(({ id, icon, category, title }, i) => (
           <DraggableItem
@@ -72,9 +75,21 @@ const SubjectListEditOverlay = () => {
                   <p className="text-lg font-bold leading-tight">{title}</p>
                 </div>
               </div>
-              <div className="flex gap-4 text-xs">
-                <FaPencil />
-                <FaTrashCan />
+              <div className="flex gap-2 text-xs">
+                <Link
+                  href={`/home/list?subject-edit=show&subjectId=${id}`}
+                  className="p-2"
+                >
+                  <FaPencil />
+                </Link>
+                <div
+                  className="p-2"
+                  onClick={() => {
+                    removeHandler(id);
+                  }}
+                >
+                  <FaTrashCan />
+                </div>
               </div>
             </div>
           </DraggableItem>

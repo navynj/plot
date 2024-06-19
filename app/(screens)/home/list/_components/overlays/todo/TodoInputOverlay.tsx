@@ -20,31 +20,29 @@ const formSchema = z.object({
   subjectId: z.string(),
 });
 
+type formSchemaType = z.infer<typeof formSchema>;
+
 const TodoInputOverlay = () => {
   const dateInput = useRef<HTMLInputElement>(null);
 
   const [today, setToday] = useAtom(todayAtom);
   const [emoji, setEmoji] = useAtom(emojiAtom);
   const subjects = useAtomValue(subjectsAtom);
-  const [{ data: todos, refetch: refetchTodos }] = useAtom(todosAtom);
+  const { data: todos, refetch: refetchTodos } = useAtomValue(todosAtom);
 
   const [isSubjectEmoji, setIsSubjectEmoji] = useState(false);
 
   const params = useSearchParams();
   const defaultSubjectId = params.get('subjectId') || '';
   const todoId = params.get('todoId') || '';
-  const showOverlay = params.get('todo-input');
+  const showOverlay = params.get('todo-input') || '';
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<formSchemaType>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      title: '',
-      subjectId: defaultSubjectId,
-    },
   });
 
-  const submitHandler = async (values: z.infer<typeof formSchema>) => {
-    const url = process.env.NEXT_PUBLIC_BASE_URL + `/api/todo`;
+  const submitHandler = async (values: formSchemaType) => {
+    const url = process.env.NEXT_PUBLIC_BASE_URL + '/api/todo';
     const body = JSON.stringify({
       ...values,
       date: today.toISOString(),
@@ -81,6 +79,7 @@ const TodoInputOverlay = () => {
           setIsSubjectEmoji(true);
         }
       } else if (!todoData) {
+        setIsSubjectEmoji(true);
         form.reset();
         form.setValue('subjectId', defaultSubjectId);
       }
@@ -102,20 +101,22 @@ const TodoInputOverlay = () => {
   useEffect(() => {
     const subject = subjects.data?.find((item) => item.id === subjectId);
 
-    if (emoji) {
-      form.setValue('icon', emoji);
-      if (emoji !== subject?.icon) {
-        setIsSubjectEmoji(false);
+    if (showOverlay) {
+      if (emoji) {
+        form.setValue('icon', emoji);
+        if (emoji !== subject?.icon) {
+          setIsSubjectEmoji(false);
+        }
+      } else {
+        form.setValue('icon', subject?.icon || '');
+        setEmoji(subject?.icon || '');
+        setIsSubjectEmoji(true);
       }
-    } else {
-      form.setValue('icon', subject?.icon || '');
-      setEmoji(subject?.icon || '');
-      setIsSubjectEmoji(true);
     }
   }, [emoji]);
 
   return (
-    <OverlayForm<z.infer<typeof formSchema>>
+    <OverlayForm<formSchemaType>
       id="todo-input"
       form={form}
       onSubmit={submitHandler}
@@ -136,7 +137,7 @@ const TodoInputOverlay = () => {
         />
       </div>
       <div className="flex gap-3">
-        <EmojiInput>
+        <EmojiInput params={`&todo-input=show&subjectId=${subjectId}&todoId=${todoId}`}>
           <input {...form.register('icon')} hidden />
         </EmojiInput>
         <div className="flex flex-col justify-between w-full [&>*]:bg-gray-100 [&>*]:px-2 [&>*]:py-2.5 [&>*]:rounded-lg">
