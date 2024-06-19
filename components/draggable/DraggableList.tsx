@@ -1,3 +1,4 @@
+import { ClassNameProps } from '@/types/className';
 import { PropsWithChildren, useEffect, useState } from 'react';
 import {
   DragDropContext,
@@ -6,9 +7,8 @@ import {
   OnDragEndResponder,
 } from 'react-beautiful-dnd';
 
-interface DraggableListProps {
+interface DraggableListProps extends ClassNameProps {
   id: string;
-  className?: string;
   onDragEnd?: (from: number, to: number) => void;
 }
 

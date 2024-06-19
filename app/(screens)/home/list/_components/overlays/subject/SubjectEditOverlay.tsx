@@ -9,6 +9,7 @@ import { emojiAtom } from '@/store/emoji';
 import { subjectsAtom } from '@/store/subject';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAtom, useAtomValue } from 'jotai';
+import { LexoRank } from 'lexorank';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -19,17 +20,17 @@ import * as z from 'zod';
 const formSchema = z.object({
   icon: z.string().min(1, 'Please select icon.'),
   title: z.string().min(1, 'Please enter the title.'),
-  categoryId: z.string().min(1, 'Please select category.'),
+  categoryId: z.string(),
 });
 
 type formSchemaType = z.infer<typeof formSchema>;
 
 const SubjectEditOverlay = () => {
   const { data: categories, isPending, isError } = useAtomValue(categoriesAtom);
-  const { data: subjects } = useAtomValue(subjectsAtom);
+  const { data: subjects, refetch: refetchSubjects } = useAtomValue(subjectsAtom);
   const [emoji, setEmoji] = useAtom(emojiAtom);
 
-  const [category, setCategory] = useState('etc');
+  const [category, setCategory] = useState('');
 
   const params = useSearchParams();
   const subjectId = params.get('subjectId') || '';
@@ -46,13 +47,30 @@ const SubjectEditOverlay = () => {
 
   const submitHandler = async (values: formSchemaType) => {
     const url = process.env.NEXT_PUBLIC_BASE_URL + '/api/subject';
-    const body = JSON.stringify(values);
+
+    let rank;
+    if (subjects?.length) {
+      const sorted = [...subjects];
+      sorted.sort((a, b) => (a.rank <= b.rank ? -1 : 1));
+      const lastItem = sorted[subjects?.length - 1];
+      rank = lastItem && lastItem.rank.genNext();
+    } else {
+      rank = LexoRank.middle();
+    }
+
+    const body = JSON.stringify({
+      ...values,
+      rank: subjectId ? undefined : rank.toString(),
+      categoryId: values.categoryId || undefined,
+    });
 
     if (subjectId) {
       await fetch(`${url}/${subjectId}`, { method: 'PATCH', body });
     } else {
       await fetch(url, { method: 'POST', body });
     }
+
+    refetchSubjects();
   };
 
   useEffect(() => {
@@ -76,6 +94,7 @@ const SubjectEditOverlay = () => {
   }, [emoji, showOverlay]);
 
   useEffect(() => {
+    console.log(category);
     form.setValue('categoryId', category);
   }, [category]);
 
@@ -103,7 +122,7 @@ const SubjectEditOverlay = () => {
           className="text-center font-medium bg-gray-100 px-3 py-2.5 rounded-lg"
         />
       </div>
-      <div className="flex flex-col items-center">
+      <div className="w-full flex flex-col items-center">
         <div className="w-full pb-1 mb-2 flex justify-between items-center border-b-2 border-black">
           <h6 className="font-extrabold">Category</h6>
           <Link href="">
@@ -124,7 +143,7 @@ const SubjectEditOverlay = () => {
             })) || []),
             {
               label: 'etc.',
-              value: 'etc',
+              value: '',
             },
           ]}
         />

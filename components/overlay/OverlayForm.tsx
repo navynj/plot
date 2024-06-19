@@ -31,6 +31,7 @@ const OverlayForm = <T extends FieldValues>({
     }
 
     closeHandler();
+    router.back();
   };
 
   const closeHandler = () => {
