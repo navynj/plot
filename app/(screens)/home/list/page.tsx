@@ -25,8 +25,8 @@ const page = () => {
       {/* overlays */}
       <SubjectSelectOverlay />
       <SubjectListEditOverlay />
-      <SubjectEditOverlay />
       <Suspense>
+        <SubjectEditOverlay />
         <TodoInputOverlay />
       </Suspense>
       <EmojiOverlay />
