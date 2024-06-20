@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { PropsWithChildren } from 'react';
 import { FieldValues, UseFormReturn } from 'react-hook-form';
-import ConfirmCancelButton from './ConfirmCancelButton';
+import SaveCancelButton from './SaveCancelButton';
 import Overlay from './Overlay';
 import { OverlayProps } from './OverlayContent';
 
@@ -48,7 +48,7 @@ const OverlayForm = <T extends FieldValues>({
     <Overlay hideX={true} {...props} onClose={closeHandler}>
       <form onSubmit={form.handleSubmit(submitHandler)} className="w-full">
         {children}
-        <ConfirmCancelButton
+        <SaveCancelButton
           onCancel={cancleHandler}
           isPending={form.formState.isSubmitting}
         />
