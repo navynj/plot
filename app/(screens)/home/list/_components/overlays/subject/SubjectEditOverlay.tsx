@@ -51,7 +51,7 @@ const SubjectEditOverlay = () => {
     let rank;
     if (subjects?.length) {
       const sorted = [...subjects];
-      sorted.sort((a, b) => (a.rank <= b.rank ? -1 : 1));
+      sorted.sort((a, b) => (a.rank < b.rank ? -1 : 1));
       const lastItem = sorted[subjects?.length - 1];
       rank = lastItem && lastItem.rank.genNext();
     } else {
@@ -125,7 +125,7 @@ const SubjectEditOverlay = () => {
       <div className="w-full flex flex-col items-center">
         <div className="w-full pb-1 mb-2 flex justify-between items-center border-b-2 border-black">
           <h6 className="font-extrabold">Category</h6>
-          <Link href="">
+          <Link href="/home/list?category-edit=show">
             <FaPencil className="text-xs" />
           </Link>
         </div>
@@ -139,7 +139,7 @@ const SubjectEditOverlay = () => {
             isPending ? <Loader key="loader" className="w-4 h-4" /> : undefined,
             ...(categories?.map((category, i) => ({
               label: category.title,
-              value: category.id,
+              value: category.id.toString(),
             })) || []),
             {
               label: 'etc.',

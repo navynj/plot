@@ -1,7 +1,7 @@
 'use client';
 
 import Button from '@/components/button/Button';
-import DraggableItem from '@/components/draggable/DraggableItem';
+import { lockXAxis } from '@/components/draggable/DraggableItem';
 import DraggableList from '@/components/draggable/DraggableList';
 import IconHolder from '@/components/holder/IconHolder';
 import Loader from '@/components/loader/Loader';
@@ -13,6 +13,12 @@ import { LexoRank } from 'lexorank';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import {
+  Draggable,
+  DraggableProvided,
+  DraggableRubric,
+  DraggableStateSnapshot,
+} from 'react-beautiful-dnd';
 import { FaPencil, FaPlus, FaTrashCan } from 'react-icons/fa6';
 import CategoryTab from '../../ui/CategoryTab';
 
@@ -69,10 +75,61 @@ const SubjectListEditOverlay = () => {
     return true;
   };
 
+  const renderSubject = (
+    provided: DraggableProvided,
+    snapshot: DraggableStateSnapshot,
+    rubric: DraggableRubric
+  ) => {
+    const lockedProvided = lockXAxis(provided);
+    const i = rubric.source.index;
+    if (subjects) {
+      const { id, icon, title, category } = subjects[i];
+      return (
+        <li
+          {...lockedProvided.draggableProps}
+          ref={lockedProvided.innerRef}
+          className="py-2 flex justify-between gap-2 items-center"
+        >
+          <div className="w-full flex justify-between items-center">
+            <div className="flex gap-2 items-center">
+              <IconHolder isCircle={true}>{icon}</IconHolder>
+              <div className="text-left">
+                <p className="text-xs font-semibold">{category?.title}</p>
+                <p className="text-lg font-bold leading-tight">{title}</p>
+              </div>
+            </div>
+            <div className="flex gap-2 text-xs">
+              <Link href={`/home/list?subject-edit=show&subjectId=${id}`} className="p-2">
+                <FaPencil />
+              </Link>
+              <div
+                className="p-2"
+                onClick={() => {
+                  removeHandler(id);
+                }}
+              >
+                <FaTrashCan />
+              </div>
+            </div>
+          </div>
+          <div {...lockedProvided.dragHandleProps} className="p-2">
+            =
+          </div>
+        </li>
+      );
+    } else {
+      return <></>;
+    }
+  };
+
   return (
     <Overlay title="Edit subject list" id="subject-list-edit" isRight={true} hideX={true}>
       <CategoryTab id="subject-list-edit-category" className="mt-4 text-xs" />
-      <DraggableList id="draggable-subject-list" onDragEnd={dragEndHandler}>
+      <DraggableList
+        id="draggable-subject-list"
+        onDragEnd={dragEndHandler}
+        renderClone={renderSubject}
+      >
         {(isFetching || isLoading) && (
           <Loader className="w-full mt-4 flex justify-center" />
         )}
@@ -84,43 +141,14 @@ const SubjectListEditOverlay = () => {
                 subject.categoryId === category ||
                 (category === 'etc' && !subject.categoryId)
             )
-            .map(({ id, icon, category, title }, i) => {
+            .map(({ id }, i) => {
               if (deletedSubjectId === id) {
                 return;
               }
               return (
-                <DraggableItem
-                  key={id}
-                  id={id}
-                  idx={i}
-                  className="py-2 flex justify-between gap-2 items-center"
-                >
-                  <div className="w-full flex justify-between items-center">
-                    <div className="flex gap-2 items-center">
-                      <IconHolder isCircle={true}>{icon}</IconHolder>
-                      <div className="text-left">
-                        <p className="text-xs font-semibold">{category?.title}</p>
-                        <p className="text-lg font-bold leading-tight">{title}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 text-xs">
-                      <Link
-                        href={`/home/list?subject-edit=show&subjectId=${id}`}
-                        className="p-2"
-                      >
-                        <FaPencil />
-                      </Link>
-                      <div
-                        className="p-2"
-                        onClick={() => {
-                          removeHandler(id);
-                        }}
-                      >
-                        <FaTrashCan />
-                      </div>
-                    </div>
-                  </div>
-                </DraggableItem>
+                <Draggable key={id} draggableId={id} index={i}>
+                  {renderSubject}
+                </Draggable>
               );
             })}
       </DraggableList>

@@ -1,8 +1,8 @@
 import { LexoRank } from 'lexorank';
 
 export interface CategoryType {
-  id: string;
+  id: string | number;
   title: string;
-  userId: string;
+  userId?: string;
   rank: LexoRank;
 }

@@ -7,6 +7,7 @@ import { categoryAtom } from '@/store/ui';
 import { ClassNameProps } from '@/types/className';
 import { cn } from '@/util/cn';
 import { useAtom } from 'jotai';
+import Link from 'next/link';
 
 interface CategoryTabProps extends ClassNameProps {
   id: string;
@@ -18,7 +19,9 @@ const CategoryTab = ({ id, className }: CategoryTabProps) => {
 
   return (
     <div className={cn('flex justify-center gap-4 text-xs', className)}>
-      <button type="button" className="font-extrabold">=</button>
+      <Link href="/home/list?category-edit=show" className="font-extrabold">
+        =
+      </Link>
       <Tab
         id={id}
         value={category}
@@ -26,12 +29,12 @@ const CategoryTab = ({ id, className }: CategoryTabProps) => {
         tabs={[
           {
             label: 'All',
-            value: 'all'
+            value: 'all',
           },
           isPending ? <Loader key="loader" className="w-4 h-4" /> : undefined,
           ...(data?.map((category, i) => ({
             label: category.title,
-            value: category.id,
+            value: category.id.toString(),
           })) || []),
           {
             label: 'etc.',
