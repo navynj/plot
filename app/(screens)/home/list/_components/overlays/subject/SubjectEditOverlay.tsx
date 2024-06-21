@@ -70,6 +70,7 @@ const SubjectEditOverlay = () => {
       await fetch(url, { method: 'POST', body });
     }
 
+    setCategory('');
     refetchSubjects();
   };
 
