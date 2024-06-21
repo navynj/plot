@@ -8,6 +8,7 @@ import SubjectSelectOverlay from './_components/overlays/subject/SubjectSelectOv
 import TodoInputOverlay from './_components/overlays/todo/TodoInputOverlay';
 import TodoList from './_components/right/TodoList';
 import CategoryTab from './_components/ui/CategoryTab';
+import CategoryEditOverlay from './_components/overlays/subject/CategoryEditOverlay';
 
 const page = () => {
   return (
@@ -27,6 +28,7 @@ const page = () => {
       <SubjectListEditOverlay />
       <Suspense>
         <SubjectEditOverlay />
+        <CategoryEditOverlay />
         <TodoInputOverlay />
       </Suspense>
       <EmojiOverlay />

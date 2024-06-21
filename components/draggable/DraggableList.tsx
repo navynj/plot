@@ -1,15 +1,20 @@
+import useTouchSensor from '@/hooks/use-touch-center';
 import { ClassNameProps } from '@/types/className';
 import { PropsWithChildren, useEffect, useState } from 'react';
 import {
   DragDropContext,
+  DraggableChildrenFn,
   Droppable,
   DroppableProps,
   OnDragEndResponder,
+  useKeyboardSensor,
+  useMouseSensor,
 } from 'react-beautiful-dnd';
 
 interface DraggableListProps extends ClassNameProps {
   id: string;
   onDragEnd?: (from: number, to: number) => void;
+  renderClone?: DraggableChildrenFn;
 }
 
 export const StrictModeDroppable = ({ children, ...props }: DroppableProps) => {
@@ -32,6 +37,7 @@ const DraggableList = ({
   className,
   children,
   onDragEnd,
+  renderClone,
 }: PropsWithChildren<DraggableListProps>) => {
   const sortHandler: OnDragEndResponder = async (result) => {
     if (!result.destination) return;
@@ -44,8 +50,12 @@ const DraggableList = ({
   };
 
   return (
-    <DragDropContext onDragEnd={sortHandler}>
-      <StrictModeDroppable droppableId={id}>
+    <DragDropContext
+      onDragEnd={sortHandler}
+      enableDefaultSensors={false}
+      sensors={[useMouseSensor, useKeyboardSensor, useTouchSensor]}
+    >
+      <StrictModeDroppable droppableId={id} renderClone={renderClone}>
         {(provided) => (
           <ul
             id={id}
