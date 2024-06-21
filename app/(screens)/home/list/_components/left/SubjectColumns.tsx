@@ -18,7 +18,7 @@ const SubjectSelectItem = ({ id, title, icon, category }: Partial<SubjectType>) 
   return (
     <li
       key={title}
-      className="flex flex-col items-center justify-between w-28 lg:w-36 shrink-0 space-y-4 px-2 py-4 border-gray-200 border-r"
+      className="flex flex-col items-center justify-between w-28 lg:w-32 shrink-0 space-y-4 px-2 py-4 border-gray-200 border-r"
     >
       <div className="flex flex-col space-y-2 items-center">
         <IconHolder isCircle={true}>{icon}</IconHolder>

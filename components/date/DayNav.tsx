@@ -23,7 +23,7 @@ const DayNav = () => {
   };
 
   return (
-    <div className="flex gap-4 items-center font-extrabold">
+    <div className="daynav flex gap-4 items-center font-extrabold">
       <button type="button" onClick={goPrevDay}>
         &lt;
       </button>

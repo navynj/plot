@@ -1,8 +1,13 @@
 import React from 'react';
 
-const DayDate = ({ date }: { date: Date }) => {
+interface YearMonthProps {
+  date: Date;
+  onClick?: React.MouseEventHandler;
+}
+
+const DayDate = ({ date, onClick }: YearMonthProps) => {
   return (
-    <div className="text-center font-extrabold">
+    <div className="text-center font-extrabold" onClick={onClick}>
       <p className="text-xs leading-3">
         {date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
       </p>

@@ -7,6 +7,7 @@ import OverlayForm from '@/components/overlay/OverlayForm';
 import { emojiAtom } from '@/store/emoji';
 import { subjectsAtom } from '@/store/subject';
 import { todayAtom, todosAtom } from '@/store/todo';
+import { getDashDate } from '@/util/date';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAtom, useAtomValue } from 'jotai';
 import { useSearchParams } from 'next/navigation';
@@ -23,7 +24,8 @@ const formSchema = z.object({
 type formSchemaType = z.infer<typeof formSchema>;
 
 const TodoInputOverlay = () => {
-  const dateInput = useRef<HTMLInputElement>(null);
+  const dateLeftInput = useRef<HTMLInputElement>(null);
+  const dateRightInput = useRef<HTMLInputElement>(null);
 
   const [today, setToday] = useAtom(todayAtom);
   const [emoji, setEmoji] = useAtom(emojiAtom);
@@ -57,8 +59,12 @@ const TodoInputOverlay = () => {
     refetchTodos();
   };
 
-  const showDatepickerHandler = () => {
-    dateInput.current?.showPicker();
+  const showLeftDatepickerHandler = () => {
+    dateLeftInput.current?.showPicker();
+  };
+
+  const showRightDatepickerHandler = () => {
+    dateRightInput.current?.showPicker();
   };
 
   const dateChangeHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,16 +129,21 @@ const TodoInputOverlay = () => {
       isRight={true}
       disableReset={true}
     >
-      <div
-        onClick={showDatepickerHandler}
-        className="mb-8 relative flex justify-between items-center cursor-pointer"
-      >
-        <YearMonth date={today} />
-        <DayDate date={today} />
+      <div className="mb-8 relative flex justify-between items-center cursor-pointer">
+        <YearMonth onClick={showLeftDatepickerHandler} date={today} />
+        <DayDate onClick={showRightDatepickerHandler} date={today} />
         <input
-          ref={dateInput}
+          ref={dateLeftInput}
           type="date"
           onChange={dateChangeHandler}
+          value={getDashDate(today)}
+          className="absolute bottom-0 left-0 invisible"
+        />
+        <input
+          ref={dateRightInput}
+          type="date"
+          onChange={dateChangeHandler}
+          value={getDashDate(today)}
           className="absolute bottom-0 right-0 invisible"
         />
       </div>

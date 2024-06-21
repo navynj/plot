@@ -95,7 +95,6 @@ const SubjectEditOverlay = () => {
   }, [emoji, showOverlay]);
 
   useEffect(() => {
-    console.log(category);
     form.setValue('categoryId', category);
   }, [category]);
 
