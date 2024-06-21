@@ -1,18 +1,17 @@
 'use client';
 
-import Button from '@/components/button/Button';
 import { lockXAxis } from '@/components/draggable/DraggableItem';
 import DraggableList from '@/components/draggable/DraggableList';
 import IconHolder from '@/components/holder/IconHolder';
 import Loader from '@/components/loader/Loader';
 import Overlay from '@/components/overlay/Overlay';
+import SaveCancelButton from '@/components/overlay/SaveCancelButton';
 import { subjectsAtom } from '@/store/subject';
-import { categoryAtom } from '@/store/ui';
 import { getLexo } from '@/util/lexo';
-import { useAtom, useAtomValue } from 'jotai';
+import { useAtom } from 'jotai';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Draggable,
   DraggableProvided,
@@ -20,48 +19,81 @@ import {
   DraggableStateSnapshot,
 } from 'react-beautiful-dnd';
 import { FaPencil, FaPlus, FaTrashCan } from 'react-icons/fa6';
-import CategoryTab from '../../ui/CategoryTab';
 
 const SubjectListEditOverlay = () => {
   const router = useRouter();
 
-  const [{ data: subjects, refetch: refetchSubjects, isFetching }] =
-    useAtom(subjectsAtom);
-  const category = useAtomValue(categoryAtom);
+  const [{ data, refetch: refetchSubjects, isFetching }] = useAtom(subjectsAtom);
 
-  const [deletedSubjectId, setDeletedSubjectId] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [subjects, setSubjects] = useState(data);
+  const [isPending, setIsPending] = useState(false);
 
-  const removeHandler = async (id: string) => {
-    if (confirm('정말 삭제할까요?')) {
-      setDeletedSubjectId(id);
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/subject/${id}`, {
-        method: 'DELETE',
-      });
-      refetchSubjects();
-    }
-  };
+  const submitHandler = async () => {
+    const url = process.env.NEXT_PUBLIC_BASE_URL + '/api/subject';
 
-  const dragEndHandler = async (from: number, to: number) => {
     if (!subjects) {
       console.error('Subjects not exist');
       return;
     }
 
-    const lexo = getLexo(subjects, from, to);
+    let isEqual = subjects.length === data?.length;
 
-    setIsLoading(true);
-    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/subject/${subjects[from].id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        rank: lexo.toString(),
-      }),
-    });
-    await refetchSubjects();
-    setIsLoading(false);
+    if (isEqual) {
+      data?.forEach((item, i) => {
+        if (item.id !== subjects[i]?.id) {
+          isEqual = false;
+          return;
+        }
+      });
+    }
 
-    return true;
+    if (isEqual) {
+      router.back();
+      return;
+    }
+
+    setIsPending(true);
+
+    for (const subject of subjects) {
+      await fetch(`${url}/${subject.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ rank: subject.rank.toString() }),
+      });
+    }
+
+    if (data) {
+      const subjectIds = subjects.map((subject) => subject.id);
+      const removingSubjects = data.filter((item) => !subjectIds.includes(item.id));
+
+      for (const subject of removingSubjects) {
+        await fetch(`${url}/${subject.id}`, { method: 'DELETE' });
+      }
+    }
+
+    refetchSubjects();
+    setIsPending(false);
+    router.back();
   };
+
+  const removeHandler = async (i: number) => {
+    setSubjects((prev) => {
+      const next = prev ? [...prev] : [];
+      next.splice(i, 1);
+      return next;
+    });
+  };
+
+  const dragEndHandler = async (from: number, to: number) => {
+    setSubjects((prev) => {
+      const next = prev ? [...prev] : [];
+      next[from].rank = getLexo(next, from, to);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    setSubjects(data);
+  }, [data]);
 
   const renderSubject = (
     provided: DraggableProvided,
@@ -93,7 +125,7 @@ const SubjectListEditOverlay = () => {
               <div
                 className="p-2"
                 onClick={() => {
-                  removeHandler(id);
+                  removeHandler(i);
                 }}
               >
                 <FaTrashCan />
@@ -112,27 +144,18 @@ const SubjectListEditOverlay = () => {
 
   return (
     <Overlay title="Edit subject list" id="subject-list-edit" isRight={true} hideX={true}>
-      <CategoryTab id="subject-list-edit-category" className="mt-4 text-xs" />
       <DraggableList
         id="draggable-subject-list"
         onDragEnd={dragEndHandler}
         renderClone={renderSubject}
       >
-        {(isFetching || isLoading) && (
+        {(isFetching || isPending) && (
           <Loader className="w-full mt-4 flex justify-center" />
         )}
-        {!(isFetching || isLoading) &&
+        {!(isFetching || isPending) &&
           subjects
-            ?.filter(
-              (subject) =>
-                category === 'all' ||
-                subject.categoryId === category ||
-                (category === 'etc' && !subject.categoryId)
-            )
+            ?.sort((a, b) => (a.rank < b.rank ? -1 : 1))
             .map(({ id }, i) => {
-              if (deletedSubjectId === id) {
-                return;
-              }
               return (
                 <Draggable key={id} draggableId={id} index={i}>
                   {renderSubject}
@@ -147,14 +170,7 @@ const SubjectListEditOverlay = () => {
         <FaPlus />
         Add subject
       </Link>
-      <Button
-        className="w-full mt-4"
-        onClick={() => {
-          router.back();
-        }}
-      >
-        Close
-      </Button>
+      <SaveCancelButton onSave={submitHandler} isPending={isPending} />
     </Overlay>
   );
 };
