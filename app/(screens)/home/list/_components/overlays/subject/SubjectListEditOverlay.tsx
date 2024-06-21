@@ -8,8 +8,8 @@ import Loader from '@/components/loader/Loader';
 import Overlay from '@/components/overlay/Overlay';
 import { subjectsAtom } from '@/store/subject';
 import { categoryAtom } from '@/store/ui';
+import { getLexo } from '@/util/lexo';
 import { useAtom, useAtomValue } from 'jotai';
-import { LexoRank } from 'lexorank';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -43,30 +43,18 @@ const SubjectListEditOverlay = () => {
   };
 
   const dragEndHandler = async (from: number, to: number) => {
-    let newLexo: LexoRank;
-
     if (!subjects) {
       console.error('Subjects not exist');
       return;
     }
 
-    if (to >= subjects.length - 1) {
-      const lastItem = subjects[subjects.length - 1];
-      newLexo = lastItem && lastItem.rank.genNext();
-    } else if (to <= 0) {
-      const firstItem = subjects[0];
-      newLexo = firstItem && firstItem.rank && firstItem.rank.genPrev();
-    } else if (from < to) {
-      newLexo = subjects[to]?.rank.between(subjects[to + 1].rank);
-    } else {
-      newLexo = subjects[to - 1]?.rank.between(subjects[to].rank);
-    }
+    const lexo = getLexo(subjects, from, to);
 
     setIsLoading(true);
     await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/subject/${subjects[from].id}`, {
       method: 'PATCH',
       body: JSON.stringify({
-        rank: newLexo.toString(),
+        rank: lexo.toString(),
       }),
     });
     await refetchSubjects();

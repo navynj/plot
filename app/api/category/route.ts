@@ -13,10 +13,36 @@ export async function GET(req: Request) {
   try {
     const data = await prisma.category.findMany({
       where: { userId: session.user.id },
+      orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
     });
 
     return new Response(JSON.stringify(data), { status: 201 });
   } catch (error) {
     return new Response('Failed to fetch', { status: 500 });
+  }
+}
+
+export async function POST(req: Request) {
+  const session = await auth();
+
+  if (!session) {
+    return new Response('Session not found', {
+      status: 401,
+    });
+  }
+
+  const reqData = await req.json();
+  try {
+    const data = await prisma.category.create({
+      data: {
+        ...reqData,
+        userId: session.user.id,
+      },
+    });
+
+    return new Response(JSON.stringify(data), { status: 201 });
+  } catch (error) {
+    console.error(error);
+    return new Response('Failed to create category', { status: 500 });
   }
 }

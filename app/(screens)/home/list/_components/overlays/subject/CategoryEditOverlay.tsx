@@ -6,8 +6,10 @@ import Loader from '@/components/loader/Loader';
 import Overlay from '@/components/overlay/Overlay';
 import SaveCancelButton from '@/components/overlay/SaveCancelButton';
 import { categoriesAtom } from '@/store/category';
+import { getLexo } from '@/util/lexo';
 import { useAtomValue } from 'jotai';
 import { LexoRank } from 'lexorank';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
   Draggable,
@@ -18,10 +20,53 @@ import {
 import { FaPlus, FaTrashCan } from 'react-icons/fa6';
 
 const CategoryEditOverlay = () => {
+  const router = useRouter();
+
   const { data, refetch: refetchCategories, isFetching } = useAtomValue(categoriesAtom);
   const [categories, setCategories] = useState(data);
+  const [isPending, setIsPending] = useState(false);
 
-  const submitHandler = async () => {};
+  const submitHandler = async () => {
+    setIsPending(true);
+
+    const url = process.env.NEXT_PUBLIC_BASE_URL + '/api/category';
+
+    if (!categories) {
+      console.error('Categories not exist');
+      return;
+    }
+
+    for (const category of categories) {
+      if (typeof category.id === 'string') {
+        await fetch(`${url}/${category.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ ...category, rank: category.rank.toString() }),
+        });
+      } else {
+        await fetch(url, {
+          method: 'POST',
+          body: JSON.stringify({
+            ...category,
+            rank: category.rank.toString(),
+            id: undefined,
+          }),
+        });
+      }
+    }
+
+    if (data) {
+      const categoryIds = categories.map((category) => category.id);
+      const removingCategories = data.filter((item) => !categoryIds.includes(item.id));
+
+      for (const category of removingCategories) {
+        await fetch(`${url}/${category.id}`, { method: 'DELETE' });
+      }
+    }
+
+    refetchCategories();
+    setIsPending(false);
+    router.back();
+  };
 
   const changeHandler = (value: string, i: number) => {
     setCategories((prev) => {
@@ -62,24 +107,8 @@ const CategoryEditOverlay = () => {
 
   const dragHandler = (from: number, to: number) => {
     setCategories((prev) => {
-      let newLexo: LexoRank;
-
       const next = prev ? [...prev] : [];
-
-      if (to >= next.length - 1) {
-        const lastItem = next[next.length - 1];
-        newLexo = lastItem && lastItem.rank.genNext();
-      } else if (to <= 0) {
-        const firstItem = next[0];
-        newLexo = firstItem && firstItem.rank && firstItem.rank.genPrev();
-      } else if (from < to) {
-        newLexo = next[to]?.rank.between(next[to + 1].rank);
-      } else {
-        newLexo = next[to - 1]?.rank.between(next[to].rank);
-      }
-
-      next[from].rank = newLexo;
-
+      next[from].rank = getLexo(next, from, to);
       return next;
     });
   };
@@ -141,14 +170,16 @@ const CategoryEditOverlay = () => {
             ))}
         {isFetching && <Loader className="w-full flex justify-center" />}
       </DraggableList>
-      <button
-        className="w-full p-4 flex gap-1 justify-center items-center text-xs text-center font-extrabold"
-        onClick={addHandler}
-      >
-        <FaPlus />
-        Add category
-      </button>
-      <SaveCancelButton onSave={submitHandler} />
+      {!isFetching && (
+        <button
+          className="w-full p-4 flex gap-1 justify-center items-center text-xs text-center font-extrabold"
+          onClick={addHandler}
+        >
+          <FaPlus />
+          Add category
+        </button>
+      )}
+      <SaveCancelButton onSave={submitHandler} isPending={isPending} />
     </Overlay>
   );
 };
