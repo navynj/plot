@@ -27,3 +27,25 @@ export const getTime = (date?: Date) => {
 
   return `${hh}:${mm}`;
 };
+
+export const getTimeState = (date?: Date) => {
+  let hour = date?.getHours();
+  const minute = date?.getMinutes();
+  let isAm = true;
+
+  if (hour && hour >= 12) {
+    if (hour > 12) {
+      hour = hour - 12;
+    }
+    isAm = false;
+  }
+
+  let hourStr = hour?.toString() || '';
+  let minuteStr = minute?.toString() || '';
+
+  return {
+    hour: hourStr.length === 1 ? '0' + hourStr : hourStr,
+    minute: minuteStr.length === 1 ? '0' + minuteStr : minuteStr,
+    isAm,
+  };
+};

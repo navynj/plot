@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
       include: {
         subject: true,
       },
-      orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+      orderBy: [{ scheduleStart: 'asc' }, { rank: 'asc' }, { createdAt: 'asc' }],
     });
 
     return new Response(JSON.stringify(data), { status: 200 });

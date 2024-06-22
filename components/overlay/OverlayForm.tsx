@@ -3,14 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { PropsWithChildren } from 'react';
 import { FieldValues, UseFormReturn } from 'react-hook-form';
-import SaveCancelButton from './SaveCancelButton';
 import Overlay from './Overlay';
 import { OverlayProps } from './OverlayContent';
-
+import SaveCancelButton from './SaveCancelButton';
 interface OverlayFormProps<T extends FieldValues> extends OverlayProps {
   form: UseFormReturn<T, any, undefined>;
   onSubmit: (values: T) => Promise<void>;
   disableReset?: boolean;
+  disalbeBackOnSubmit?: boolean;
 }
 
 const OverlayForm = <T extends FieldValues>({
@@ -18,7 +18,9 @@ const OverlayForm = <T extends FieldValues>({
   form,
   onSubmit,
   disableReset,
+  disalbeBackOnSubmit,
   onClose,
+  className,
   ...props
 }: PropsWithChildren<OverlayFormProps<T>>) => {
   const router = useRouter();
@@ -26,12 +28,11 @@ const OverlayForm = <T extends FieldValues>({
   const submitHandler = async (values: T) => {
     try {
       await onSubmit(values);
+      !disalbeBackOnSubmit && closeHandler();
+      !disalbeBackOnSubmit && router.back();
     } catch (error) {
       console.error(error);
     }
-
-    closeHandler();
-    router.back();
   };
 
   const closeHandler = () => {
@@ -45,9 +46,14 @@ const OverlayForm = <T extends FieldValues>({
   };
 
   return (
-    <Overlay hideX={true} {...props} onClose={closeHandler}>
+    <Overlay
+      hideX={true}
+      {...props}
+      onClose={closeHandler}
+      disableBackdrop={form.formState.isSubmitting}
+    >
       <form onSubmit={form.handleSubmit(submitHandler)} className="w-full">
-        {children}
+        <div className={className}>{children}</div>
         <SaveCancelButton
           onCancel={cancleHandler}
           isPending={form.formState.isSubmitting}
