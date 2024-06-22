@@ -12,7 +12,13 @@ export const todosAtom = atomWithQuery<TodoType[]>((get) => {
       const res = await fetch(
         process.env.NEXT_PUBLIC_BASE_URL + `/api/todo?date=${getDashDate(today as Date)}`
       );
-      return res.json();
+      const todos = await res.json();
+
+      return todos.map((todo: any) => ({
+        ...todo,
+        scheduleStart: todo.scheduleStart && new Date(todo.scheduleStart),
+        scheduleEnd: todo.scheduleEnd && new Date(todo.scheduleEnd),
+      }));
     },
   };
 });

@@ -16,6 +16,7 @@ export interface OverlayProps {
   hideX?: boolean;
   backdropOpacity?: number;
   backdropZindex?: number;
+  disableBackdrop?: boolean;
   className?: string;
 }
 
@@ -27,6 +28,7 @@ const OverlayContent = ({
   hideX,
   backdropOpacity,
   backdropZindex,
+  disableBackdrop,
   className,
   children,
 }: PropsWithChildren<OverlayProps>) => {
@@ -49,6 +51,9 @@ const OverlayContent = ({
   }, [isOpen]);
 
   const closeHandler = () => {
+    if (disableBackdrop) {
+      return;
+    }
     onClose && onClose();
     router.back();
   };

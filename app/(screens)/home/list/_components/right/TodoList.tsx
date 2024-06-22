@@ -58,7 +58,7 @@ const TodoList = () => {
                   <p className="text-[0.75rem] lg:text-base font-semibold">
                     {getTimestamp(historyTotal || 0)}
                   </p>
-                  <p className="text-[0.75rem] text-gray-400">
+                  <p className="text-[0.625rem] text-gray-400">
                     {scheduleStart &&
                       scheduleEnd &&
                       `/${getTime(scheduleStart)}~${getTime(scheduleEnd)}`}

@@ -20,3 +20,7 @@ body {
 input[type='checkbox'] {
   accent-color: #313338;
 }
+
+input:focus {
+  outline: none;
+}
