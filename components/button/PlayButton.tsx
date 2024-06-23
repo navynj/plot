@@ -35,7 +35,7 @@ const PlayButton = ({ onPlay, onPause, isPlaying }: PlayButtonProps) => {
       onClick={togglePlayPause}
       className={cn(
         'flex justify-center items-center shrink-0 text-white bg-primary w-4 h-4 text-[0.625rem] rounded-full',
-        showPlayIcon ? 'pl-[1.2%]' : ''
+        showPlayIcon ? 'pl-[1.5px]' : ''
       )}
     >
       {showPlayIcon ? <FaPlay /> : <FaPause />}
