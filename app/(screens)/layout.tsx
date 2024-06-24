@@ -13,7 +13,7 @@ export default function RootLayout({
       </main>
       {/* nav */}
       <Nav className="h-[6rem] lg:h-auto lg:p-8 lg:flex lg:flex-col lg:justify-start lg:items-center" />
-      {/* overlays */}
+      {/* overlay containers */}
       <div id="overlay-container" className="absolute" />
       <div
         id="overlay-container-tl"
