@@ -22,8 +22,8 @@ const NAV_DATA: { [key: string]: any } = {
       // { icon: <span key="up" className="text-primary text-xs mb-2">↑</span> },
       { path: 'list', icon: <FaList />, title: 'Todolist' },
       { path: 'schedule', icon: <FaRegClock />, title: 'Schedule' },
-      { path: 'calendar', icon: <FaRegCalendar />, title: 'Calendar' },
-      { path: 'statistics', icon: <FaChartBar />, title: 'Statistics' },
+      // { path: 'calendar', icon: <FaRegCalendar />, title: 'Calendar' },
+      // { path: 'statistics', icon: <FaChartBar />, title: 'Statistics' },
       {
         plus: (pathname: string) => (
           <Link
