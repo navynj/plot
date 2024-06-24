@@ -178,50 +178,45 @@ export const getIntervalFromTimeInput = (
     const startDate = date ? new Date(date) : new Date(0);
     const endDate = date ? new Date(date) : new Date(0);
 
-    if (
-      (startHourNum === 0 || startHourNum) &&
-      (startMinuteNum === 0 || startMinuteNum)
-    ) {
-      let startHour = startHourNum;
-      if (!start.isAm && startHour !== 12) {
-        startHour = startHourNum + 12;
-      }
-
-      let endHour = endHourNum;
-      if (!end.isAm && endHour !== 12) {
-        endHour = endHourNum + 12;
-      }
-
-      startDate.setHours(startHour);
-      startDate.setMinutes(startMinuteNum);
-      startDate.setSeconds(0);
-
-      endDate.setHours(endHour);
-      endDate.setMinutes(endMinuteNum);
-      endDate.setSeconds(0);
-
-      if (!startDate) {
-        throw Error('Please enter valid start schedule time value.');
-      }
-
-      if (!endDate) {
-        throw Error('Please enter valid end schedule time value.');
-      }
-
-      if (startDate >= endDate) {
-        throw Error(
-          `Start time is same or over end time: \n${getDashDate(startDate)} ${getTime(
-            startDate
-          )} >= \n${getDashDate(endDate)} ${getTime(endDate)}`
-        );
-      }
-
-      return [startDate, endDate];
-    } else if (isEmpty) {
-      return [undefined, undefined];
-    } else {
-      throw Error('Please enter valid schedule time value.');
+    let startHour = startHourNum;
+    if (!start.isAm && startHour !== 12) {
+      startHour = startHourNum + 12;
     }
+
+    let endHour = endHourNum;
+    if (!end.isAm && endHour !== 12) {
+      endHour = endHourNum + 12;
+    }
+
+    startDate.setHours(startHour);
+    startDate.setMinutes(startMinuteNum);
+    startDate.setSeconds(0);
+
+    endDate.setHours(endHour);
+    endDate.setMinutes(endMinuteNum);
+    endDate.setSeconds(0);
+
+    if (!startDate) {
+      throw Error('Please enter valid start schedule time value.');
+    }
+
+    if (!endDate) {
+      throw Error('Please enter valid end schedule time value.');
+    }
+
+    if (startDate >= endDate) {
+      throw Error(
+        `Start time is same or over end time: \n${getDashDate(startDate)} ${getTime(
+          startDate
+        )} >= \n${getDashDate(endDate)} ${getTime(endDate)}`
+      );
+    }
+
+    return [startDate, endDate];
+  } else if (isEmpty) {
+    return [null, null];
+  } else {
+    throw Error('Please enter valid schedule time value.');
   }
 };
 
