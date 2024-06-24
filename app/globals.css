@@ -25,3 +25,15 @@ input:focus,
 textarea:focus {
   outline: none;
 }
+
+/* Hide numberinput arrows - Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Hide numberinput arrows - Firefox */
+input[type='number'] {
+  -moz-appearance: textfield;
+}

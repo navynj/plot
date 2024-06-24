@@ -44,13 +44,12 @@ const TodoList = () => {
                 <div className="flex items-center gap-2">
                   <PlayButton />
                   {icon && !thumbnail && (
-                    <IconHolder className="w-10 h-10 shrink-0">{icon}</IconHolder>
-                  )}
-                  {!icon && !thumbnail && (
-                    <IconHolder className="w-10 h-10 shrink-0">{subject?.icon}</IconHolder>
+                    <IconHolder className="w-10 h-10 shrink-0">
+                      {icon || subject?.icon}
+                    </IconHolder>
                   )}
                   <div>
-                    <p className="text-xs font-semibold">{subject?.title}</p>
+                    <p className="text-xs font-semibold break-words">{subject?.title}</p>
                     <p className="text-sm lg:text-base">{title}</p>
                   </div>
                 </div>

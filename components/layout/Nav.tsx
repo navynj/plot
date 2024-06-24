@@ -43,7 +43,6 @@ const NAV_DATA: { [key: string]: any } = {
 
 const Nav = ({ className }: ClassNameProps) => {
   const pathname = usePathname();
-  console.log(pathname);
 
   return (
     pathname.split('/').length === 3 && (
