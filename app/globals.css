@@ -21,6 +21,7 @@ input[type='checkbox'] {
   accent-color: #313338;
 }
 
-input:focus {
+input:focus,
+textarea:focus {
   outline: none;
 }
