@@ -23,6 +23,7 @@ const formSchema = z.object({
   icon: z.string(),
   title: z.string(),
   subjectId: z.string(),
+  content: z.string().optional(),
 });
 
 type formSchemaType = z.infer<typeof formSchema>;
@@ -124,6 +125,7 @@ const TodoInputOverlay = () => {
         setToday(new Date(todoData.date));
         form.setValue('title', todoData.title || '');
         form.setValue('subjectId', todoData.subject?.id || '');
+        form.setValue('content', todoData.content || '');
         setEmoji(todoData.icon || todoData.subject?.icon || '');
         setScheduleStart(getTimeState(todoData.scheduleStart));
         setScheduleEnd(getTimeState(todoData.scheduleEnd));
@@ -234,6 +236,15 @@ const TodoInputOverlay = () => {
           <span>~</span>
           <TimeInput time={scheduleEnd} setTime={setScheduleEnd} />
         </div>
+      </div>
+      <div>
+        <div className="mb-2 flex justify-between items-center">
+          <h6 className="font-extrabold">Log</h6>
+        </div>
+        <textarea
+          className="w-full p-2.5 text-sm bg-gray-100 rounded-lg"
+          {...form.register('content')}
+        />
       </div>
       {error && (
         <div className="w-full p-2 text-sm bg-red-50 text-red-400 font-bold text-center rounded-lg">
