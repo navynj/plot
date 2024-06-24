@@ -4,7 +4,7 @@ import Button from '@/components/button/Button';
 import IconHolder from '@/components/holder/IconHolder';
 import { SubjectType } from '@/types/subject';
 import Link from 'next/link';
-import SubjectListWrapper from '../ui/SubjectListWrapper';
+import SubjectListWrapper from '../../../_components/ui/SubjectListWrapper';
 
 const SubjectColumns = () => {
   return (

@@ -4,7 +4,7 @@ import { ClassNameProps } from '@/types/className';
 import { cn } from '@/util/cn';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaChartBar, FaHome, FaRegCalendar } from 'react-icons/fa';
+import { FaChartBar, FaHome, FaRegCalendar, FaRegClock } from 'react-icons/fa';
 import { FaList, FaPlus } from 'react-icons/fa6';
 import { IoChatbox, IoPeople } from 'react-icons/io5';
 
@@ -19,16 +19,17 @@ const NAV_DATA: { [key: string]: any } = {
   ],
   sub: {
     home: [
-      // { icon: <span key="up" className="text-primary text-xs">↑</span> },
+      // { icon: <span key="up" className="text-primary text-xs mb-2">↑</span> },
       { path: 'list', icon: <FaList />, title: 'Todolist' },
+      { path: 'schedule', icon: <FaRegClock />, title: 'Schedule' },
       { path: 'calendar', icon: <FaRegCalendar />, title: 'Calendar' },
       { path: 'statistics', icon: <FaChartBar />, title: 'Statistics' },
       {
-        icon: (
+        plus: (pathname: string) => (
           <Link
-            href="/home/list?subject-select=show"
+            href={`${pathname}?subject-select=show`}
             key="add"
-            className="bg-primary w-9 h-9 rounded-md"
+            className="bg-primary w-9 h-9 mb-2 rounded-md"
           >
             <FaPlus className="text-base text-white" />
           </Link>
@@ -42,15 +43,16 @@ const NAV_DATA: { [key: string]: any } = {
 
 const Nav = ({ className }: ClassNameProps) => {
   const pathname = usePathname();
+  console.log(pathname);
 
   return (
     pathname.split('/').length === 3 && (
       <nav
         className={cn(
-          'flex justify-center items-center gap-10 text-xl text-gray-300 bg-white',
-          '[&>a]:flex [&>a]:flex-col [&>a]:space-y-1 [&>a]:justify-center [&>a]:items-center',
-          '[&>div]:flex [&>div]:flex-col [&>div]:space-y-1 [&>div]:justify-center [&>div]:items-center',
-          '[&_span]:text-xs [&_span]:font-bold',
+          'flex justify-center items-center gap-6 text-xl text-gray-300 bg-white',
+          '[&>a]:flex [&>a]:flex-col [&>a]:justify-center [&>a]:items-center',
+          '[&>div]:flex [&>div]:flex-col [&>div]:justify-center [&>div]:items-center',
+          '[&_span]:text-[0.625rem] [&_span]:font-bold',
           className
         )}
       >
@@ -64,6 +66,8 @@ const Nav = ({ className }: ClassNameProps) => {
               {nav.icon}
               <span>{nav.title}</span>
             </Link>
+          ) : nav.plus ? (
+            nav.plus(pathname)
           ) : (
             nav.icon
           )
