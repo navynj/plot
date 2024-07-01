@@ -1,6 +1,12 @@
+import dayjs from "dayjs";
+
 export const getDashDate = (date: Date) => {
-  return date.toLocaleDateString('sv-SE');
+  return dayjs(date).format('YYYY-MM-DD');
 };
+
+export const getISODate = (date: Date) => {
+  return dayjs(date).format('YYYY-MM-DDTHH:mm:ss[Z]');
+}
 
 export const getTimestamp = (duration: number) => {
   const seconds = Math.floor((duration / 1000) % 60);

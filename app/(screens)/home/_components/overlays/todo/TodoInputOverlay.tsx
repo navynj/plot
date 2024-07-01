@@ -11,7 +11,7 @@ import OverlayForm from '@/components/overlay/OverlayForm';
 import { emojiAtom } from '@/store/emoji';
 import { subjectsAtom } from '@/store/subject';
 import { todayAtom, todosAtom } from '@/store/todo';
-import { getDashDate, getTimeState } from '@/util/date';
+import { getDashDate, getISODate, getTimeState } from '@/util/date';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAtom, useAtomValue } from 'jotai';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -69,7 +69,7 @@ const TodoInputOverlay = () => {
 
       const body = JSON.stringify({
         ...values,
-        date: today.toISOString(),
+        date: getISODate(today),
         scheduleStart: interval && interval[0] && interval[0].toISOString(),
         scheduleEnd: interval && interval[1] && interval[1].toISOString(),
       });
