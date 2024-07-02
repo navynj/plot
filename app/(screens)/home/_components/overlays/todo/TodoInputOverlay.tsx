@@ -45,6 +45,7 @@ const TodoInputOverlay = () => {
   const subjects = useAtomValue(subjectsAtom);
   const { data: todos, refetch: refetchTodos } = useAtomValue(todosAtom);
 
+  const [date, setDate] = useState(today);
   const [scheduleStart, setScheduleStart] = useState(initialTime);
   const [scheduleEnd, setScheduleEnd] = useState(initialTime);
   const [isSubjectEmoji, setIsSubjectEmoji] = useState(false);
@@ -65,11 +66,11 @@ const TodoInputOverlay = () => {
     const url = process.env.NEXT_PUBLIC_BASE_URL + '/api/todo';
 
     try {
-      const interval = getIntervalFromTimeInput(scheduleStart, scheduleEnd, today);
+      const interval = getIntervalFromTimeInput(scheduleStart, scheduleEnd, date);
 
       const body = JSON.stringify({
         ...values,
-        date: getISODate(today),
+        date: getISODate(date),
         scheduleStart: interval && interval[0] && interval[0].toISOString(),
         scheduleEnd: interval && interval[1] && interval[1].toISOString(),
       });
@@ -80,6 +81,7 @@ const TodoInputOverlay = () => {
         await fetch(url, { method: 'POST', body });
       }
 
+      setToday(date);
       refetchTodos();
       closeHandler();
       router.back();
@@ -104,7 +106,7 @@ const TodoInputOverlay = () => {
   };
 
   const dateChangeHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setToday(new Date(event.target.value));
+    setDate(new Date(event.target.value));
   };
 
   const clearTimeHandler = () => {
@@ -122,7 +124,7 @@ const TodoInputOverlay = () => {
     if (showOverlay) {
       const todoData = todos?.find((item) => item.id === todoId);
       if (todoData && todoData.date) {
-        setToday(new Date(todoData.date));
+        setDate(new Date(todoData.date));
         form.setValue('title', todoData.title || '');
         form.setValue('subjectId', todoData.subject?.id || '');
         form.setValue('content', todoData.content || '');
@@ -187,20 +189,20 @@ const TodoInputOverlay = () => {
       className="flex flex-col gap-8"
     >
       <div className="relative flex justify-between items-center cursor-pointer">
-        <YearMonth onClick={showLeftDatepickerHandler} date={today} />
-        <DayDate onClick={showRightDatepickerHandler} date={today} />
+        <YearMonth onClick={showLeftDatepickerHandler} date={date} />
+        <DayDate onClick={showRightDatepickerHandler} date={date} />
         <input
           ref={dateLeftInput}
           type="date"
           onChange={dateChangeHandler}
-          value={getDashDate(today)}
+          value={getDashDate(date)}
           className="absolute bottom-0 left-0 invisible"
         />
         <input
           ref={dateRightInput}
           type="date"
           onChange={dateChangeHandler}
-          value={getDashDate(today)}
+          value={getDashDate(date)}
           className="absolute bottom-0 right-0 invisible"
         />
       </div>
@@ -248,7 +250,9 @@ const TodoInputOverlay = () => {
       </div>
       {error && (
         <div className="w-full p-2 text-sm bg-red-50 text-red-400 font-bold text-center rounded-lg">
-          {error}
+          {error.split('\n').map((line, i) => (
+            <p key={i}>{line}</p>
+          ))}
         </div>
       )}
     </OverlayForm>

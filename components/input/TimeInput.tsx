@@ -206,9 +206,9 @@ export const getIntervalFromTimeInput = (
 
     if (startDate >= endDate) {
       throw Error(
-        `Start time is same or over end time: \n${getDashDate(startDate)} ${getTime(
+        `Start time is over end time: \n${getDashDate(startDate)} ${getTime(
           startDate
-        )} >= \n${getDashDate(endDate)} ${getTime(endDate)}`
+        )} > ${getDashDate(endDate)} ${getTime(endDate)}`
       );
     }
 
