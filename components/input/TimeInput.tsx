@@ -132,7 +132,7 @@ const TimeInput = ({ time, setTime }: TimeInputProps) => {
           min={0}
           max={24}
           value={time.hour}
-          className="box-content w-[2ch] px-2 mx-1 focus:bg-gray-200 text-center bg-transparent rounded-md"
+          className="box-content w-[2ch] px-1 mx-1 focus:bg-gray-200 text-center bg-transparent rounded-md"
         />
         <span>:</span>
         <input
@@ -144,7 +144,7 @@ const TimeInput = ({ time, setTime }: TimeInputProps) => {
           min={0}
           max={59}
           value={time.minute}
-          className="box-content w-[2ch] px-2 mx-1 focus:bg-gray-200 text-center bg-transparent rounded-md"
+          className="box-content w-[2ch] px-1 mx-1 focus:bg-gray-200 text-center bg-transparent rounded-md"
         />
       </div>
       <button type="button" className="px-3" onClick={amToggleHandler}>
