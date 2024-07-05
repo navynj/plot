@@ -1,6 +1,7 @@
 import DailyHeader from '@/components/layout/DailyHeader';
 import CategoryTab from '../_components/ui/CategoryTab';
 import SubjectColumns from './_components/left/SubjectColumns';
+import DoneList from './_components/right/DoneList';
 import TodoList from './_components/right/TodoList';
 
 const page = () => {
@@ -13,8 +14,9 @@ const page = () => {
           <SubjectColumns />
         </div>
       </div>
-      <div className="lg:w-[50%] lg:h-[60vh] overflow-scroll">
+      <div className="lg:w-[50%] lg:h-[60vh] overflow-scroll pb-16">
         <TodoList />
+        <DoneList />
       </div>
     </>
   );
