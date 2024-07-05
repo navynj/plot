@@ -9,7 +9,7 @@ const page = () => {
   };
 
   return (
-    <div className="flex flex-col space-y-8 justify-center items-center h-screen">
+    <div className="flex flex-col space-y-8 justify-center items-center h-[100dvh]">
       <h1 className="text-3xl font-extrabold">PLOT</h1>
       <div className="flex justify-center items-center bg-gray-100 rounded-full w-[300px] h-[300px]">
         <Image src="/logo.png" width={260} height={260} alt="plot logo" priority />

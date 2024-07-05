@@ -8,7 +8,7 @@ export default function RootLayout({
   return (
     <body className="relative max-w-[1280px] mx-auto lg:flex lg:mt-48">
       {/* content */}
-      <main className="w-full h-[calc(100vh-6rem)] lg:h-auto overflow-scroll p-4 lg:flex lg:space-x-16">
+      <main className="w-full h-[calc(100dvh-6rem)] lg:h-auto overflow-scroll p-4 lg:flex lg:space-x-16">
         {children}
       </main>
       {/* nav */}
