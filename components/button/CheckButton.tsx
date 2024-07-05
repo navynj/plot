@@ -3,29 +3,21 @@ import { cn } from '@/util/cn';
 import { useEffect, useState } from 'react';
 
 interface CheckButtonProps extends ClassNameProps {
-  defaultChecked?: boolean;
-  onChecked?: (checked: boolean) => void;
+  checked: boolean;
+  onChecked: (checked: boolean) => void;
   checkedCheckClass?: string;
 }
 
 const CheckButton = ({
-  defaultChecked,
+  checked,
   onChecked,
   checkedCheckClass,
   className,
 }: CheckButtonProps) => {
-  const [checked, setChecked] = useState(!!defaultChecked);
-
-  useEffect(() => {
-    setChecked(!!defaultChecked);
-  }, [defaultChecked]);
 
   const checkHandler = () => {
-    setChecked((prevChecked) => {
-      onChecked && onChecked(!prevChecked);
-      return !prevChecked;
-    });
-  };
+    onChecked(!checked);
+  }
 
   return (
     <button

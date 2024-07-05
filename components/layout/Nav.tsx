@@ -21,7 +21,7 @@ const NAV_DATA: { [key: string]: any } = {
     home: [
       // { icon: <span key="up" className="text-primary text-xs mb-2">↑</span> },
       { path: 'list', icon: <FaList />, title: 'Todolist' },
-      { path: 'schedule', icon: <FaRegClock />, title: 'Schedule' },
+      // { path: 'schedule', icon: <FaRegClock />, title: 'Schedule' },
       // { path: 'calendar', icon: <FaRegCalendar />, title: 'Calendar' },
       // { path: 'statistics', icon: <FaChartBar />, title: 'Statistics' },
       {

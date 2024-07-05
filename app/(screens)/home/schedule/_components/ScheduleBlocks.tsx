@@ -73,7 +73,7 @@ const ScheduleBlocks = () => {
                         {getTimestamp(historyTotal || 0)}
                       </p>
                     </div>
-                    <CheckButton className="bg-white" checkedCheckClass="text-black" />
+                    {/* <CheckButton className="bg-white" checkedCheckClass="text-black" /> */}
                     <OptionButton
                       menu={[
                         {
