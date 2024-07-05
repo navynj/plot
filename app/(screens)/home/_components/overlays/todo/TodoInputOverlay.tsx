@@ -37,9 +37,6 @@ const initialTime: timeStateType = {
 const TodoInputOverlay = () => {
   const router = useRouter();
 
-  const dateLeftInput = useRef<HTMLInputElement>(null);
-  const dateRightInput = useRef<HTMLInputElement>(null);
-
   const [today, setToday] = useAtom(todayAtom);
   const [emoji, setEmoji] = useAtom(emojiAtom);
   const subjects = useAtomValue(subjectsAtom);
@@ -95,14 +92,6 @@ const TodoInputOverlay = () => {
       }
       return;
     }
-  };
-
-  const showLeftDatepickerHandler = () => {
-    dateLeftInput.current?.showPicker();
-  };
-
-  const showRightDatepickerHandler = () => {
-    dateRightInput.current?.showPicker();
   };
 
   const dateChangeHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -189,29 +178,27 @@ const TodoInputOverlay = () => {
       className="flex flex-col gap-8"
     >
       <div className="relative flex justify-between items-center cursor-pointer">
-        <YearMonth onClick={showLeftDatepickerHandler} date={date} />
-        <DayDate onClick={showRightDatepickerHandler} date={date} />
+        <YearMonth date={date} />
+        <DayDate date={date} />
         <input
-          ref={dateLeftInput}
           type="date"
           onChange={dateChangeHandler}
           value={getDashDate(date)}
-          className="absolute bottom-0 left-0 invisible"
+          className="absolute bottom-0 left-0 h-full opacity-0"
         />
         <input
-          ref={dateRightInput}
           type="date"
           onChange={dateChangeHandler}
           value={getDashDate(date)}
-          className="absolute bottom-0 right-0 invisible"
+          className="absolute bottom-0 right-0 h-full opacity-0"
         />
       </div>
       <div className="flex gap-3">
-        <EmojiInput params={`&todo-input=show&subjectId=${subjectId}&todoId=${todoId}`}>
+        <EmojiInput params={`&todo-input =show&subjectId=${subjectId}&todoId=${todoId}`}>
           <input {...form.register('icon')} hidden />
         </EmojiInput>
-        <div className="flex flex-col justify-between w-full [&>*]:bg-gray-100 [&>*]:px-2 [&>*]:py-2.5 [&>*]:rounded-lg">
-          <select {...form.register('subjectId')}>
+        <div className="flex flex-col justify-between gap-2 min-w-0 [&>*]:bg-gray-100 [&>*]:px-2 [&>*]:py-2.5 [&>*]:rounded-lg">
+          <select {...form.register('subjectId')} className="h-full">
             <option value="">주제 없음</option>
             {subjects.data?.map((item) => (
               <option key={item.id} value={item.id}>

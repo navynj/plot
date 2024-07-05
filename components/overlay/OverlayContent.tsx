@@ -77,7 +77,7 @@ const OverlayContent = ({
               {/* Overlay */}
               <motion.div
                 className={cn(
-                  'absolute bottom-0 w-full max-w-[640px] p-8 rounded-tl-3xl rounded-tr-3xl bg-white z-[100] shadow-[0_4px_60px_0_rgba(99,99,99,0.2)] lg:shadow-none',
+                  'absolute bottom-0 w-full p-8 rounded-tl-3xl rounded-tr-3xl bg-white z-[100] shadow-[0_4px_60px_0_rgba(99,99,99,0.2)] lg:shadow-none',
                   fromTop ? 'top-0 bottom-auto rounded-[0_0_1.5rem_1.5rem]' : '',
                   className
                 )}
