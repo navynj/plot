@@ -1,7 +1,14 @@
-import type { Metadata } from 'next';
-import './globals.css';
 import JotaiProvider from '@/components/provider/JotaiProvider';
-import Head from 'next/head';
+import type { Metadata, Viewport } from 'next';
+import './globals.css';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover'
+}
 
 export const metadata: Metadata = {
   title: 'PLOT',
@@ -17,14 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <Head>
+      <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/icon-192x192.png" />
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
-        />
-      </Head>
+      </head>
       <JotaiProvider>{children}</JotaiProvider>
     </html>
   );
