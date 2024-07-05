@@ -7,7 +7,7 @@ interface LoaderProps extends ClassNameProps {
 
 const Loader = ({ isDark, className }: LoaderProps) => {
   return (
-    <div role="status">
+    <div role="status" className="w-full">
       <svg
         aria-hidden="true"
         className={cn(
