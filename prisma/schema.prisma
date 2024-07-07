@@ -27,6 +27,7 @@ model User {
   Account       Account[]
   Session       Session[]
   Subject       Subject[]
+  Time          Time[]
 }
 
 model Account {
@@ -103,30 +104,47 @@ model Tag {
 }
 
 model Todo {
-  id             String     @id @default(cuid())
-  title          String
-  content        String?
-  icon           String?
-  thumbnail      String?
-  subject        Subject?   @relation(fields: [subjectId], references: [id])
-  subjectId      String?
-  tags           Tag[]
-  scheduleStart  DateTime?
-  scheduleEnd    DateTime?
-  history        History[]
-  isDone         Boolean    @default(false)
-  isRepeating    Boolean?   @default(false)
-  repeatingDays  Int[]      @default([])
-  repeatingDates Int[]      @default([])
-  repeatingStart DateTime?
-  repeatingEnd   DateTime?
-  excludeDates   DateTime[] @default([])
-  date           DateTime?  @default(now()) @db.Date
-  user           User       @relation(fields: [userId], references: [id])
-  userId         String
-  rank           String?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id                String     @id @default(cuid())
+  title             String
+  content           String?
+  icon              String?
+  thumbnail         String?
+  subject           Subject?   @relation(fields: [subjectId], references: [id])
+  subjectId         String?
+  tags              Tag[]
+  scheduleStartTime Time?      @relation("start", fields: [scheduleStartId], references: [id])
+  scheduleEndTime   Time?      @relation("end", fields: [scheduleEndId], references: [id])
+  scheduleStartId   String?    @unique
+  scheduleEndId     String?    @unique
+  scheduleStart     DateTime? // 추후 삭제
+  scheduleEnd       DateTime? // 추후 삭제
+  history           History[]
+  isDone            Boolean    @default(false)
+  isRepeating       Boolean?   @default(false)
+  repeatingDays     Int[]      @default([])
+  repeatingDates    Int[]      @default([])
+  repeatingStart    DateTime?
+  repeatingEnd      DateTime?
+  excludeDates      DateTime[] @default([])
+  date              DateTime?  @default(now()) @db.Date
+  user              User       @relation(fields: [userId], references: [id])
+  userId            String
+  rank              String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
+
+model Time {
+  id        String    @id @default(cuid())
+  time      DateTime?
+  date      String
+  rank      String
+  startTodo Todo?     @relation("start")
+  endTodo   Todo?     @relation("end")
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model History {
@@ -135,4 +153,6 @@ model History {
   end    DateTime
   Todo   Todo?    @relation(fields: [todoId], references: [id])
   todoId String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
