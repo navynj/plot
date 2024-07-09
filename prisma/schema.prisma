@@ -1,5 +1,3 @@
-// schema.prisma
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
@@ -7,8 +5,8 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL") // uses connection pooling
-  directUrl = env("DIRECT_URL") // uses a direct connection
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -22,12 +20,12 @@ model User {
   tel           String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
-  Todo          Todo[]
-  Category      Category[]
   Account       Account[]
+  Category      Category[]
   Session       Session[]
   Subject       Subject[]
   Time          Time[]
+  Todo          Todo[]
 }
 
 model Account {
@@ -45,8 +43,7 @@ model Account {
   session_state      String?
   oauth_token_secret String?
   oauth_token        String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -71,67 +68,65 @@ model VerificationToken {
 model Category {
   id        String    @id @default(cuid())
   title     String
-  Subject   Subject[]
   rank      String
-  User      User      @relation(fields: [userId], references: [id])
   userId    String
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  User      User      @relation(fields: [userId], references: [id])
+  Subject   Subject[]
 }
 
 model Subject {
   id         String    @id @default(cuid())
   title      String
   icon       String
-  category   Category? @relation(fields: [categoryId], references: [id])
   categoryId String?
   rank       String
-  User       User      @relation(fields: [userId], references: [id])
   userId     String
-  Todo       Todo[]
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+  category   Category? @relation(fields: [categoryId], references: [id])
+  User       User      @relation(fields: [userId], references: [id])
+  Todo       Todo[]
 }
 
 model Tag {
   id          String   @id @default(cuid())
   name        String
-  Todo        Todo?    @relation(fields: [todoId], references: [id])
   todoId      String?
   repeatingId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  Todo        Todo?    @relation(fields: [todoId], references: [id])
 }
 
 model Todo {
-  id                String     @id @default(cuid())
-  title             String
-  content           String?
-  icon              String?
-  thumbnail         String?
-  subject           Subject?   @relation(fields: [subjectId], references: [id])
-  subjectId         String?
-  tags              Tag[]
-  scheduleStartTime Time?      @relation("start", fields: [scheduleStartId], references: [id])
-  scheduleEndTime   Time?      @relation("end", fields: [scheduleEndId], references: [id])
-  scheduleStartId   String?    @unique
-  scheduleEndId     String?    @unique
-  scheduleStart     DateTime? // 추후 삭제
-  scheduleEnd       DateTime? // 추후 삭제
-  history           History[]
-  isDone            Boolean    @default(false)
-  isRepeating       Boolean?   @default(false)
-  repeatingDays     Int[]      @default([])
-  repeatingDates    Int[]      @default([])
-  repeatingStart    DateTime?
-  repeatingEnd      DateTime?
-  excludeDates      DateTime[] @default([])
-  date              DateTime?  @default(now()) @db.Date
-  user              User       @relation(fields: [userId], references: [id])
-  userId            String
-  rank              String?
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  id              String     @id @default(cuid())
+  title           String
+  content         String?
+  icon            String?
+  thumbnail       String?
+  subjectId       String?
+  scheduleEnd     Time?      @relation("end", fields: [scheduleEndId], references: [id])
+  scheduleStart   Time?      @relation("start", fields: [scheduleStartId], references: [id])
+  isDone          Boolean    @default(false)
+  isRepeating     Boolean?   @default(false)
+  repeatingDays   Int[]      @default([])
+  repeatingDates  Int[]      @default([])
+  repeatingStart  DateTime?
+  repeatingEnd    DateTime?
+  excludeDates    DateTime[] @default(dbgenerated("(ARRAY[]::timestamp without time zone[])::timestamp(3) without time zone[]"))
+  userId          String
+  rank            String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  scheduleEndId   String?    @unique
+  scheduleStartId String?    @unique
+  date            String     @default("")
+  history         History[]
+  tags            Tag[]
+  subject         Subject?   @relation(fields: [subjectId], references: [id])
+  user            User       @relation(fields: [userId], references: [id])
 }
 
 model Time {
@@ -139,20 +134,20 @@ model Time {
   time      DateTime?
   date      String
   rank      String
-  startTodo Todo?     @relation("start")
-  endTodo   Todo?     @relation("end")
-  user      User      @relation(fields: [userId], references: [id])
   userId    String
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id])
+  endTodo   Todo?     @relation("end")
+  startTodo Todo?     @relation("start")
 }
 
 model History {
-  id     String   @id @default(cuid())
-  start  DateTime
-  end    DateTime
-  Todo   Todo?    @relation(fields: [todoId], references: [id])
-  todoId String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  start     DateTime
+  end       DateTime
+  todoId    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Todo      Todo?    @relation(fields: [todoId], references: [id])
 }

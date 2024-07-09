@@ -10,13 +10,25 @@ const TodoList = () => {
   const [{ data, isPending, isFetching, isError }] = useAtom(todosAtom);
 
   const todos = useMemo(() => {
-    return data?.filter((todo) => !todo.isDone)
+    return data
+      ?.filter((todo) => !todo.isDone)
+      .sort((a, b) => {
+        if (a.scheduleStart && b.scheduleStart) {
+          return a.scheduleStart.rank < b.scheduleStart.rank ? -1 : 1;
+        } else {
+          // TODO: 정렬 로직 짜기
+          return a.createdAt < b.createdAt ? -1 : 1;
+        }
+      });
   }, [data]);
 
   return (
-    todos && todos.length > 0 && (
+    todos &&
+    todos.length > 0 && (
       <ol className="flex flex-col items-center px-4 py-6 space-y-3">
-        {todos.map((todo) => <TodoItem key={todo.id} {...todo} />)}
+        {todos.map((todo) => (
+          <TodoItem key={todo.id} {...todo} />
+        ))}
         {isPending ||
           (isFetching && (
             <div className="p-16">

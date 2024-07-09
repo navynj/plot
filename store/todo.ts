@@ -2,6 +2,7 @@ import { TodoType } from '@/types/todo';
 import { getDashDate } from '@/util/date';
 import { atom } from 'jotai';
 import { atomWithQuery } from 'jotai-tanstack-query';
+import { LexoRank } from 'lexorank';
 
 export const todayAtom = atom(new Date());
 
@@ -16,8 +17,16 @@ export const todosAtom = atomWithQuery<TodoType[]>((get) => {
 
       return todos.map((todo: any) => ({
         ...todo,
-        scheduleStart: todo.scheduleStart && new Date(todo.scheduleStart),
-        scheduleEnd: todo.scheduleEnd && new Date(todo.scheduleEnd),
+        scheduleStart: todo.scheduleStart && {
+          ...todo.scheduleStart,
+          time: todo.scheduleStart && new Date(todo.scheduleStart.time),
+          rank: LexoRank.parse(todo.scheduleStart.rank),
+        },
+        scheduleEnd: todo.scheduleEnd && {
+          ...todo.scheduleEnd,
+          time: todo.scheduleEnd && new Date(todo.scheduleEnd.time),
+          rank: LexoRank.parse(todo.scheduleEnd.rank),
+        },
       }));
     },
   };

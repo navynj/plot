@@ -4,6 +4,7 @@ import CheckButton from '@/components/button/CheckButton';
 import OptionButton from '@/components/button/OptionButton';
 import PlayButton from '@/components/button/PlayButton';
 import IconHolder from '@/components/holder/IconHolder';
+import { timesAtom } from '@/store/time';
 import { todosAtom } from '@/store/todo';
 import { TodoType } from '@/types/todo';
 import { getTime, getTimestamp } from '@/util/date';
@@ -21,8 +22,10 @@ const TodoItem = ({
   history,
   isDone,
 }: TodoType) => {
-  const [{ refetch }] = useAtom(todosAtom);
   const router = useRouter();
+
+  const [{ refetch: refetchTodos }] = useAtom(todosAtom);
+  const [{ refetch: refetchTimes }] = useAtom(timesAtom);
 
   const historyTotal = history?.reduce(
     (acc, curr) => acc + (curr.end.getTime() - curr.start.getTime()),
@@ -34,7 +37,8 @@ const TodoItem = ({
       method: 'PATCH',
       body: JSON.stringify({ isDone }),
     });
-    refetch();
+    refetchTodos();
+    refetchTimes();
   };
 
   return (
@@ -59,7 +63,7 @@ const TodoItem = ({
           <p className="text-[0.625rem] text-gray-400">
             {scheduleStart &&
               scheduleEnd &&
-              `/${getTime(scheduleStart)}~${getTime(scheduleEnd)}`}
+              `/${getTime(scheduleStart.time)}~${getTime(scheduleEnd.time)}`}
           </p>
         </div>
       </div>
@@ -78,7 +82,27 @@ const TodoItem = ({
               await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/todo/${id}`, {
                 method: 'DELETE',
               });
-              await refetch();
+
+              if (scheduleStart && !scheduleStart.endTodo) {
+                await fetch(
+                  process.env.NEXT_PUBLIC_BASE_URL + '/api/time/' + scheduleStart.id,
+                  {
+                    method: 'DELETE',
+                  }
+                );
+              }
+
+              if (scheduleEnd && !scheduleEnd.startTodo) {
+                await fetch(
+                  process.env.NEXT_PUBLIC_BASE_URL + '/api/time/' + scheduleEnd.id,
+                  {
+                    method: 'DELETE',
+                  }
+                );
+              }
+
+              await refetchTodos();
+              await refetchTimes();
             },
           },
         ]}

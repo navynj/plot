@@ -17,6 +17,7 @@
     "@neondatabase/serverless": "^0.9.1",
     "@prisma/adapter-neon": "^5.13.0",
     "@prisma/client": "5.12.1",
+    "@tanstack/query-core": "^5.50.1",
     "@types/react-beautiful-dnd": "^13.1.8",
     "@vercel/postgres": "^0.8.0",
     "clsx": "^2.1.1",
