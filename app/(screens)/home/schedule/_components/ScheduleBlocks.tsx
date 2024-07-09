@@ -29,20 +29,20 @@ const ScheduleBlocks = () => {
 
             let duration = 0;
             if (scheduleStart && scheduleEnd) {
-              duration =
-                (scheduleEnd.getTime() - scheduleStart!.getTime()) / 10000 / 60 / 6;
+              duration = 0;
+                // (scheduleEnd.time.getTime() - scheduleStart!.time!.getTime()) / 10000 / 60 / 6;
             }
 
-            const showBottom =
-              i === todos.length - 1 ||
-              getTime(todos[i + 1].scheduleStart) !== getTime(scheduleEnd);
+            const showBottom = false;
+              // i === todos.length - 1 ||
+              // getTime(todos[i + 1].scheduleStart) !== getTime(scheduleEnd);
 
             return (
               <>
                 <li key={id} className="flex gap-2 justify-between">
                   <div className="mt-[-0.5rem] pb-2 box-border">
                     <p className="text-xs font-extrabold mb-2">
-                      {getTime(scheduleStart)}
+                      {getTime(scheduleStart?.time)}
                     </p>
                     <div className="w-1/2 h-[calc(100%-1.5rem)] border-r border-black" />
                   </div>
@@ -101,7 +101,7 @@ const ScheduleBlocks = () => {
                 {showBottom && (
                   <li key={`${id}-bottom`} className="w-full flex gap-2 justify-between">
                     <span className="mt-[-0.5rem] text-xs font-extrabold">
-                      {getTime(scheduleEnd)}
+                      {getTime(scheduleEnd?.time)}
                     </span>
                     {i < todos.length - 1 && (
                       <div className="w-80 bg-gray-100 p-4 rounded-xl" />

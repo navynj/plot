@@ -12,25 +12,25 @@ export async function GET(req: NextRequest) {
   }
 
   const searchParams = req.nextUrl.searchParams;
-  const dateStr = searchParams.get('date');
+  const date = searchParams.get('date');
 
-  if (!dateStr) {
+  if (!date) {
     return new Response('Date query is empty', {
       status: 400,
     });
   }
 
-  const date = new Date(dateStr);
+  const dateObj = new Date(date);
 
   try {
     const data = await prisma.todo.findMany({
       where: {
         userId: session.user.id,
-        NOT: { excludeDates: { has: date } },
+        NOT: { excludeDates: { has: dateObj } },
         OR: [
           { date },
-          { repeatingDays: { has: date.getDay() } },
-          { repeatingDates: { has: date.getDate() } },
+          { repeatingDays: { has: dateObj.getDay() } },
+          { repeatingDates: { has: dateObj.getDate() } },
           {
             AND: [
               { isRepeating: true },
@@ -41,8 +41,8 @@ export async function GET(req: NextRequest) {
                   },
                   {
                     AND: [
-                      { repeatingStart: { gte: date } },
-                      { repeatingEnd: { lte: date } },
+                      { repeatingStart: { gte: dateObj } },
+                      { repeatingEnd: { lte: dateObj } },
                     ],
                   },
                 ],
@@ -53,8 +53,26 @@ export async function GET(req: NextRequest) {
       },
       include: {
         subject: true,
+        scheduleStart: {
+          select: {
+            id: true,
+            time: true,
+            startTodo: true,
+            endTodo: true,
+            rank: true,
+          },
+        },
+        scheduleEnd: {
+          select: {
+            id: true,
+            time: true,
+            startTodo: true,
+            endTodo: true,
+            rank: true,
+          },
+        },
       },
-      orderBy: [{ scheduleStart: 'asc' }, { rank: 'asc' }, { createdAt: 'asc' }],
+      orderBy: [{ createdAt: 'asc' }],
     });
 
     return new Response(JSON.stringify(data), { status: 200 });

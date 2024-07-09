@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+import dayjs from 'dayjs';
 
 export const getDashDate = (date: Date) => {
   return dayjs(date).format('YYYY-MM-DD');
@@ -6,7 +6,7 @@ export const getDashDate = (date: Date) => {
 
 export const getISODate = (date: Date) => {
   return dayjs(date).format('YYYY-MM-DDTHH:mm:ss[Z]');
-}
+};
 
 export const getTimestamp = (duration: number) => {
   const seconds = Math.floor((duration / 1000) % 60);
@@ -20,8 +20,10 @@ export const getTimestamp = (duration: number) => {
   return `${hh}:${mm}:${ss}`;
 };
 
-export const getTime = (date?: Date) => {
-  if (!date) {
+export const getTime = (inputDate?: Date | null) => {
+  const date = inputDate && new Date(inputDate);
+
+  if (!date || !isValidDate(date)) {
     return '--:--';
   }
 
@@ -35,6 +37,14 @@ export const getTime = (date?: Date) => {
 };
 
 export const getTimeState = (date?: Date) => {
+  if (!date || !isValidDate(date)) {
+    return {
+      hour: '',
+      minute: '',
+      isAm: true,
+    };
+  }
+
   let hour = date?.getHours();
   const minute = date?.getMinutes();
   let isAm = true;
@@ -54,4 +64,8 @@ export const getTimeState = (date?: Date) => {
     minute: minuteStr.length === 1 ? '0' + minuteStr : minuteStr,
     isAm,
   };
+};
+
+export const isValidDate = (date: any) => {
+  return date instanceof Date && isFinite(+date) && date.getTime();
 };

@@ -1,4 +1,5 @@
 import { SubjectType } from './subject';
+import { TimeType } from './time';
 
 export interface TodoType {
   id: string;
@@ -9,11 +10,11 @@ export interface TodoType {
   subject?: SubjectType;
   tags?: TagType[];
   repeatingDays?: number[];
-  scheduleStart?: Date;
-  scheduleEnd?: Date;
+  scheduleStart?: TimeType;
+  scheduleEnd?: TimeType;
   history?: HistoryType[];
   isDone?: boolean;
-  date?: Date;
+  date: string;
   userId: string;
   createdAt: Date;
   updatedAt: Date;

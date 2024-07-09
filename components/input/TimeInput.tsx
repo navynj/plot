@@ -1,4 +1,4 @@
-import { getDashDate, getTime } from '@/util/date';
+import { getDashDate, getTime, isValidDate } from '@/util/date';
 import React, { useEffect, useRef, useState } from 'react';
 
 export interface timeStateType {
@@ -172,11 +172,11 @@ export const getIntervalFromTimeInput = (
   const endMinuteNum = parseInt(endMinuteStr);
 
   const isEmpty = !startHourNum && !startMinuteNum && !endHourNum && !endMinuteNum;
-  const isFull = startHourStr && startMinuteStr && endHourStr && endMinuteStr;
+  const isExist = (startHourStr && startMinuteStr) || (endHourStr && endMinuteStr);
 
-  if (isFull) {
-    const startDate = date ? new Date(date) : new Date(0);
-    const endDate = date ? new Date(date) : new Date(0);
+  if (isExist) {
+    let startDate: Date | null = date ? new Date(date) : new Date(0);
+    let endDate: Date | null = date ? new Date(date) : new Date(0);
 
     let startHour = startHourNum;
     if (!start.isAm && startHour !== 12) {
@@ -191,27 +191,28 @@ export const getIntervalFromTimeInput = (
     startDate.setHours(startHour);
     startDate.setMinutes(startMinuteNum);
     startDate.setSeconds(0);
+    startDate.setMilliseconds(0);
 
     endDate.setHours(endHour);
     endDate.setMinutes(endMinuteNum);
     endDate.setSeconds(0);
+    endDate.setMilliseconds(0);
 
-    if (!startDate) {
-      throw Error('Please enter valid start schedule time value.');
+    if (!isValidDate(startDate)) {
+      startDate = null;
     }
 
-    if (!endDate) {
-      throw Error('Please enter valid end schedule time value.');
+    if (!isValidDate(endDate)) {
+      endDate = null;
     }
 
-    if (startDate >= endDate) {
+    if (startDate && endDate && startDate >= endDate) {
       throw Error(
         `Start time is over end time: \n${getDashDate(startDate)} ${getTime(
           startDate
         )} > ${getDashDate(endDate)} ${getTime(endDate)}`
       );
     }
-
     return [startDate, endDate];
   } else if (isEmpty) {
     return [null, null];
