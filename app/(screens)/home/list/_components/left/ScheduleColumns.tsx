@@ -5,9 +5,9 @@ import PlayButton from '@/components/button/PlayButton';
 import IconHolder from '@/components/holder/IconHolder';
 import Loader from '@/components/loader/Loader';
 import { timesAtom } from '@/store/time';
-import { todayAtom, todosAtom } from '@/store/todo';
+import { todayAtom, tracksAtom } from '@/store/track';
 import { TimeType } from '@/types/time';
-import { TodoType } from '@/types/todo';
+import { TrackType } from '@/types/track';
 import { cn } from '@/util/cn';
 import { getTime, getTimestamp } from '@/util/date';
 import { useAtom, useAtomValue } from 'jotai';
@@ -26,11 +26,11 @@ const ScheduleColumns = () => {
   ] = useAtom(timesAtom);
   const [
     {
-      isFetching: isFetchingTodos,
-      isError: todosError,
-      refetch: refetchTodos,
+      isFetching: isFetchingTracks,
+      isError: tracksError,
+      refetch: refetchTracks,
     },
-  ] = useAtom(todosAtom);
+  ] = useAtom(tracksAtom);
 
   return (
     <ul
@@ -38,7 +38,7 @@ const ScheduleColumns = () => {
         'w-full flex justify-start overflow-x-scroll [&>*]:scroll-ml-5 scrollbar-hide border-primary border-b-4 px-4'
       )}
     >
-      {isFetchingTodos && (
+      {isFetchingTracks && (
         <Loader className="w-full flex justify-center items-center py-4 box-content" />
       )}
       {times?.map((time, i) => {
@@ -62,14 +62,14 @@ const ScheduleColumns = () => {
               key={time.id}
               id={`schedule-column-${getTime(time.time)}`}
               className={`relative flex flex-col items-center justify-between ${
-                time.startTodo ? 'w-28 lg:w-32' : ''
+                time.startTrack ? 'w-28 lg:w-32' : ''
               } shrink-0 space-y-4 px-2 py-4 border-gray-200 border-l last:border-r`}
             >
               <span className="absolute top-0 left-[-1rem] text-xs text-gray-400 bg-white whitespace-nowrap">
                 {getTime(time.time)}
               </span>
-              {time.startTodo ? (
-                <ColumnItem time={time} refetchTodos={refetchTodos} />
+              {time.startTrack ? (
+                <ColumnItem time={time} refetchTracks={refetchTracks} />
               ) : (
                 <div className="h-full flex items-center p-1 rounded-xl">
                   <Link href={``}>
@@ -87,40 +87,40 @@ const ScheduleColumns = () => {
   );
 };
 
-const ColumnItem = ({ time, refetchTodos }: { time: TimeType; refetchTodos: any }) => {
-  const { startTodo } = time;
+const ColumnItem = ({ time, refetchTracks }: { time: TimeType; refetchTracks: any }) => {
+  const { startTrack } = time;
   const historyTotal =
-    startTodo?.history?.reduce(
+    startTrack?.history?.reduce(
       (acc, curr) => acc + (curr.end.getTime() - curr.start.getTime()),
       0
     ) || 0;
 
   const checkHandler = async (isDone: boolean) => {
-    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/todo/${startTodo?.id}`, {
+    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/track/${startTrack?.id}`, {
       method: 'PATCH',
       body: JSON.stringify({ isDone }),
     });
-    refetchTodos();
+    refetchTracks();
   };
 
   return (
-    startTodo && (
+    startTrack && (
       <>
         <div className="flex flex-col space-y-2 items-center">
-          <IconHolder>{startTodo.icon || startTodo.subject?.icon}</IconHolder>
+          <IconHolder>{startTrack.icon || startTrack.profile?.icon}</IconHolder>
           <div className="text-center">
-            <p className="text-xs font-semibold">{startTodo.subject?.title || '-'}</p>
-            <p className="text-sm leading-tight">{startTodo.title}</p>
+            <p className="text-xs font-semibold">{startTrack.profile?.title || '-'}</p>
+            <p className="text-sm leading-tight">{startTrack.title}</p>
           </div>
         </div>
         <div className="flex flex-col items-center gap-2">
           <div className="flex items-center gap-1">
-            {!startTodo.isDone && <PlayButton />}
+            {!startTrack.isDone && <PlayButton />}
             <p className="text-sm lg:text-base font-extrabold">
               {getTimestamp(historyTotal || 0)}
             </p>
           </div>
-          <CheckButton checked={!!startTodo.isDone} onChecked={checkHandler} />
+          <CheckButton checked={!!startTrack.isDone} onChecked={checkHandler} />
         </div>
       </>
     )

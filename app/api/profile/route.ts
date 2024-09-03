@@ -11,7 +11,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const data = await prisma.subject.findMany({
+    const data = await prisma.profile.findMany({
       where: { userId: session.user.id },
       include: {
         category: true,
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
   const reqData = await req.json();
   try {
-    const data = await prisma.subject.create({
+    const data = await prisma.profile.create({
       data: {
         ...reqData,
         userId: session.user.id,
@@ -46,6 +46,6 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify(data), { status: 201 });
   } catch (error) {
     console.error(error);
-    return new Response('Failed to create subject', { status: 500 });
+    return new Response('Failed to create profile', { status: 500 });
   }
 }

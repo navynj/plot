@@ -1,7 +1,7 @@
 import { LexoRank } from 'lexorank';
 import { CategoryType } from './category';
 
-export interface SubjectType {
+export interface ProfileType {
   id: string;
   title: string;
   icon: string;

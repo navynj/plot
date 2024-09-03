@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const GET = async (req: NextRequest, { params }: { params: { id: string } }) => {
   const id = params.id;
 
-  const post = await prisma.subject.findUnique({
+  const post = await prisma.profile.findUnique({
     where: {
       id,
     },
@@ -19,22 +19,22 @@ export async function PATCH(
 ) {
   const data = await req.json();
 
-  await prisma.subject.update({
+  await prisma.profile.update({
     where: {
       id: id,
     },
     data,
   });
-  return NextResponse.json({ message: 'Subject updated: ' + id }, { status: 200 });
+  return NextResponse.json({ message: 'Profile updated: ' + id }, { status: 200 });
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const id = params.id;
 
-  await prisma.subject.delete({
+  await prisma.profile.delete({
     where: {
       id: id,
     },
   });
-  return NextResponse.json({ message: 'Subject Deleted: ' + id }, { status: 200 });
+  return NextResponse.json({ message: 'Profile Deleted: ' + id }, { status: 200 });
 }

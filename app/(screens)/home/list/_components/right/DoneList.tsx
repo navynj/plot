@@ -1,26 +1,26 @@
 'use client';
 
 import Loader from '@/components/loader/Loader';
-import { todosAtom } from '@/store/todo';
+import { tracksAtom } from '@/store/track';
 import { useAtom } from 'jotai';
 import { useMemo } from 'react';
-import TodoItem from './TodoItem';
+import TrackItem from './TrackItem';
 
-const TodoList = () => {
-  const [{ data, isPending, isFetching, isError }] = useAtom(todosAtom);
+const TrackList = () => {
+  const [{ data, isPending, isFetching, isError }] = useAtom(tracksAtom);
 
-  const todos = useMemo(() => {
-    return data?.filter((todo) => todo.isDone);
+  const tracks = useMemo(() => {
+    return data?.filter((track) => track.isDone);
   }, [data]);
 
   return (
-    todos &&
-    todos.length > 0 && (
+    tracks &&
+    tracks.length > 0 && (
       <div>
         <h3 className="block border-b border-b-black p-2 font-semibold">DONE</h3>
         <ol className="flex flex-col items-center px-4 py-6 space-y-3">
-          {todos.map((todo) => (
-            <TodoItem key={todo.id} {...todo} />
+          {tracks.map((track) => (
+            <TrackItem key={track.id} {...track} />
           ))}
           {isPending ||
             (isFetching && (
@@ -34,4 +34,4 @@ const TodoList = () => {
   );
 };
 
-export default TodoList;
+export default TrackList;

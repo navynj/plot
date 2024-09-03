@@ -9,11 +9,11 @@ import TimeInput, {
 } from '@/components/input/TimeInput';
 import OverlayForm from '@/components/overlay/OverlayForm';
 import { emojiAtom } from '@/store/emoji';
-import { subjectsAtom } from '@/store/subject';
+import { profilesAtom } from '@/store/profile';
 import { timesAtom } from '@/store/time';
-import { todayAtom, todosAtom } from '@/store/todo';
+import { todayAtom, tracksAtom } from '@/store/track';
 import { TimeType } from '@/types/time';
-import { TodoType } from '@/types/todo';
+import { TrackType } from '@/types/track';
 import { getDashDate, getTime, getTimeState, isValidDate } from '@/util/date';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAtom, useAtomValue } from 'jotai';
@@ -26,8 +26,8 @@ import * as z from 'zod';
 const formSchema = z.object({
   icon: z.string(),
   title: z.string(),
-  subjectId: z.string(),
-  content: z.string().optional(),
+  profileId: z.string(),
+  // content: z.string().optional(),
 });
 
 type formSchemaType = z.infer<typeof formSchema>;
@@ -38,25 +38,25 @@ const initialTime: timeStateType = {
   isAm: true,
 };
 
-const TodoInputOverlay = () => {
+const TrackInputOverlay = () => {
   const router = useRouter();
 
   const [today, setToday] = useAtom(todayAtom);
   const [emoji, setEmoji] = useAtom(emojiAtom);
-  const subjects = useAtomValue(subjectsAtom);
+  const profiles = useAtomValue(profilesAtom);
   const { refetch: refetchTimes } = useAtomValue(timesAtom);
-  const { data: todos, refetch: refetchTodos } = useAtomValue(todosAtom);
+  const { data: tracks, refetch: refetchTracks } = useAtomValue(tracksAtom);
 
   const [date, setDate] = useState(today);
   const [scheduleStart, setScheduleStart] = useState(initialTime);
   const [scheduleEnd, setScheduleEnd] = useState(initialTime);
-  const [isSubjectEmoji, setIsSubjectEmoji] = useState(false);
+  const [isProfileEmoji, setIsProfileEmoji] = useState(false);
   const [error, setError] = useState('');
 
   const params = useSearchParams();
-  const defaultSubjectId = params.get('subjectId') || '';
-  const todoId = params.get('todoId') || '';
-  const showOverlay = params.get('todo-input') || '';
+  const defaultProfileId = params.get('profileId') || '';
+  const trackId = params.get('trackId') || '';
+  const showOverlay = params.get('track-input') || '';
 
   const form = useForm<formSchemaType>({
     resolver: zodResolver(formSchema),
@@ -65,7 +65,7 @@ const TodoInputOverlay = () => {
   const submitHandler = async (values: formSchemaType) => {
     setError('');
 
-    const url = process.env.NEXT_PUBLIC_BASE_URL + '/api/todo';
+    const url = process.env.NEXT_PUBLIC_BASE_URL + '/api/track';
 
     try {
       const [start, end] = getIntervalFromTimeInput(scheduleStart, scheduleEnd, date);
@@ -73,7 +73,7 @@ const TodoInputOverlay = () => {
       let startTime: TimeType | undefined = undefined;
       let endTime: TimeType | undefined = undefined;
       let startFetchedTimes, endFetchedTimes;
-      const prevTodo = todos?.find((item) => item.id === todoId);
+      const prevTrack = tracks?.find((item) => item.id === trackId);
 
       try {
         if (start || end) {
@@ -83,7 +83,7 @@ const TodoInputOverlay = () => {
               today,
               start,
               startFetchedTimes.data,
-              prevTodo,
+              prevTrack,
               true
             );
             endFetchedTimes = await refetchTimes();
@@ -91,7 +91,7 @@ const TodoInputOverlay = () => {
               today,
               end,
               endFetchedTimes.data,
-              prevTodo,
+              prevTrack,
               false,
               end ? undefined : startTime
             );
@@ -101,7 +101,7 @@ const TodoInputOverlay = () => {
               today,
               end,
               endFetchedTimes.data,
-              prevTodo,
+              prevTrack,
               false
             );
             startFetchedTimes = await refetchTimes();
@@ -109,22 +109,25 @@ const TodoInputOverlay = () => {
               today,
               start,
               startFetchedTimes.data,
-              prevTodo,
+              prevTrack,
               true,
               endTime
             );
           }
         }
 
+        // const log = await createLog(content)
+
         const body = JSON.stringify({
           ...values,
+          // log: log.id
           date: getDashDate(date),
           scheduleStartId: startTime && startTime.id,
           scheduleEndId: endTime && endTime.id,
         });
 
-        if (todoId) {
-          const response = await fetch(`${url}/${todoId}`, { method: 'PATCH', body });
+        if (trackId) {
+          const response = await fetch(`${url}/${trackId}`, { method: 'PATCH', body });
           if (!response.ok) {
             throw new Error(response.status + ' ' + response.statusText);
           }
@@ -136,7 +139,7 @@ const TodoInputOverlay = () => {
         }
 
         setToday(date);
-        refetchTodos();
+        refetchTracks();
         refetchTimes();
         closeHandler();
         router.back();
@@ -162,6 +165,19 @@ const TodoInputOverlay = () => {
         ) {
           await deleteTime(endTime.id);
         }
+
+        if (start || end) {
+          if (start && startFetchedTimes?.data) {
+            for (let time of startFetchedTimes?.data) {
+              await patchTime(time.id, time.time, time);
+            }
+          } else if (endFetchedTimes?.data) {
+            for (let time of endFetchedTimes?.data) {
+              await patchTime(time.id, time.time, time);
+            }
+          }
+        }
+
         refetchTimes();
 
         throw error;
@@ -192,67 +208,67 @@ const TodoInputOverlay = () => {
     clearTimeHandler();
   };
 
-  // Todo 수정 시 기본값 세팅
+  // Track 수정 시 기본값 세팅
   useEffect(() => {
     if (showOverlay) {
-      const todoData = todos?.find((item) => item.id === todoId);
-      if (todoData && todoData.date) {
-        setDate(new Date(todoData.date));
-        form.setValue('title', todoData.title || '');
-        form.setValue('subjectId', todoData.subject?.id || '');
-        form.setValue('content', todoData.content || '');
-        setEmoji(todoData.icon || todoData.subject?.icon || '');
-        setScheduleStart(getTimeState(todoData.scheduleStart?.time));
-        setScheduleEnd(getTimeState(todoData.scheduleEnd?.time));
+      const trackData = tracks?.find((item) => item.id === trackId);
+      if (trackData && trackData.date) {
+        setDate(new Date(trackData.date));
+        form.setValue('title', trackData.title || '');
+        form.setValue('profileId', trackData.profile?.id || '');
+        // form.setValue('content', trackData.content || '');
+        setEmoji(trackData.icon || trackData.profile?.icon || '');
+        setScheduleStart(getTimeState(trackData.scheduleStart?.time));
+        setScheduleEnd(getTimeState(trackData.scheduleEnd?.time));
 
-        if (todoData.icon === todoData.subject?.icon || !todoData.icon) {
-          setIsSubjectEmoji(true);
+        if (trackData.icon === trackData.profile?.icon || !trackData.icon) {
+          setIsProfileEmoji(true);
         }
-      } else if (!todoData) {
-        setIsSubjectEmoji(true);
+      } else if (!trackData) {
+        setIsProfileEmoji(true);
         form.reset();
-        form.setValue('subjectId', defaultSubjectId);
+        form.setValue('profileId', defaultProfileId);
         setTimeout(() => {
           form.setFocus('title');
         }, 50);
       }
     } else {
-      setIsSubjectEmoji(false);
+      setIsProfileEmoji(false);
     }
-  }, [showOverlay, todoId, defaultSubjectId, todos]);
+  }, [showOverlay, trackId, defaultProfileId, tracks]);
 
-  // Subject 변경 시 이모지 업데이트 (단, 사용자가 설정하지 않았을 경우)
-  const subjectId = form.watch('subjectId');
+  // Profile 변경 시 이모지 업데이트 (단, 사용자가 설정하지 않았을 경우)
+  const profileId = form.watch('profileId');
 
   useEffect(() => {
-    if (isSubjectEmoji) {
-      const subject = subjects.data?.find((item) => item.id === subjectId);
-      form.setValue('icon', subject?.icon || '');
-      setEmoji(subject?.icon || '');
+    if (isProfileEmoji) {
+      const profile = profiles.data?.find((item) => item.id === profileId);
+      form.setValue('icon', profile?.icon || '');
+      setEmoji(profile?.icon || '');
     }
-  }, [subjectId, isSubjectEmoji, subjects]);
+  }, [profileId, isProfileEmoji, profiles]);
 
   // Emoji 선택값으로 업데이트
   useEffect(() => {
-    const subject = subjects.data?.find((item) => item.id === subjectId);
+    const profile = profiles.data?.find((item) => item.id === profileId);
 
     if (showOverlay) {
       if (emoji) {
         form.setValue('icon', emoji);
-        if (emoji !== subject?.icon) {
-          setIsSubjectEmoji(false);
+        if (emoji !== profile?.icon) {
+          setIsProfileEmoji(false);
         }
       } else {
-        form.setValue('icon', subject?.icon || '');
-        setEmoji(subject?.icon || '');
-        setIsSubjectEmoji(true);
+        form.setValue('icon', profile?.icon || '');
+        setEmoji(profile?.icon || '');
+        setIsProfileEmoji(true);
       }
     }
   }, [emoji]);
 
   return (
     <OverlayForm<formSchemaType>
-      id="todo-input"
+      id="track-input"
       form={form}
       onSubmit={submitHandler}
       onClose={closeHandler}
@@ -278,13 +294,13 @@ const TodoInputOverlay = () => {
         />
       </div>
       <div className="flex gap-3">
-        <EmojiInput params={`&todo-input =show&subjectId=${subjectId}&todoId=${todoId}`}>
+        <EmojiInput params={`&track-input =show&profileId=${profileId}&trackId=${trackId}`}>
           <input {...form.register('icon')} hidden />
         </EmojiInput>
         <div className="flex flex-col justify-between gap-2 min-w-0 [&>*]:bg-gray-100 [&>*]:px-2 [&>*]:py-2.5 [&>*]:rounded-lg">
-          <select {...form.register('subjectId')} className="h-full">
+          <select {...form.register('profileId')} className="h-full">
             <option value="">주제 없음</option>
-            {subjects.data?.map((item) => (
+            {profiles.data?.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.title}
               </option>
@@ -316,7 +332,7 @@ const TodoInputOverlay = () => {
         </div>
         <textarea
           className="w-full p-2.5 text-sm bg-gray-100 rounded-lg"
-          {...form.register('content')}
+          // {...form.register('content')}
         />
       </div>
       {error && (
@@ -334,7 +350,7 @@ const getTimeData = async (
   today: Date,
   time: Date | null,
   times?: TimeType[],
-  prevTodo?: TodoType,
+  prevTrack?: TrackType,
   isStart?: boolean,
   linkedTime?: TimeType
 ) => {
@@ -344,74 +360,73 @@ const getTimeData = async (
 
   if (!time || !isValidDate(time)) {
     // 1. 빈 값일 경우
-    return await getBlankTimeDate(time, today, times, isStart, linkedTime, prevTodo);
+    return await getBlankTimeDate(time, today, times, isStart, linkedTime, prevTrack);
   }
 
   const timeIdx = times.findIndex((item) => {
     return getTime(item.time) === getTime(time);
   });
   if (timeIdx > -1) {
-    // 2. 기존 값이 존재할 경우 - Todo를 갖고 있지 않은 시간일 경우 반환, 이외 에러
+    // 2. 기존 값이 존재할 경우 - Track를 갖고 있지 않은 시간일 경우 반환, 이외 에러
     if (
-      !prevTodo &&
-      ((isStart && times[timeIdx].startTodo) || (!isStart && times[timeIdx].endTodo))
+      !prevTrack &&
+      ((isStart && times[timeIdx].startTrack) || (!isStart && times[timeIdx].endTrack))
     ) {
-      throw new Error('Time conflict: Existing time has already got todos');
+      throw new Error('Time conflict: Existing time has already got tracks');
     }
 
-    if (prevTodo) {
+    if (prevTrack) {
+      // 수정으로 인해 기존 scheduleStart/scheudleEnd가 더 이상 해당 track에 연결되지 않을 경우 삭제
       if (
         isStart &&
-        prevTodo.scheduleStart &&
-        !prevTodo.scheduleStart.endTodo &&
-        getTime(prevTodo.scheduleStart.time) !== getTime(time)
+        prevTrack.scheduleStart &&
+        !prevTrack.scheduleStart.endTrack &&
+        getTime(prevTrack.scheduleStart.time) !== getTime(time)
       ) {
-        // TODO: 주석 추가
-        await deleteTime(prevTodo.scheduleStart.id);
+        await deleteTime(prevTrack.scheduleStart.id);
       }
 
       if (
         !isStart &&
-        prevTodo.scheduleEnd &&
-        prevTodo.scheduleEnd.startTodo &&
-        getTime(prevTodo.scheduleEnd.time) !== getTime(time)
+        prevTrack.scheduleEnd &&
+        prevTrack.scheduleEnd.startTrack &&
+        getTime(prevTrack.scheduleEnd.time) !== getTime(time)
       ) {
-        // TODO: 주석 추가
-        await deleteTime(prevTodo.scheduleEnd.id);
+        await deleteTime(prevTrack.scheduleEnd.id);
       }
     }
 
     return times[timeIdx];
   } else {
     // 3. 새로운 값일 경우
-    if (prevTodo) {
+    if (prevTrack) {
       // 3-1. 수정
-      if (isStart && prevTodo.scheduleStart) {
+      if (isStart && prevTrack.scheduleStart) {
         // 3-1-1. 이전 start 값이 존재
-        if (prevTodo.scheduleStart.endTodo) {
-          // 3-1-1-1. 이전 start 값에 endTodo가 존재 - 생성
-          const rank = await getNewTimeRank(today, time, times, isStart, prevTodo);
+        if (prevTrack.scheduleStart.endTrack) {
+          // 3-1-1-1. 이전 start 값에 endTrack가 존재 - 생성
+          const rank = await getNewTimeRank(today, time, times, isStart, prevTrack);
           return await createTime(today, time, rank);
         } else {
           // 3-1-1-2. 이전 start 값이 비어있음 - 수정
-          return await patchTime(prevTodo.scheduleStart.id, time);
+          return await patchTime(prevTrack.scheduleStart.id, time);
         }
       }
 
-      if (!isStart && prevTodo.scheduleEnd) {
+      if (!isStart && prevTrack.scheduleEnd) {
         // 3-1-1. 이전 end 값이 존재
-        if (prevTodo.scheduleEnd.startTodo) {
-          // 3-1-1-1. 이전 start 값에 startTodo가 존재 - 생성
-          const rank = await getNewTimeRank(today, time, times, isStart, prevTodo);
+        if (prevTrack.scheduleEnd.startTrack) {
+          // 3-1-1-1. 이전 start 값에 startTrack가 존재 - 생성
+          const rank = await getNewTimeRank(today, time, times, isStart, prevTrack);
           return await createTime(today, time, rank);
         } else {
           // 3-1-1-2. 이전 start 값이 비어있음 - 수정
-          return await patchTime(prevTodo.scheduleEnd.id, time);
+          return await patchTime(prevTrack.scheduleEnd.id, time);
         }
       }
 
       // 3-1-3. 이전 start, end 값 없음
-      const rank = await getNewTimeRank(today, time, times, isStart, prevTodo);
+      const rank = await getNewTimeRank(today, time, times, isStart, prevTrack);
       return await createTime(today, time, rank);
     } else {
       // 3-2. 생성
@@ -427,15 +442,15 @@ const getBlankTimeDate = async (
   times: TimeType[],
   isStart?: boolean,
   linkedTime?: TimeType,
-  prevTodo?: TodoType
+  prevTrack?: TrackType
 ) => {
-  if (prevTodo) {
-    if (isStart && prevTodo.scheduleStart && !isValidDate(prevTodo.scheduleStart.time)) {
-      return prevTodo.scheduleStart.time;
+  if (prevTrack) {
+    if (isStart && prevTrack.scheduleStart && !isValidDate(prevTrack.scheduleStart.time)) {
+      return prevTrack.scheduleStart.time;
     }
 
-    if (!isStart && prevTodo.scheduleEnd && !isValidDate(prevTodo.scheduleEnd.time)) {
-      return prevTodo.scheduleEnd.time;
+    if (!isStart && prevTrack.scheduleEnd && !isValidDate(prevTrack.scheduleEnd.time)) {
+      return prevTrack.scheduleEnd.time;
     }
   }
 
@@ -456,47 +471,81 @@ const getBlankTimeDate = async (
 
     if (isStart) {
       if (i === 0) {
-        // 2-1. 시작 시간일 경우 연결 시간이 맨 앞일 때 이전에 추가
+        // 2-1-1. 시작 시간일 경우 연결 시간이 맨 앞일 때 이전에 추가
         rank = times[i].rank.genPrev();
       } else {
-        if (!times[i - 1].startTodo && !isValidDate(times[i - 1].time)) {
-          // 2-1-1. 시작 시간일 경우 연결 시간 앞쪽이 비어있을 때(time값 / startTodo 값) 해당 시간으로 반환
+        if (!times[i - 1].startTrack && !isValidDate(times[i - 1].time)) {
+          // 2-1-2. 시작 시간일 경우 연결 시간 앞쪽이 비어있을 때(time값 / startTrack 값) 해당 시간으로 반환
           return times[i - 1];
         } else if (
-          prevTodo && prevTodo.scheduleStart
+          prevTrack && prevTrack.scheduleStart
             ? getTime(times[i - 2].time)
             : getTime(times[i - 1].time) === getTime(time)
         ) {
-          // 2-2-2. 연결 시간 뒤쪽이 추가하는 값과 동일한 값을 가질 경우
-          if (prevTodo?.scheduleStart) {
-            await deleteTime(prevTodo.scheduleStart.id);
+          // 2-1-3. 연결 시간 앞쪽이 추가하는 값과 동일한 값을 가질 경우
+          if (prevTrack?.scheduleStart) {
+            await deleteTime(prevTrack.scheduleStart.id);
           }
-          return prevTodo ? times[i - 2] : times[i - 1];
+          return prevTrack ? times[i - 2] : times[i - 1];
+        } else if (
+          times[i - 1].startTrack &&
+          !isValidDate(times[i - 1].startTrack?.scheduleStart?.time)
+        ) {
+          // 2-2-5. 연결시간 앞쪽이 이미 startTrack를 가지고 있고, 해당 투두의 ScheduleStart가 --:--인 경우
+          const prevBlankRank = times[i].rank.between(times[i - 1].rank);
+          const prevBlank = await createTime(today, null, prevBlankRank);
+
+          const prevTrackId = times[i - 1].startTrack?.id;
+          await fetch(process.env.NEXT_PUBLIC_BASE_URL + '/api/track/' + prevTrackId, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              scheduleStartId: prevBlank.id,
+            }),
+          });
+
+          return prevBlank;
         } else {
-          // 2-1-3. 시작 시간일 경우 이전 시간 앞 순서에 추가
+          // 2-1-4. 시작 시간일 경우 이전 시간 앞 순서에 추가
           rank = times[i].rank.between(times[i - 1].rank);
         }
       }
     } else {
       if (i === times.length - 1) {
-        // 2-2. 끝 시간일 경우 연결 시간이 맨 마지막일 때 이후에 추가
+        // 2-2-1. 끝 시간일 경우 연결 시간이 맨 마지막일 때 이후에 추가
         rank = times[i].rank.genNext();
       } else {
-        if (!times[i + 1].endTodo && !isValidDate(times[i + 1].time)) {
-          // 2-2-1. 연결 시간 뒤쪽이 비어있을 때(time값 / endTodo 값) 해당 시간으로 반환
+        if (!times[i + 1].endTrack && !isValidDate(times[i + 1].time)) {
+          // 2-2-2. 연결 시간 뒤쪽이 비어있을 때(time값 / endTrack 값) 해당 시간으로 반환
           return times[i + 1];
         } else if (
-          prevTodo && prevTodo.scheduleEnd
+          prevTrack && prevTrack.scheduleEnd
             ? getTime(times[i + 2].time) === getTime(time)
             : getTime(times[i + 1].time) === getTime(time)
         ) {
-          // 2-2-2. 연결 시간 뒤쪽이 추가하는 값과 동일한 값을 가질 경우
-          if (prevTodo?.scheduleEnd) {
-            await deleteTime(prevTodo.scheduleEnd.id);
+          // 2-2-3. 연결 시간 뒤쪽이 추가하는 값과 동일한 값을 가질 경우
+          if (prevTrack?.scheduleEnd) {
+            await deleteTime(prevTrack.scheduleEnd.id);
           }
-          return prevTodo ? times[i + 2] : times[i + 1];
+          return prevTrack ? times[i + 2] : times[i + 1];
+        } else if (
+          times[i + 1].endTrack &&
+          !isValidDate(times[i + 1].endTrack?.scheduleStart?.time)
+        ) {
+          // 2-2-5. 연결시간 뒤쪽이 이미 endTrack를 가지고 있고, 해당 투두의 ScheduleStart가 --:--인
+          const nextBlankRank = times[i].rank.between(times[i + 1].rank);
+          const nextBlank = await createTime(today, null, nextBlankRank);
+
+          const nextTrackId = times[i + 1].endTrack?.id;
+          await fetch(process.env.NEXT_PUBLIC_BASE_URL + '/api/track/' + nextTrackId, {
+            method: 'PATCH',
+            body: JSON.stringify({
+              scheduleStartId: nextBlank.id,
+            }),
+          });
+
+          return nextBlank;
         } else {
-          // 2-2-3. 이전 시간 뒷 순서에 추가
+          // 2-2-4. 이전 시간 뒷 순서에 추가
           rank = times[i].rank.between(times[i + 1].rank);
         }
       }
@@ -521,7 +570,7 @@ const getNewTimeRank = async (
   time: Date,
   times: TimeType[],
   isStart?: boolean,
-  prevTodo?: TodoType
+  prevTrack?: TrackType
 ) => {
   if (times.length === 0) {
     // 빈 배열에 새로 추가
@@ -530,64 +579,87 @@ const getNewTimeRank = async (
 
   let idx = -1;
 
-  times.forEach((item, i) => {
-    if (!item.time || !isValidDate(item.time)) {
-      return;
-    }
+  // time 값 기반 주입 위치 탐색 로직
+  // 1) 값이 존재하는 시간만 필터링
+  const valuedTimes = times.filter((item) => isValidDate(item.time));
 
-    if (item.time < time) {
-      idx = i;
+  let startRank: LexoRank | undefined;
+  let endRank: LexoRank | undefined;
+
+  // 2) 타겟 시간이 현재시간보다 작을 경후 start로 지정, 다음 시간을 end로 지정
+  valuedTimes.forEach((item, i) => {
+    if (item.time! < time) {
+      startRank = item.rank;
+      if (i + 1 < valuedTimes.length) {
+        endRank = valuedTimes[i + 1].rank;
+      } else {
+        endRank = startRank;
+      }
     }
   });
 
+  // 3) rank 기반으로 실제 인덱스 찾기
+  let startIdx = -1;
+  let endIdx = -1;
 
-  if (prevTodo) {
-    if (times[idx]?.startTodo && times[idx]?.startTodo?.id !== prevTodo.id) {
+  if (startRank && endRank) {
+    startIdx = times.findIndex((item) => item.rank.toString() === startRank?.toString());
+    endIdx = times.findIndex((item) => item.rank.toString() === endRank?.toString());
+  }
+
+  // 4) 새로운 time이 위치할 기준 인덱스 찾기
+  const diff = endIdx - startIdx;
+
+  if (diff === 0) {
+    // 4-1) startIdx와 endIdx가 같은 경우 (맨 앞에 위치해야할 시간인 경우)
+    if (startIdx === -1) {
+      idx = -1;
+    } else {
+      idx = times.length - 1;
+    }
+  } else if (diff === 1) {
+    // 4-1) 사이에 blank time이 없는 경우
+    if (times[startIdx].startTrack) {
+      idx = endIdx;
+    } else {
+      idx = startIdx;
+    }
+  } else if (diff === 2) {
+    // 4-2) 사이에 blank time이 하나인 경우
+    if (isStart) {
+      idx = startIdx + 1;
+    } else {
+      idx = startIdx;
+    }
+  } else {
+    // 사이에 blank time이 여럿인 경우 -> 시간 선택창 띄우기
+    throw new Error('TODO: 타임라인 편집 오버레이 구현 후 추후 개발');
+  }
+
+  if (prevTrack) {
+    if (times[idx]?.startTrack && times[idx]?.startTrack?.id !== prevTrack.id) {
       if (
         isStart &&
-        prevTodo.scheduleStart &&
-        getTime(prevTodo.scheduleStart.time) === getTime(time)
+        prevTrack.scheduleStart &&
+        getTime(prevTrack.scheduleStart.time) === getTime(time)
       ) {
-        throw new Error('Time conflict: Already got todo on injecting position');
+        // 편집 시간이 이전 시간과 동일할 경우 제외, 주입 위치에 이미 startTrack가 있는 경우 에러
+        throw new Error('Time conflict: Already got track on injecting position');
       }
 
       if (
         !isStart &&
-        prevTodo.scheduleEnd &&
-        getTime(prevTodo.scheduleEnd.time) === getTime(time)
+        prevTrack.scheduleEnd &&
+        getTime(prevTrack.scheduleEnd.time) === getTime(time)
       ) {
-        throw new Error('Time conflict: Already got todo on injecting position');
+        // 편집 시간이 이전 시간과 동일할 경우 제외, 주입 위치에 이미 endTrack가 있는 경우 에러
+        throw new Error('Time conflict: Already got track on injecting position');
       }
     }
   }
 
-  if (times[idx]?.startTodo) {
-    if (times[idx + 1] && !isValidDate(times[idx + 1].time)) {
-      // TODO: 주석 쓰기
-      idx += 1;
-      while (idx < times.length - 1) {
-        if (isValidDate(times[idx].time)) {
-          if (times[idx].time! > time) {
-            break;
-          }
-        } else {
-          if (isValidDate(times[idx + 1].time) && times[idx + 1].time! > time) {
-            if (!isStart) {
-              idx -= 1;
-            }
-            break;
-          }
-        }
-
-        idx += 1;
-      }
-    } else {
-      throw new Error('Time conflict: Already got todo on injecting position');
-    }
-  }
-
-  if (isStart && times[idx]?.startTodo && isValidDate(times[idx].time)) {
-    const prevScheduleEnd = times[idx].startTodo?.scheduleEnd?.time;
+  if (isStart && times[idx]?.startTrack && isValidDate(times[idx].time)) {
+    const prevScheduleEnd = times[idx].startTrack?.scheduleEnd?.time;
     if (
       isStart &&
       prevScheduleEnd &&
@@ -598,8 +670,8 @@ const getNewTimeRank = async (
     }
   }
 
-  if (!isStart && times[idx]?.endTodo && isValidDate(times[idx].time)) {
-    const nextScheduleStart = times[idx].endTodo?.scheduleStart?.time;
+  if (!isStart && times[idx]?.endTrack && isValidDate(times[idx].time)) {
+    const nextScheduleStart = times[idx].endTrack?.scheduleStart?.time;
     if (
       isStart &&
       nextScheduleStart &&
@@ -610,23 +682,24 @@ const getNewTimeRank = async (
     }
   }
 
-  if (!isValidDate(time) && !isValidDate(times[idx].time) && times[idx].startTodo) {
-    // Blank 추가 시.... 타겟이 blank인데 startTodo를 가질 경우, 새로운 blank를 만들어 해당 startTodo에 연결
-    const rank = times[idx].rank.between(times[idx + 1].rank);
+  // if (!isValidDate(time) && !isValidDate(times[idx].time) && times[idx].startTrack) {
+  //   // Blank 추가 시 - 타겟이 blank인데 startTrack를 가질 경우, 새로운 blank를 만들어 해당 startTrack에 연결
+  //   const rank = times[idx].rank.between(times[idx + 1].rank);
+  //   console.log(times[idx], times[idx + 1]);
 
-    const nextBlankRank = rank.between(times[idx + 1].rank);
-    const nextBlank = await createTime(today, null, nextBlankRank);
+  //   const nextBlankRank = rank.between(times[idx + 1].rank);
+  //   const nextBlank = await createTime(today, null, nextBlankRank);
 
-    const nextTodoId = times[idx].startTodo?.id;
-    await fetch(process.env.NEXT_PUBLIC_BASE_URL + '/api/todo/' + nextTodoId, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        scheduleStartId: nextBlank.id,
-      }),
-    });
+  //   const nextTrackId = times[idx].startTrack?.id;
+  //   await fetch(process.env.NEXT_PUBLIC_BASE_URL + '/api/track/' + nextTrackId, {
+  //     method: 'PATCH',
+  //     body: JSON.stringify({
+  //       scheduleStartId: nextBlank.id,
+  //     }),
+  //   });
 
-    return rank;
-  }
+  //   return rank;
+  // }
 
   if (idx === -1 || (idx === 0 && isStart)) {
     // 맨 앞에 새로 추가
@@ -662,17 +735,38 @@ const createTime = async (today: Date, time: Date | null, rank: LexoRank) => {
   }
 };
 
-const patchTime = async (id: string, time: Date | null) => {
+const patchTime = async (id: string, time?: Date | null, replacingTime?: TimeType) => {
+  const timeUrl = process.env.NEXT_PUBLIC_BASE_URL + '/api/time/';
+  const trackUrl = process.env.NEXT_PUBLIC_BASE_URL + '/api/track/';
+
   try {
-    const timeResponse = await fetch(
-      process.env.NEXT_PUBLIC_BASE_URL + '/api/time/' + id,
-      {
-        method: 'PATCH',
-        body: JSON.stringify({
-          time: time && isValidDate(time) ? time.toISOString() : null,
-        }),
+    const timeResponse = await fetch(timeUrl + id, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        time: time && isValidDate(time) ? time.toISOString() : null,
+        rank: replacingTime?.rank.toString(),
+      }),
+    });
+
+    if (replacingTime) {
+      if (replacingTime?.startTrack) {
+        await fetch(trackUrl + replacingTime.startTrack.id, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            scheduleStartId: replacingTime?.id,
+          }),
+        });
       }
-    );
+
+      if (replacingTime?.endTrack) {
+        await fetch(trackUrl + replacingTime.endTrack.id, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            scheduleEndId: replacingTime?.id,
+          }),
+        });
+      }
+    }
 
     if (!timeResponse.ok) {
       throw new Error(timeResponse.status + ' ' + timeResponse.statusText);
@@ -704,4 +798,4 @@ const deleteTime = async (id: string) => {
   }
 };
 
-export default TodoInputOverlay;
+export default TrackInputOverlay;

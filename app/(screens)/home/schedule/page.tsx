@@ -1,5 +1,5 @@
 import DailyHeader from '@/components/layout/DailyHeader';
-import TodoList from '../list/_components/right/TodoList';
+import TrackList from '../list/_components/right/TrackList';
 import ScheduleBlocks from './_components/ScheduleBlocks';
 
 const page = () => (
@@ -9,7 +9,7 @@ const page = () => (
       <ScheduleBlocks />
     </div>
     <div className="hidden lg:block lg:w-[50%] lg:h-[60vh] overflow-scroll">
-      <TodoList />
+      <TrackList />
     </div>
   </>
 );

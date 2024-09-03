@@ -20,14 +20,14 @@ const NAV_DATA: { [key: string]: any } = {
   sub: {
     home: [
       // { icon: <span key="up" className="text-primary text-xs mb-2">↑</span> },
-      { path: 'list', icon: <FaList />, title: 'Todolist' },
+      { path: 'list', icon: <FaList />, title: 'Playlist' },
       // { path: 'schedule', icon: <FaRegClock />, title: 'Schedule' },
       // { path: 'calendar', icon: <FaRegCalendar />, title: 'Calendar' },
       // { path: 'statistics', icon: <FaChartBar />, title: 'Statistics' },
       {
         plus: (pathname: string) => (
           <Link
-            href={`${pathname}?subject-select=show`}
+            href={`${pathname}?profile-select=show`}
             key="add"
             className="bg-primary w-9 h-9 mb-2 rounded-md"
           >

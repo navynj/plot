@@ -25,7 +25,7 @@ export async function PATCH(
     },
     data,
   });
-  return NextResponse.json({ message: 'Subject updated: ' + id }, { status: 200 });
+  return NextResponse.json({ message: 'Profile updated: ' + id }, { status: 200 });
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
@@ -36,5 +36,5 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       id: id,
     },
   });
-  return NextResponse.json({ message: 'Subject Deleted: ' + id }, { status: 200 });
+  return NextResponse.json({ message: 'Profile Deleted: ' + id }, { status: 200 });
 }

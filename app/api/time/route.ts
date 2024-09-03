@@ -27,11 +27,11 @@ export async function GET(req: NextRequest) {
         date: dateStr,
       },
       include: {
-        startTodo: {
-          select: { id: true, icon: true, title: true, isDone: true, subject: true },
+        startTrack: {
+          select: { id: true, icon: true, title: true, isDone: true, profile: true },
         },
-        endTodo: {
-          select: { id: true, icon: true, title: true, isDone: true, subject: true },
+        endTrack: {
+          select: { id: true, icon: true, title: true, isDone: true, profile: true },
         },
       },
       orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],

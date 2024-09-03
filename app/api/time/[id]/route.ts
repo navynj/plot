@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const GET = async (req: NextRequest, { params }: { params: { id: string } }) => {
   const id = params.id;
 
-  const post = await prisma.todo.findUnique({
+  const post = await prisma.track.findUnique({
     where: {
       id,
     },

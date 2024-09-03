@@ -1,13 +1,13 @@
-import { SubjectType } from './subject';
+import { ProfileType } from './profile';
 import { TimeType } from './time';
 
-export interface TodoType {
+export interface TrackType {
   id: string;
   title?: string;
   content?: string;
   icon?: string;
   thumbnail?: string;
-  subject?: SubjectType;
+  profile?: ProfileType;
   tags?: TagType[];
   repeatingDays?: number[];
   scheduleStart?: TimeType;
@@ -22,12 +22,12 @@ export interface TodoType {
 export interface TagType {
   id: string;
   name: string;
-  todoId: string;
+  trackId: string;
 }
 
 export interface HistoryType {
   id: string;
   start: Date;
   end: Date;
-  todoId: string;
+  trackId: string;
 }

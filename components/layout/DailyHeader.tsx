@@ -1,7 +1,7 @@
 'use client';
 
 import DayNav from '@/components/date/DayNav';
-import { todayAtom } from '@/store/todo';
+import { todayAtom } from '@/store/track';
 import { ClassNameProps } from '@/types/className';
 import { cn } from '@/util/cn';
 import { getDashDate } from '@/util/date';

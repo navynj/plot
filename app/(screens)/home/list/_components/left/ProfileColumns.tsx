@@ -2,19 +2,19 @@
 
 import Button from '@/components/button/Button';
 import IconHolder from '@/components/holder/IconHolder';
-import { SubjectType } from '@/types/subject';
+import { ProfileType } from '@/types/profile';
 import Link from 'next/link';
-import SubjectListWrapper from '../../../_components/ui/SubjectListWrapper';
+import ProfileListWrapper from '../../../_components/ui/ProfileListWrapper';
 
-const SubjectColumns = () => {
+const ProfileColumns = () => {
   return (
-    <SubjectListWrapper className="flex justify-start overflow-x-scroll scrollbar-hide border-primary border-b-4">
-      <SubjectSelectItem />
-    </SubjectListWrapper>
+    <ProfileListWrapper className="flex justify-start overflow-x-scroll scrollbar-hide border-primary border-b-4">
+      <ProfileSelectItem />
+    </ProfileListWrapper>
   );
 };
 
-const SubjectSelectItem = ({ id, title, icon, category }: Partial<SubjectType>) => {
+const ProfileSelectItem = ({ id, title, icon, category }: Partial<ProfileType>) => {
   return (
     <li
       key={title}
@@ -27,11 +27,11 @@ const SubjectSelectItem = ({ id, title, icon, category }: Partial<SubjectType>) 
           <p className="text-lg font-extrabold leading-tight">{title}</p>
         </div>
       </div>
-      <Link href={`/home/list?todo-input=show&subjectId=${id}`}>
-        <Button className="px-2 py-1 text-xs rounded-md">Add Todo</Button>
+      <Link href={`/home/list?track-input=show&profileId=${id}`}>
+        <Button className="px-2 py-1 text-xs rounded-md">Add Track</Button>
       </Link>
     </li>
   );
 };
 
-export default SubjectColumns;
+export default ProfileColumns;

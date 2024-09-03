@@ -2,7 +2,7 @@ import { TimeType } from '@/types/time';
 import { getDashDate } from '@/util/date';
 import { atomWithQuery } from 'jotai-tanstack-query';
 import { LexoRank } from 'lexorank';
-import { todayAtom } from './todo';
+import { todayAtom } from './track';
 
 export const timesAtom = atomWithQuery<TimeType[]>((get) => {
   return {

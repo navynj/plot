@@ -1,10 +1,10 @@
 import EmojiOverlay from '@/components/emoji/EmojiOverlay';
 import { Suspense } from 'react';
-import CategoryEditOverlay from './_components/overlays/subject/CategoryEditOverlay';
-import SubjectEditOverlay from './_components/overlays/subject/SubjectEditOverlay';
-import SubjectListEditOverlay from './_components/overlays/subject/SubjectListEditOverlay';
-import SubjectSelectOverlay from './_components/overlays/subject/SubjectSelectOverlay';
-import TodoInputOverlay from './_components/overlays/todo/TodoInputOverlay';
+import CategoryEditOverlay from './_components/overlays/profile/CategoryEditOverlay';
+import ProfileEditOverlay from './_components/overlays/profile/ProfileEditOverlay';
+import ProfileListEditOverlay from './_components/overlays/profile/ProfileListEditOverlay';
+import ProfileSelectOverlay from './_components/overlays/profile/ProfileSelectOverlay';
+import TrackInputOverlay from './_components/overlays/track/TrackInputOverlay';
 
 export default function RootLayout({
   children,
@@ -15,12 +15,12 @@ export default function RootLayout({
     <>
       {children}
       {/* overlays */}
-      <SubjectSelectOverlay />
-      <SubjectListEditOverlay />
+      <ProfileSelectOverlay />
+      <ProfileListEditOverlay />
       <Suspense>
-        <SubjectEditOverlay />
+        <ProfileEditOverlay />
         <CategoryEditOverlay />
-        <TodoInputOverlay />
+        <TrackInputOverlay />
       </Suspense>
       <EmojiOverlay />
     </>

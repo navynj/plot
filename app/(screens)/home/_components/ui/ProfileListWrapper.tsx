@@ -1,19 +1,19 @@
 'use client';
 
 import Loader from '@/components/loader/Loader';
-import { subjectsAtom } from '@/store/subject';
+import { profilesAtom } from '@/store/profile';
 import { categoryAtom } from '@/store/ui';
 import { ClassNameProps } from '@/types/className';
 import { cn } from '@/util/cn';
 import { useAtom, useAtomValue } from 'jotai';
 import React, { PropsWithChildren } from 'react';
 
-const SubjectListWrapper = ({
+const ProfileListWrapper = ({
   className,
   children,
 }: PropsWithChildren<ClassNameProps>) => {
   const category = useAtomValue(categoryAtom);
-  const [{ data, isPending, isFetching, isError }] = useAtom(subjectsAtom);
+  const [{ data, isPending, isFetching, isError }] = useAtom(profilesAtom);
 
   return (
     <ul
@@ -28,15 +28,15 @@ const SubjectListWrapper = ({
         React.Children.map(children, (child, i) => {
           if (i === 0 && React.isValidElement(child)) {
             // NOTE: 첫번째 자식 컴포넌트를 템플릿으로 사용
-            // NOTE: 카테고리별로 필터링된 subject의 props를 템플릿에 전달
+            // NOTE: 카테고리별로 필터링된 profile의 props를 템플릿에 전달
             return data
               ?.filter(
-                (subject) =>
+                (profile) =>
                   category === 'all' ||
-                  subject.categoryId === category ||
-                  (category === 'etc' && !subject.categoryId)
+                  profile.categoryId === category ||
+                  (category === 'etc' && !profile.categoryId)
               )
-              .map((subject) => React.cloneElement(child, subject));
+              .map((profile) => React.cloneElement(child, profile));
           } else if (!isPending) {
             return child;
           }
@@ -45,4 +45,4 @@ const SubjectListWrapper = ({
   );
 };
 
-export default SubjectListWrapper;
+export default ProfileListWrapper;

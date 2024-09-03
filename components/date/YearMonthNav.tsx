@@ -1,7 +1,7 @@
 'use client';
 
 import { MONTHS } from '@/constants/date';
-import { todayAtom } from '@/store/todo';
+import { todayAtom } from '@/store/track';
 import { cn } from '@/util/cn';
 import { useAtom } from 'jotai';
 import Link from 'next/link';

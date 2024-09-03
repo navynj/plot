@@ -4,7 +4,7 @@ import CheckButton from '@/components/button/CheckButton';
 import OptionButton from '@/components/button/OptionButton';
 import IconHolder from '@/components/holder/IconHolder';
 import Loader from '@/components/loader/Loader';
-import { todosAtom } from '@/store/todo';
+import { tracksAtom } from '@/store/track';
 import { getTime, getTimestamp } from '@/util/date';
 import { useAtom } from 'jotai';
 import { useRouter } from 'next/navigation';
@@ -12,14 +12,14 @@ import { useRouter } from 'next/navigation';
 const ScheduleBlocks = () => {
   const router = useRouter();
 
-  const [{ data: todos, isFetching, refetch, isError }] = useAtom(todosAtom);
+  const [{ data: tracks, isFetching, refetch, isError }] = useAtom(tracksAtom);
 
   return (
     <>
       <ul className="flex flex-col items-center space-y-2">
-        {todos?.map(
+        {tracks?.map(
           (
-            { id, icon, thumbnail, subject, title, history, scheduleStart, scheduleEnd },
+            { id, icon, thumbnail, profile, title, history, scheduleStart, scheduleEnd },
             i
           ) => {
             const historyTotal = history?.reduce(
@@ -34,8 +34,8 @@ const ScheduleBlocks = () => {
             }
 
             const showBottom = false;
-              // i === todos.length - 1 ||
-              // getTime(todos[i + 1].scheduleStart) !== getTime(scheduleEnd);
+              // i === tracks.length - 1 ||
+              // getTime(tracks[i + 1].scheduleStart) !== getTime(scheduleEnd);
 
             return (
               <>
@@ -58,12 +58,12 @@ const ScheduleBlocks = () => {
                         <div className="flex items-center gap-2">
                           {icon && !thumbnail && (
                             <IconHolder className="w-10 h-10 shrink-0 bg-white">
-                              {icon || subject?.icon}
+                              {icon || profile?.icon}
                             </IconHolder>
                           )}
                           <div>
                             <p className="text-xs font-semibold break-words">
-                              {subject?.title}
+                              {profile?.title}
                             </p>
                             <p className="text-sm lg:text-base">{title}</p>
                           </div>
@@ -77,16 +77,16 @@ const ScheduleBlocks = () => {
                     <OptionButton
                       menu={[
                         {
-                          name: 'Edit Todo',
+                          name: 'Edit Track',
                           action: () => {
-                            router.push(`/home/schedule?todo-input=show&todoId=${id}`);
+                            router.push(`/home/schedule?track-input=show&trackId=${id}`);
                           },
                         },
                         {
-                          name: 'Delete Todo',
+                          name: 'Delete Track',
                           action: async () => {
                             await fetch(
-                              `${process.env.NEXT_PUBLIC_BASE_URL}/api/todo/${id}`,
+                              `${process.env.NEXT_PUBLIC_BASE_URL}/api/track/${id}`,
                               {
                                 method: 'DELETE',
                               }
@@ -103,7 +103,7 @@ const ScheduleBlocks = () => {
                     <span className="mt-[-0.5rem] text-xs font-extrabold">
                       {getTime(scheduleEnd?.time)}
                     </span>
-                    {i < todos.length - 1 && (
+                    {i < tracks.length - 1 && (
                       <div className="w-80 bg-gray-100 p-4 rounded-xl" />
                     )}
                   </li>

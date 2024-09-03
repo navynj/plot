@@ -23,9 +23,9 @@ model User {
   Account       Account[]
   Category      Category[]
   Session       Session[]
-  Subject       Subject[]
+  Profile       Profile[]
   Time          Time[]
-  Todo          Todo[]
+  Track         Track[]
 }
 
 model Account {
@@ -72,11 +72,11 @@ model Category {
   userId    String
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  User      User      @relation(fields: [userId], references: [id])
-  Subject   Subject[]
+  user      User      @relation(fields: [userId], references: [id])
+  Profile   Profile[]
 }
 
-model Subject {
+model Profile {
   id         String    @id @default(cuid())
   title      String
   icon       String
@@ -86,68 +86,109 @@ model Subject {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   category   Category? @relation(fields: [categoryId], references: [id])
-  User       User      @relation(fields: [userId], references: [id])
-  Todo       Todo[]
+  user       User      @relation(fields: [userId], references: [id])
+  Tracks     Track[]
+  Albums     Album[]
+}
+
+model Album {
+  id          String  @id @default(cuid())
+  title       String
+  icon        String
+  thumbnail   String?
+  profileId   String
+  description String?
+  Profile     Profile @relation(fields: [profileId], references: [id])
+  Tracks      Track[]
 }
 
 model Tag {
   id          String   @id @default(cuid())
   name        String
-  todoId      String?
+  trackId     String?
   repeatingId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  Todo        Todo?    @relation(fields: [todoId], references: [id])
+  track       Track?   @relation(fields: [trackId], references: [id])
 }
 
-model Todo {
-  id              String     @id @default(cuid())
-  title           String
-  content         String?
+model Track {
+  id              String         @id @default(cuid())
+  title           String?
   icon            String?
   thumbnail       String?
-  subjectId       String?
-  scheduleEnd     Time?      @relation("end", fields: [scheduleEndId], references: [id])
-  scheduleStart   Time?      @relation("start", fields: [scheduleStartId], references: [id])
-  isDone          Boolean    @default(false)
-  isRepeating     Boolean?   @default(false)
-  repeatingDays   Int[]      @default([])
-  repeatingDates  Int[]      @default([])
+  profileId       String?
+  albumId         String?
+  scheduleEnd     Time?          @relation("end", fields: [scheduleEndId], references: [id])
+  scheduleStart   Time?          @relation("start", fields: [scheduleStartId], references: [id])
+  isDone          Boolean        @default(false)
+  isRepeating     Boolean?       @default(false)
+  repeatingDays   Int[]          @default([])
+  repeatingDates  Int[]          @default([])
   repeatingStart  DateTime?
   repeatingEnd    DateTime?
-  excludeDates    DateTime[] @default(dbgenerated("(ARRAY[]::timestamp without time zone[])::timestamp(3) without time zone[]"))
+  excludeDates    DateTime[]     @default(dbgenerated("(ARRAY[]::timestamp without time zone[])::timestamp(3) without time zone[]"))
   userId          String
   rank            String?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  scheduleEndId   String?    @unique
-  scheduleStartId String?    @unique
-  date            String     @default("")
-  history         History[]
-  tags            Tag[]
-  subject         Subject?   @relation(fields: [subjectId], references: [id])
-  user            User       @relation(fields: [userId], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  scheduleEndId   String?        @unique
+  scheduleStartId String?        @unique
+  date            String         @default("")
+  Histories       History[]
+  album           Album?         @relation(fields: [albumId], references: [id])
+  Tags            Tag[]
+  profile         Profile?       @relation(fields: [profileId], references: [id])
+  user            User           @relation(fields: [userId], references: [id])
+  log             Log?           @relation(fields: [logId], references: [id])
+  logId           String?        @unique
+  LinkedLogs      TracksOnLogs[]
+}
+
+model Log {
+  id           String         @id @default(cuid())
+  title        String?
+  content      String
+  page         Page?          @relation(fields: [pageId], references: [id])
+  Track        Track?
+  LinkedTracks TracksOnLogs[]
+  pageId       String?
+}
+
+model Page {
+  id    String @id @default(cuid())
+  title String
+  Log   Log[]
+}
+
+model TracksOnLogs {
+  log     Log    @relation(fields: [logId], references: [id])
+  track   Track  @relation(fields: [trackId], references: [id])
+  logId   String
+  trackId String
+
+  @@id([logId, trackId])
 }
 
 model Time {
-  id        String    @id @default(cuid())
-  time      DateTime?
-  date      String
-  rank      String
-  userId    String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  user      User      @relation(fields: [userId], references: [id])
-  endTodo   Todo?     @relation("end")
-  startTodo Todo?     @relation("start")
+  id         String    @id @default(cuid())
+  time       DateTime?
+  date       String
+  rank       String
+  userId     String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id])
+  endTrack   Track?    @relation("end")
+  startTrack Track?    @relation("start")
 }
 
 model History {
   id        String   @id @default(cuid())
   start     DateTime
   end       DateTime
-  todoId    String?
+  trackId   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  Todo      Todo?    @relation(fields: [todoId], references: [id])
+  track     Track?   @relation(fields: [trackId], references: [id])
 }

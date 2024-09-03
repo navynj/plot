@@ -1,6 +1,6 @@
 'use client';
 
-import { todayAtom } from '@/store/todo';
+import { todayAtom } from '@/store/track';
 import { useAtom } from 'jotai';
 import DayDate from './DayDate';
 

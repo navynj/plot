@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const GET = async (req: NextRequest, { params }: { params: { id: string } }) => {
   const id = params.id;
 
-  const post = await prisma.todo.findUnique({
+  const post = await prisma.track.findUnique({
     where: {
       id,
     },
@@ -19,22 +19,22 @@ export async function PATCH(
 ) {
   const data = await req.json();
 
-  await prisma.todo.update({
+  await prisma.track.update({
     where: {
       id: id,
     },
     data,
   });
-  return NextResponse.json({ message: 'Todo updated: ' + id }, { status: 200 });
+  return NextResponse.json({ message: 'Track updated: ' + id }, { status: 200 });
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const id = params.id;
 
-  await prisma.todo.delete({
+  await prisma.track.delete({
     where: {
       id: id,
     },
   });
-  return NextResponse.json({ message: 'Todo Deleted: ' + id }, { status: 200 });
+  return NextResponse.json({ message: 'Track Deleted: ' + id }, { status: 200 });
 }

@@ -6,7 +6,7 @@ import IconHolder from '@/components/holder/IconHolder';
 import Loader from '@/components/loader/Loader';
 import Overlay from '@/components/overlay/Overlay';
 import SaveCancelButton from '@/components/overlay/SaveCancelButton';
-import { subjectsAtom } from '@/store/subject';
+import { profilesAtom } from '@/store/profile';
 import { getLexo } from '@/util/lexo';
 import { useAtom } from 'jotai';
 import Link from 'next/link';
@@ -20,27 +20,27 @@ import {
 } from 'react-beautiful-dnd';
 import { FaPencil, FaPlus, FaTrashCan } from 'react-icons/fa6';
 
-const SubjectListEditOverlay = () => {
+const ProfileListEditOverlay = () => {
   const router = useRouter();
 
-  const [{ data, refetch: refetchSubjects, isFetching }] = useAtom(subjectsAtom);
+  const [{ data, refetch: refetchProfiles, isFetching }] = useAtom(profilesAtom);
 
-  const [subjects, setSubjects] = useState(data);
+  const [profiles, setProfiles] = useState(data);
   const [isPending, setIsPending] = useState(false);
 
   const submitHandler = async () => {
-    const url = process.env.NEXT_PUBLIC_BASE_URL + '/api/subject';
+    const url = process.env.NEXT_PUBLIC_BASE_URL + '/api/profile';
 
-    if (!subjects) {
-      console.error('Subjects not exist');
+    if (!profiles) {
+      console.error('Profiles not exist');
       return;
     }
 
-    let isEqual = subjects.length === data?.length;
+    let isEqual = profiles.length === data?.length;
 
     if (isEqual) {
       data?.forEach((item, i) => {
-        if (item.id !== subjects[i]?.id) {
+        if (item.id !== profiles[i]?.id) {
           isEqual = false;
           return;
         }
@@ -54,29 +54,29 @@ const SubjectListEditOverlay = () => {
 
     setIsPending(true);
 
-    for (const subject of subjects) {
-      await fetch(`${url}/${subject.id}`, {
+    for (const profile of profiles) {
+      await fetch(`${url}/${profile.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ rank: subject.rank.toString() }),
+        body: JSON.stringify({ rank: profile.rank.toString() }),
       });
     }
 
     if (data) {
-      const subjectIds = subjects.map((subject) => subject.id);
-      const removingSubjects = data.filter((item) => !subjectIds.includes(item.id));
+      const profileIds = profiles.map((profile) => profile.id);
+      const removingProfiles = data.filter((item) => !profileIds.includes(item.id));
 
-      for (const subject of removingSubjects) {
-        await fetch(`${url}/${subject.id}`, { method: 'DELETE' });
+      for (const profile of removingProfiles) {
+        await fetch(`${url}/${profile.id}`, { method: 'DELETE' });
       }
     }
 
-    refetchSubjects();
+    refetchProfiles();
     setIsPending(false);
     router.back();
   };
 
   const removeHandler = async (i: number) => {
-    setSubjects((prev) => {
+    setProfiles((prev) => {
       const next = prev ? [...prev] : [];
       next.splice(i, 1);
       return next;
@@ -84,7 +84,7 @@ const SubjectListEditOverlay = () => {
   };
 
   const dragEndHandler = async (from: number, to: number) => {
-    setSubjects((prev) => {
+    setProfiles((prev) => {
       const next = prev ? [...prev] : [];
       next[from].rank = getLexo(next, from, to);
       return next;
@@ -92,18 +92,18 @@ const SubjectListEditOverlay = () => {
   };
 
   useEffect(() => {
-    setSubjects(data);
+    setProfiles(data);
   }, [data]);
 
-  const renderSubject = (
+  const renderProfile = (
     provided: DraggableProvided,
     snapshot: DraggableStateSnapshot,
     rubric: DraggableRubric
   ) => {
     const lockedProvided = lockXAxis(provided);
     const i = rubric.source.index;
-    if (subjects) {
-      const { id, icon, title, category } = subjects[i];
+    if (profiles) {
+      const { id, icon, title, category } = profiles[i];
       return (
         <li
           {...lockedProvided.draggableProps}
@@ -119,7 +119,7 @@ const SubjectListEditOverlay = () => {
               </div>
             </div>
             <div className="flex gap-2 text-xs">
-              <Link href={`/home/list?subject-edit=show&subjectId=${id}`} className="p-2">
+              <Link href={`/home/list?profile-edit=show&profileId=${id}`} className="p-2">
                 <FaPencil />
               </Link>
               <div
@@ -143,36 +143,36 @@ const SubjectListEditOverlay = () => {
   };
 
   return (
-    <Overlay title="Edit subject list" id="subject-list-edit" isRight={true} hideX={true}>
+    <Overlay title="Edit profile list" id="profile-list-edit" isRight={true} hideX={true}>
       <DraggableList
-        id="draggable-subject-list"
+        id="draggable-profile-list"
         onDragEnd={dragEndHandler}
-        renderClone={renderSubject}
+        renderClone={renderProfile}
       >
         {(isFetching || isPending) && (
           <Loader className="w-full mt-4 flex justify-center" />
         )}
         {!(isFetching || isPending) &&
-          subjects
+          profiles
             ?.sort((a, b) => (a.rank < b.rank ? -1 : 1))
             .map(({ id }, i) => {
               return (
                 <Draggable key={id} draggableId={id} index={i}>
-                  {renderSubject}
+                  {renderProfile}
                 </Draggable>
               );
             })}
       </DraggableList>
       <Link
-        href="/home/list?subject-edit=show"
+        href="/home/list?profile-edit=show"
         className="w-full p-4 flex gap-1 justify-center items-center text-xs text-center font-extrabold"
       >
         <FaPlus />
-        Add subject
+        Add profile
       </Link>
       <SaveCancelButton onSave={submitHandler} isPending={isPending} />
     </Overlay>
   );
 };
 
-export default SubjectListEditOverlay;
+export default ProfileListEditOverlay;

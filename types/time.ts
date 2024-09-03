@@ -1,11 +1,11 @@
 import { LexoRank } from 'lexorank';
-import { TodoType } from './todo';
+import { TrackType } from './track';
 
 export interface TimeType {
   id: string;
   date: string;
   time?: Date;
-  startTodo?: Partial<TodoType>;
-  endTodo?: Partial<TodoType>;
+  startTrack?: Partial<TrackType>;
+  endTrack?: Partial<TrackType>;
   rank: LexoRank;
 }

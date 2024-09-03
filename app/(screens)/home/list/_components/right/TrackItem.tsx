@@ -5,26 +5,26 @@ import OptionButton from '@/components/button/OptionButton';
 import PlayButton from '@/components/button/PlayButton';
 import IconHolder from '@/components/holder/IconHolder';
 import { timesAtom } from '@/store/time';
-import { todosAtom } from '@/store/todo';
-import { TodoType } from '@/types/todo';
+import { tracksAtom } from '@/store/track';
+import { TrackType } from '@/types/track';
 import { getTime, getTimestamp } from '@/util/date';
 import { useAtom } from 'jotai';
 import { useRouter } from 'next/navigation';
 
-const TodoItem = ({
+const TrackItem = ({
   id,
   thumbnail,
-  subject,
+  profile,
   title,
   icon,
   scheduleStart,
   scheduleEnd,
   history,
   isDone,
-}: TodoType) => {
+}: TrackType) => {
   const router = useRouter();
 
-  const [{ refetch: refetchTodos }] = useAtom(todosAtom);
+  const [{ refetch: refetchTracks }] = useAtom(tracksAtom);
   const [{ refetch: refetchTimes }] = useAtom(timesAtom);
 
   const historyTotal = history?.reduce(
@@ -33,11 +33,11 @@ const TodoItem = ({
   );
 
   const checkHandler = async (isDone: boolean) => {
-    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/todo/${id}`, {
+    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/track/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ isDone }),
     });
-    refetchTodos();
+    refetchTracks();
     refetchTimes();
   };
 
@@ -48,11 +48,11 @@ const TodoItem = ({
           {!isDone && <PlayButton />}
           {icon && !thumbnail && (
             <IconHolder className="w-10 h-10 shrink-0">
-              {icon || subject?.icon}
+              {icon || profile?.icon}
             </IconHolder>
           )}
           <div>
-            <p className="text-xs font-semibold break-words">{subject?.title}</p>
+            <p className="text-xs font-semibold break-words">{profile?.title}</p>
             <p className="text-sm lg:text-base">{title}</p>
           </div>
         </div>
@@ -71,19 +71,19 @@ const TodoItem = ({
       <OptionButton
         menu={[
           {
-            name: 'Edit Todo',
+            name: 'Edit Track',
             action: () => {
-              router.push(`/home/list?todo-input=show&todoId=${id}`);
+              router.push(`/home/list?track-input=show&trackId=${id}`);
             },
           },
           {
-            name: 'Delete Todo',
+            name: 'Delete Track',
             action: async () => {
-              await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/todo/${id}`, {
+              await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/track/${id}`, {
                 method: 'DELETE',
               });
 
-              if (scheduleStart && !scheduleStart.endTodo) {
+              if (scheduleStart && !scheduleStart.endTrack) {
                 await fetch(
                   process.env.NEXT_PUBLIC_BASE_URL + '/api/time/' + scheduleStart.id,
                   {
@@ -92,7 +92,7 @@ const TodoItem = ({
                 );
               }
 
-              if (scheduleEnd && !scheduleEnd.startTodo) {
+              if (scheduleEnd && !scheduleEnd.startTrack) {
                 await fetch(
                   process.env.NEXT_PUBLIC_BASE_URL + '/api/time/' + scheduleEnd.id,
                   {
@@ -101,7 +101,7 @@ const TodoItem = ({
                 );
               }
 
-              await refetchTodos();
+              await refetchTracks();
               await refetchTimes();
             },
           },
@@ -111,4 +111,4 @@ const TodoItem = ({
   );
 };
 
-export default TodoItem;
+export default TrackItem;

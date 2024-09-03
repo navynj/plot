@@ -6,7 +6,7 @@ import OverlayForm from '@/components/overlay/OverlayForm';
 import Tab from '@/components/tab/Tab';
 import { categoriesAtom } from '@/store/category';
 import { emojiAtom } from '@/store/emoji';
-import { subjectsAtom } from '@/store/subject';
+import { profilesAtom } from '@/store/profile';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAtom, useAtomValue } from 'jotai';
 import { LexoRank } from 'lexorank';
@@ -25,16 +25,16 @@ const formSchema = z.object({
 
 type formSchemaType = z.infer<typeof formSchema>;
 
-const SubjectEditOverlay = () => {
+const ProfileEditOverlay = () => {
   const { data: categories, isPending, isError } = useAtomValue(categoriesAtom);
-  const { data: subjects, refetch: refetchSubjects } = useAtomValue(subjectsAtom);
+  const { data: profiles, refetch: refetchProfiles } = useAtomValue(profilesAtom);
   const [emoji, setEmoji] = useAtom(emojiAtom);
 
   const [category, setCategory] = useState('');
 
   const params = useSearchParams();
-  const subjectId = params.get('subjectId') || '';
-  const showOverlay = params.get('subject-edit') || '';
+  const profileId = params.get('profileId') || '';
+  const showOverlay = params.get('profile-edit') || '';
 
   const form = useForm<formSchemaType>({
     resolver: zodResolver(formSchema),
@@ -46,13 +46,13 @@ const SubjectEditOverlay = () => {
   });
 
   const submitHandler = async (values: formSchemaType) => {
-    const url = process.env.NEXT_PUBLIC_BASE_URL + '/api/subject';
+    const url = process.env.NEXT_PUBLIC_BASE_URL + '/api/profile';
 
     let rank;
-    if (subjects?.length) {
-      const sorted = [...subjects];
+    if (profiles?.length) {
+      const sorted = [...profiles];
       sorted.sort((a, b) => (a.rank < b.rank ? -1 : 1));
-      const lastItem = sorted[subjects?.length - 1];
+      const lastItem = sorted[profiles?.length - 1];
       rank = lastItem && lastItem.rank.genNext();
     } else {
       rank = LexoRank.middle();
@@ -60,33 +60,33 @@ const SubjectEditOverlay = () => {
 
     const body = JSON.stringify({
       ...values,
-      rank: subjectId ? undefined : rank.toString(),
+      rank: profileId ? undefined : rank.toString(),
       categoryId: values.categoryId || undefined,
     });
 
-    if (subjectId) {
-      await fetch(`${url}/${subjectId}`, { method: 'PATCH', body });
+    if (profileId) {
+      await fetch(`${url}/${profileId}`, { method: 'PATCH', body });
     } else {
       await fetch(url, { method: 'POST', body });
     }
 
     setCategory('');
-    refetchSubjects();
+    refetchProfiles();
   };
 
   useEffect(() => {
     if (showOverlay) {
-      if (subjectId) {
-        const subject = subjects?.find((subject) => subject.id === subjectId);
-        setEmoji(subject?.icon || '');
-        setCategory(subject?.categoryId || '');
-        form.setValue('title', subject?.title || '');
+      if (profileId) {
+        const profile = profiles?.find((profile) => profile.id === profileId);
+        setEmoji(profile?.icon || '');
+        setCategory(profile?.categoryId || '');
+        form.setValue('title', profile?.title || '');
       }
     } else {
       setEmoji('');
       form.reset();
     }
-  }, [showOverlay, subjectId]);
+  }, [showOverlay, profileId]);
 
   useEffect(() => {
     if (showOverlay && emoji) {
@@ -100,9 +100,9 @@ const SubjectEditOverlay = () => {
 
   return (
     <OverlayForm
-      id="subject-edit"
+      id="profile-edit"
       className="[&>form]:flex [&>form]:flex-col [&>form]:px-8 [&>form]:items-center [&>form]:gap-4"
-      title={subjectId ? 'Edit subject' : 'Add subject'}
+      title={profileId ? 'Edit profile' : 'Add profile'}
       form={form}
       onSubmit={submitHandler}
       isRight={true}
@@ -110,7 +110,7 @@ const SubjectEditOverlay = () => {
       <div className="my-4 flex flex-col gap-4 items-center">
         {/* 이모지 */}
         <EmojiInput
-          params={`&subject-edit=show${subjectId ? '&subjectId=' + subjectId : ''}`}
+          params={`&profile-edit=show${profileId ? '&profileId=' + profileId : ''}`}
           isCircle={true}
         >
           <input {...form.register('icon')} value={emoji} hidden />
@@ -131,7 +131,7 @@ const SubjectEditOverlay = () => {
         </div>
         {/* 카테고리 */}
         <Tab
-          id="subject-edit-catgory"
+          id="profile-edit-catgory"
           value={category}
           setValue={setCategory}
           className="text-sm w-full [&>li]:p-1"
@@ -166,4 +166,4 @@ const SubjectEditOverlay = () => {
   );
 };
 
-export default SubjectEditOverlay;
+export default ProfileEditOverlay;
