@@ -7,9 +7,9 @@ import Tab from '@/components/tab/Tab';
 import { categoriesAtom } from '@/store/category';
 import { emojiAtom } from '@/store/emoji';
 import { profilesAtom } from '@/store/profile';
+import { getLastLexo } from '@/util/lexo';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAtom, useAtomValue } from 'jotai';
-import { LexoRank } from 'lexorank';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -48,19 +48,9 @@ const ProfileEditOverlay = () => {
   const submitHandler = async (values: formSchemaType) => {
     const url = process.env.NEXT_PUBLIC_BASE_URL + '/api/profile';
 
-    let rank;
-    if (profiles?.length) {
-      const sorted = [...profiles];
-      sorted.sort((a, b) => (a.rank < b.rank ? -1 : 1));
-      const lastItem = sorted[profiles?.length - 1];
-      rank = lastItem && lastItem.rank.genNext();
-    } else {
-      rank = LexoRank.middle();
-    }
-
     const body = JSON.stringify({
       ...values,
-      rank: profileId ? undefined : rank.toString(),
+      rank: profileId ? undefined : getLastLexo(profiles || []).toString(),
       categoryId: values.categoryId || undefined,
     });
 

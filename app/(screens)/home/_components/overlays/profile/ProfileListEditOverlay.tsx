@@ -146,6 +146,7 @@ const ProfileListEditOverlay = () => {
     <Overlay title="Edit profile list" id="profile-list-edit" isRight={true} hideX={true}>
       <DraggableList
         id="draggable-profile-list"
+        className="max-h-[60vh] lg:max-h-[50vh] overflow-scroll"
         onDragEnd={dragEndHandler}
         renderClone={renderProfile}
       >

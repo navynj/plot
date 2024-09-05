@@ -12,7 +12,7 @@ const YearMonth = ({ date, onClick }: YearMonthProps) => {
       onClick={onClick}
     >
       <div className="text-lg">{date.getFullYear()}</div>
-      <div className="text-4xl">
+      <div className="text-3xl">
         {date.toLocaleDateString('en-US', { month: 'long' })}
       </div>
     </div>

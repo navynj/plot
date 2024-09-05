@@ -1,5 +1,7 @@
 import EmojiOverlay from '@/components/emoji/EmojiOverlay';
 import { Suspense } from 'react';
+import AlbumEditOverlay from './_components/overlays/profile/AlbumEditOverlay';
+import AlbumSelectOverlay from './_components/overlays/profile/AlbumSelectOverlay';
 import CategoryEditOverlay from './_components/overlays/profile/CategoryEditOverlay';
 import ProfileEditOverlay from './_components/overlays/profile/ProfileEditOverlay';
 import ProfileListEditOverlay from './_components/overlays/profile/ProfileListEditOverlay';
@@ -19,6 +21,8 @@ export default function RootLayout({
       <ProfileListEditOverlay />
       <Suspense>
         <ProfileEditOverlay />
+        <AlbumSelectOverlay />
+        <AlbumEditOverlay />
         <CategoryEditOverlay />
         <TrackInputOverlay />
       </Suspense>

@@ -3,11 +3,12 @@ import { cn } from '@/util/cn';
 
 interface LoaderProps extends ClassNameProps {
   isDark?: boolean;
+  isFit?: boolean;
 }
 
-const Loader = ({ isDark, className }: LoaderProps) => {
+const Loader = ({ isFit, isDark, className }: LoaderProps) => {
   return (
-    <div role="status" className="w-full">
+    <div role="status" className={`${isFit ? '' : 'w-full'} flex justify-center`}>
       <svg
         aria-hidden="true"
         className={cn(

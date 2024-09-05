@@ -26,6 +26,7 @@ model User {
   Profile       Profile[]
   Time          Time[]
   Track         Track[]
+  Album         Album[]
 }
 
 model Account {
@@ -92,14 +93,20 @@ model Profile {
 }
 
 model Album {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   title       String
   icon        String
   thumbnail   String?
   profileId   String
   description String?
-  Profile     Profile @relation(fields: [profileId], references: [id])
+  isActive    Boolean  @default(true)
+  rank        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  profile     Profile  @relation(fields: [profileId], references: [id])
   Tracks      Track[]
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
 }
 
 model Tag {
@@ -115,6 +122,8 @@ model Tag {
 model Track {
   id              String         @id @default(cuid())
   title           String?
+  summary         String?
+  content         String?
   icon            String?
   thumbnail       String?
   profileId       String?
@@ -140,19 +149,20 @@ model Track {
   Tags            Tag[]
   profile         Profile?       @relation(fields: [profileId], references: [id])
   user            User           @relation(fields: [userId], references: [id])
-  log             Log?           @relation(fields: [logId], references: [id])
-  logId           String?        @unique
-  LinkedLogs      TracksOnLogs[]
+  Log             Log[]
+  TracksOnLogs    TracksOnLogs[]
 }
 
 model Log {
   id           String         @id @default(cuid())
   title        String?
+  summary      String
   content      String
   page         Page?          @relation(fields: [pageId], references: [id])
-  Track        Track?
+  Track        Track?         @relation(fields: [trackId], references: [id])
   LinkedTracks TracksOnLogs[]
   pageId       String?
+  trackId      String?
 }
 
 model Page {

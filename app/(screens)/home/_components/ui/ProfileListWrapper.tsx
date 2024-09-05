@@ -6,14 +6,25 @@ import { categoryAtom } from '@/store/ui';
 import { ClassNameProps } from '@/types/className';
 import { cn } from '@/util/cn';
 import { useAtom, useAtomValue } from 'jotai';
-import React, { PropsWithChildren } from 'react';
+import React, { PropsWithChildren, useEffect } from 'react';
+
+interface ProfileListWrapperProps extends ClassNameProps {
+  onFetchEnd?: () => void;
+}
 
 const ProfileListWrapper = ({
+  onFetchEnd,
   className,
   children,
-}: PropsWithChildren<ClassNameProps>) => {
+}: PropsWithChildren<ProfileListWrapperProps>) => {
   const category = useAtomValue(categoryAtom);
   const [{ data, isPending, isFetching, isError }] = useAtom(profilesAtom);
+
+  useEffect(() => {
+    if (!(isFetching || isPending)) {
+      onFetchEnd && onFetchEnd();
+    }
+  }, [isPending, isFetching]);
 
   return (
     <ul

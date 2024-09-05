@@ -8,6 +8,7 @@ import TimeInput, {
   timeStateType,
 } from '@/components/input/TimeInput';
 import OverlayForm from '@/components/overlay/OverlayForm';
+import { albumsAtom } from '@/store/album';
 import { emojiAtom } from '@/store/emoji';
 import { profilesAtom } from '@/store/profile';
 import { timesAtom } from '@/store/time';
@@ -26,8 +27,9 @@ import * as z from 'zod';
 const formSchema = z.object({
   icon: z.string(),
   title: z.string(),
-  profileId: z.string(),
-  // content: z.string().optional(),
+  profileId: z.string().optional(),
+  albumId: z.string().optional(),
+  content: z.string().optional(),
 });
 
 type formSchemaType = z.infer<typeof formSchema>;
@@ -43,18 +45,21 @@ const TrackInputOverlay = () => {
 
   const [today, setToday] = useAtom(todayAtom);
   const [emoji, setEmoji] = useAtom(emojiAtom);
-  const profiles = useAtomValue(profilesAtom);
+  const { data: profiles } = useAtomValue(profilesAtom);
+  const { data: albums } = useAtomValue(albumsAtom);
   const { refetch: refetchTimes } = useAtomValue(timesAtom);
   const { data: tracks, refetch: refetchTracks } = useAtomValue(tracksAtom);
 
   const [date, setDate] = useState(today);
   const [scheduleStart, setScheduleStart] = useState(initialTime);
   const [scheduleEnd, setScheduleEnd] = useState(initialTime);
+  const [isAutoTitle, setIsAutoTitle] = useState(false);
   const [isProfileEmoji, setIsProfileEmoji] = useState(false);
   const [error, setError] = useState('');
 
   const params = useSearchParams();
-  const defaultProfileId = params.get('profileId') || '';
+  const profileId = params.get('profileId') || '';
+  const albumId = params.get('albumId') || '';
   const trackId = params.get('trackId') || '';
   const showOverlay = params.get('track-input') || '';
 
@@ -116,11 +121,8 @@ const TrackInputOverlay = () => {
           }
         }
 
-        // const log = await createLog(content)
-
         const body = JSON.stringify({
           ...values,
-          // log: log.id
           date: getDashDate(date),
           scheduleStartId: startTime && startTime.id,
           scheduleEndId: endTime && endTime.id,
@@ -216,7 +218,8 @@ const TrackInputOverlay = () => {
         setDate(new Date(trackData.date));
         form.setValue('title', trackData.title || '');
         form.setValue('profileId', trackData.profile?.id || '');
-        // form.setValue('content', trackData.content || '');
+        form.setValue('albumId', trackData.album?.id || '');
+        form.setValue('content', trackData.content || '');
         setEmoji(trackData.icon || trackData.profile?.icon || '');
         setScheduleStart(getTimeState(trackData.scheduleStart?.time));
         setScheduleEnd(getTimeState(trackData.scheduleEnd?.time));
@@ -226,8 +229,11 @@ const TrackInputOverlay = () => {
         }
       } else if (!trackData) {
         setIsProfileEmoji(true);
+        setIsAutoTitle(true);
         form.reset();
-        form.setValue('profileId', defaultProfileId);
+        form.setValue('profileId', profileId);
+        form.setValue('albumId', albumId);
+        form.setValue('title', albums?.find(({ id }) => id === albumId)?.title || '');
         setTimeout(() => {
           form.setFocus('title');
         }, 50);
@@ -235,14 +241,38 @@ const TrackInputOverlay = () => {
     } else {
       setIsProfileEmoji(false);
     }
-  }, [showOverlay, trackId, defaultProfileId, tracks]);
+  }, [showOverlay, trackId, tracks]);
 
-  // Profile 변경 시 이모지 업데이트 (단, 사용자가 설정하지 않았을 경우)
-  const profileId = form.watch('profileId');
+  // Profile 변경 시 앨범 업데이트
+  useEffect(() => {
+    form.setValue('albumId', '');
+  }, [profileId]);
+
+  // Album 변경 시 타이틀 업데이트 (단, 사용자가 설정하지 않았을 경우)
+  const albumIdInputValue = form.watch('albumId');
+  const titleInputValue = form.watch('title');
 
   useEffect(() => {
+    console.log(albumIdInputValue);
+    if (isAutoTitle) {
+      const album = albums?.find((item) => item.id === albumIdInputValue);
+      form.setValue('title', album?.title || '');
+    }
+  }, [albumIdInputValue]);
+
+  useEffect(() => {
+    const album = albums?.find((item) => item.id === albumIdInputValue);
+    if (titleInputValue === (album?.title || '')) {
+      setIsAutoTitle(true);
+    } else {
+      setIsAutoTitle(false);
+    }
+  }, [titleInputValue, albumIdInputValue]);
+
+  // Profile 변경 시 이모지 업데이트 (단, 사용자가 설정하지 않았을 경우)
+  useEffect(() => {
     if (isProfileEmoji) {
-      const profile = profiles.data?.find((item) => item.id === profileId);
+      const profile = profiles?.find((item) => item.id === profileId);
       form.setValue('icon', profile?.icon || '');
       setEmoji(profile?.icon || '');
     }
@@ -250,7 +280,7 @@ const TrackInputOverlay = () => {
 
   // Emoji 선택값으로 업데이트
   useEffect(() => {
-    const profile = profiles.data?.find((item) => item.id === profileId);
+    const profile = profiles?.find((item) => item.id === profileId);
 
     if (showOverlay) {
       if (emoji) {
@@ -266,6 +296,11 @@ const TrackInputOverlay = () => {
     }
   }, [emoji]);
 
+  const changeProfileHandler = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    e.target.value &&
+      router.replace(`/home/list?track-input=show&profileId=${e.target.value}`);
+  };
+
   return (
     <OverlayForm<formSchemaType>
       id="track-input"
@@ -275,7 +310,7 @@ const TrackInputOverlay = () => {
       isRight={true}
       disableReset={true}
       disalbeBackOnSubmit={true}
-      className="flex flex-col gap-8"
+      className="flex flex-col gap-8 text-sm"
     >
       <div className="relative flex justify-between items-center cursor-pointer">
         <YearMonth date={date} />
@@ -293,20 +328,42 @@ const TrackInputOverlay = () => {
           className="absolute bottom-0 right-0 h-full opacity-0"
         />
       </div>
-      <div className="flex gap-3">
-        <EmojiInput params={`&track-input =show&profileId=${profileId}&trackId=${trackId}`}>
+      <div className=" flex gap-2">
+        <EmojiInput
+          params={`&track-input=show&profileId=${profileId}&trackId=${trackId}&albumId=${albumId}`}
+        >
           <input {...form.register('icon')} hidden />
         </EmojiInput>
-        <div className="flex flex-col justify-between gap-2 min-w-0 [&>*]:bg-gray-100 [&>*]:px-2 [&>*]:py-2.5 [&>*]:rounded-lg">
-          <select {...form.register('profileId')} className="h-full">
-            <option value="">주제 없음</option>
-            {profiles.data?.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.title}
-              </option>
-            ))}
-          </select>
-          <input placeholder="Enter the title" {...form.register('title')} />
+        <div className="w-full flex flex-col justify-between gap-2 min-w-0 [&>*]:bg-gray-100 [&>*]:px-2 [&>*]:py-2.5 [&>*]:rounded-lg">
+          <div className="w-full flex gap-1 [&>*]:bg-transparent">
+            <select
+              {...form.register('profileId')}
+              className="w-24 h-full text-ellipsis"
+              onChange={changeProfileHandler}
+            >
+              <option value="">프로필 없음</option>
+              {profiles?.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.title}
+                </option>
+              ))}
+            </select>
+            <select {...form.register('albumId')} className="w-full h-full text-ellipsis">
+              <option value="">앨범 없음</option>
+              {albums
+                ?.filter((album) => album.profileId === profileId)
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.title}
+                  </option>
+                ))}
+            </select>
+          </div>
+          <input
+            className="h-full"
+            placeholder="Enter the title"
+            {...form.register('title')}
+          />
         </div>
       </div>
       <div>
@@ -328,11 +385,11 @@ const TrackInputOverlay = () => {
       </div>
       <div>
         <div className="mb-2 flex justify-between items-center">
-          <h6 className="font-extrabold">Log</h6>
+          <h6 className="font-extrabold">Content</h6>
         </div>
         <textarea
           className="w-full p-2.5 text-sm bg-gray-100 rounded-lg"
-          // {...form.register('content')}
+          {...form.register('content')}
         />
       </div>
       {error && (
@@ -445,7 +502,11 @@ const getBlankTimeDate = async (
   prevTrack?: TrackType
 ) => {
   if (prevTrack) {
-    if (isStart && prevTrack.scheduleStart && !isValidDate(prevTrack.scheduleStart.time)) {
+    if (
+      isStart &&
+      prevTrack.scheduleStart &&
+      !isValidDate(prevTrack.scheduleStart.time)
+    ) {
       return prevTrack.scheduleStart.time;
     }
 

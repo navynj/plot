@@ -10,7 +10,7 @@ const IconHolder = ({ isCircle, className, children }: PropsWithChildren<IconPro
   return (
     <div
       className={cn(
-        'flex justify-center items-center w-12 h-12 text-2xl bg-gray-100 rounded-lg',
+        'flex justify-center items-center w-12 h-12 text-2xl bg-gray-100 rounded-lg shrink-0',
         isCircle ? 'rounded-full' : '',
         className
       )}

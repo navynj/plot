@@ -3,6 +3,7 @@
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { cn } from '@/util/cn';
 import { AnimatePresence, motion } from 'framer-motion';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PropsWithChildren, useEffect, useState } from 'react';
 import { BiX } from 'react-icons/bi';
@@ -17,6 +18,7 @@ export interface OverlayProps {
   backdropOpacity?: number;
   backdropZindex?: number;
   disableBackdrop?: boolean;
+  backLink?: string;
   className?: string;
 }
 
@@ -29,6 +31,7 @@ const OverlayContent = ({
   backdropOpacity,
   backdropZindex,
   disableBackdrop,
+  backLink,
   className,
   children,
 }: PropsWithChildren<OverlayProps>) => {
@@ -56,6 +59,10 @@ const OverlayContent = ({
     }
     onClose && onClose();
     router.back();
+  };
+
+  const goBackLinkHandler = () => {
+    backLink && router.replace(backLink);
   };
 
   return (
@@ -98,8 +105,12 @@ const OverlayContent = ({
                       'w-full mb-4 flex justify-between items-center font-extrabold text-lg',
                       title ? '' : ' flex-row-reverse'
                     )}
+                    onClick={backLink ? goBackLinkHandler : undefined}
                   >
-                    {title && <h3 className="w-full text-left">{title}</h3>}
+                    <div className="flex gap-2 items-center">
+                      {backLink && <span className="text-xs font-extrabold">&lt;</span>}
+                      {title && <h3 className="w-full text-left">{title}</h3>}
+                    </div>
                     {!hideX && (
                       <button type="button" onClick={closeHandler}>
                         <BiX />
