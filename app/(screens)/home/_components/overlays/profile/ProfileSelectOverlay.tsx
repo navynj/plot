@@ -19,7 +19,7 @@ const ProfileSelectOverlay = () => {
       className="flex flex-col items-center"
     >
       <CategoryTab id="profile-select-overlay-category" className="mt-4 text-xs" />
-      <ProfileListWrapper className="flex flex-col items-center my-6 space-y-5 max-h-[60vh] overflow-scroll">
+      <ProfileListWrapper className="flex flex-col items-center my-6 space-y-5 max-h-[60vh] lg:max-h-[50vh] overflow-scroll">
         <ProfileSelectItem />
       </ProfileListWrapper>
       <div className="flex justify-center gap-16">
@@ -35,7 +35,7 @@ const ProfileSelectOverlay = () => {
           className="w-full p-4 flex gap-1 justify-center items-center text-xs text-center font-extrabold"
         >
           <FaPencil />
-          Edit profile
+          Edit profiles
         </Link>
       </div>
     </Overlay>
@@ -45,7 +45,11 @@ const ProfileSelectOverlay = () => {
 const ProfileSelectItem = ({ id, title, icon, category }: Partial<ProfileType>) => {
   const router = useRouter();
 
-  const selectProfileHandler = () => {
+  const selectAlbumHandler = () => {
+    router.replace(`/home/list?album-select=show&profileId=${id}`);
+  };
+
+  const addTrackHandler = () => {
     router.replace(`/home/list?track-input=show&profileId=${id}`);
   };
 
@@ -54,14 +58,16 @@ const ProfileSelectItem = ({ id, title, icon, category }: Partial<ProfileType>) 
       key={title}
       className="w-full flex items-center justify-between px-4 cursor-pointer"
     >
-      <div className="flex gap-2 items-center">
+      <div className="w-full flex gap-2 items-center" onClick={selectAlbumHandler}>
         <IconHolder isCircle={true}>{icon}</IconHolder>
-        <div className="text-left">
+        <div className="text-left w-full">
           <p className="text-xs font-semibold">{category?.title}</p>
           <p className="text-lg font-bold leading-tight">{title}</p>
         </div>
       </div>
-      <Button className="px-2 py-1 text-xs rounded-md" onClick={selectProfileHandler}>Add Track</Button>
+      <Button className="px-2 py-1 text-xs rounded-md shrink-0" onClick={addTrackHandler}>
+        Add Track
+      </Button>
     </li>
   );
 };

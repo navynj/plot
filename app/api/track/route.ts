@@ -53,6 +53,7 @@ export async function GET(req: NextRequest) {
       },
       include: {
         profile: true,
+        album: true,
         scheduleStart: {
           select: {
             id: true,

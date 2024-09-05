@@ -31,7 +31,9 @@ const CategoryTab = ({ id, className }: CategoryTabProps) => {
             label: 'All',
             value: 'all',
           },
-          isPending ? <Loader key="loader" className="w-4 h-4" /> : undefined,
+          isPending ? (
+            <Loader key="loader" isFit={true} className="w-4 h-4" />
+          ) : undefined,
           ...(data?.map((category, i) => ({
             label: category.title,
             value: category.id.toString(),
