@@ -1,9 +1,10 @@
 import { ClassNameProps } from '@/types/className';
 import { cn } from '@/util/cn';
-import React from 'react';
+import React, { ReactElement } from 'react';
 import { FieldValues } from 'react-hook-form';
 
 interface TabItemType {
+  icon?: ReactElement;
   label: string;
   value: string;
 }
@@ -52,7 +53,11 @@ const Tab = <T extends FieldValues>({
               onChange={changeHandler}
               hidden
             />
-            <label htmlFor={`${id}-${tabData.value}`} className="cursor-pointer">
+            <label
+              htmlFor={`${id}-${tabData.value}`}
+              className="flex flex-col items-center cursor-pointer"
+            >
+              {tabData.icon}
               {tabData.label}
             </label>
           </li>

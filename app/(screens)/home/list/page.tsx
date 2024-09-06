@@ -1,15 +1,21 @@
-import DailyHeader from '@/components/layout/DailyHeader';
+'use client'
+
+import DateHeader from '@/components/layout/DateHeader';
 import CategoryTab from '../_components/ui/CategoryTab';
-import ScheduleColumns from './_components/left/ScheduleColumns';
-import DoneList from './_components/right/DoneList';
-import TrackList from './_components/right/TrackList';
+import TimelineColumn from '../../../../components/calender/TimelineColumn';
+import DoneList from './_components/list/DoneList';
+import TrackList from './_components/list/TrackList';
+import { useAtomValue } from 'jotai';
+import { dateViewAtom } from '@/store/ui';
 
 const page = () => {
+  const dateView = useAtomValue(dateViewAtom);
+
   return (
     <>
       <div className="lg:w-[50%]">
-        <DailyHeader className="my-12" />
-        <ScheduleColumns />
+        <DateHeader className="my-12" />
+        {dateView === 'daily' && <TimelineColumn />}
       </div>
       <div className="lg:w-[50%] lg:h-[60vh] overflow-scroll pb-16">
         <TrackList />
