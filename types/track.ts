@@ -1,3 +1,4 @@
+import { LexoRank } from 'lexorank';
 import { AlbumType } from './album';
 import { ProfileType } from './profile';
 import { TimeType } from './time';
@@ -35,4 +36,20 @@ export interface HistoryType {
   start: Date;
   end: Date;
   trackId: string;
+}
+
+export const convertTrackData = (tracks: any[]) => {
+  return tracks.map((track: any) => ({
+    ...track,
+    scheduleStart: track.scheduleStart && {
+      ...track.scheduleStart,
+      time: track.scheduleStart && new Date(track.scheduleStart.time),
+      rank: LexoRank.parse(track.scheduleStart.rank),
+    },
+    scheduleEnd: track.scheduleEnd && {
+      ...track.scheduleEnd,
+      time: track.scheduleEnd && new Date(track.scheduleEnd.time),
+      rank: LexoRank.parse(track.scheduleEnd.rank),
+    },
+  }));
 }

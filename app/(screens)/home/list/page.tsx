@@ -1,28 +1,29 @@
-'use client'
+'use client';
 
+import WeeklyColumn from '@/components/calender/WeeklyColumn';
 import DateHeader from '@/components/layout/DateHeader';
-import CategoryTab from '../_components/ui/CategoryTab';
+import { dateViewAtom } from '@/store/ui';
+import { useAtomValue } from 'jotai';
 import TimelineColumn from '../../../../components/calender/TimelineColumn';
 import DoneList from './_components/list/DoneList';
 import TrackList from './_components/list/TrackList';
-import { useAtomValue } from 'jotai';
-import { dateViewAtom } from '@/store/ui';
 
-const page = () => {
+const Page = () => {
   const dateView = useAtomValue(dateViewAtom);
 
   return (
-    <>
-      <div className="lg:w-[50%]">
+    <div className="w-full">
+      <div>
         <DateHeader className="my-12" />
+        {dateView === 'weekly' && <WeeklyColumn />}
         {dateView === 'daily' && <TimelineColumn />}
       </div>
       <div className="lg:w-[50%] lg:h-[60vh] overflow-scroll pb-16">
         <TrackList />
         <DoneList />
       </div>
-    </>
+    </div>
   );
 };
 
-export default page;
+export default Page;

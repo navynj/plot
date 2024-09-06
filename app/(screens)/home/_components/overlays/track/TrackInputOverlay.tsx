@@ -126,6 +126,7 @@ const TrackInputOverlay = () => {
           date: getDashDate(date),
           scheduleStartId: startTime && startTime.id,
           scheduleEndId: endTime && endTime.id,
+          albumId: albumId || undefined,
         });
 
         if (trackId) {
@@ -256,6 +257,10 @@ const TrackInputOverlay = () => {
       setIsProfileEmoji(false);
     }
   }, [showOverlay, trackId, tracks]);
+
+  useEffect(() => {
+    setDate(today);
+  }, [today]);
 
   // Album 변경 시 타이틀 업데이트 (단, 사용자가 설정하지 않았을 경우)
   const albumIdInputValue = form.watch('albumId');

@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth';
 import { prisma } from '@/prisma/client';
+import { getDashDate } from '@/util/date';
 import { NextRequest } from 'next/server';
 
 export async function GET(req: NextRequest) {
@@ -13,39 +14,30 @@ export async function GET(req: NextRequest) {
 
   const searchParams = req.nextUrl.searchParams;
   const date = searchParams.get('date');
+  const startDate = searchParams.get('startDate');
+  const endDate = searchParams.get('endDate');
 
-  if (!date) {
+  if (!date && !(startDate && endDate)) {
     return new Response('Date query is empty', {
       status: 400,
     });
   }
 
-  const dateObj = new Date(date);
-
   try {
     const data = await prisma.track.findMany({
       where: {
         userId: session.user.id,
-        NOT: { excludeDates: { has: dateObj } },
         OR: [
-          { date },
-          { repeatingDays: { has: dateObj.getDay() } },
-          { repeatingDates: { has: dateObj.getDate() } },
+          { date: date || '' },
           {
             AND: [
-              { isRepeating: true },
               {
-                OR: [
-                  {
-                    AND: [{ repeatingStart: undefined }, { repeatingEnd: undefined }],
-                  },
-                  {
-                    AND: [
-                      { repeatingStart: { gte: dateObj } },
-                      { repeatingEnd: { lte: dateObj } },
-                    ],
-                  },
-                ],
+                date: {
+                  gte: (startDate && new Date(startDate).toISOString()) || undefined,
+                },
+              },
+              {
+                date: { lte: (endDate && new Date(endDate).toISOString()) || undefined },
               },
             ],
           },

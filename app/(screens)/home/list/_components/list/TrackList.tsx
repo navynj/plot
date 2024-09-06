@@ -26,20 +26,16 @@ const TrackList = () => {
   }, [data]);
 
   return (
-    tracks &&
-    tracks.length > 0 && (
-      <ol className="flex flex-col items-center px-4 py-6 space-y-3">
-        {tracks.map((track) => (
-          <TrackItem key={track.id} {...track} />
-        ))}
-        {isPending ||
-          (isFetching && (
-            <div className="p-16">
-              <Loader />
-            </div>
-          ))}
-      </ol>
-    )
+    <ol className="flex flex-col items-center px-4 py-6 space-y-3">
+      {!isPending &&
+        !isFetching &&
+        tracks?.map((track) => <TrackItem key={track.id} {...track} />)}
+      {(isPending || isFetching) && (
+          <div className="p-16">
+            <Loader />
+          </div>
+        )}
+    </ol>
   );
 };
 

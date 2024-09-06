@@ -11,8 +11,11 @@ export const config: Config = {
       colors: {
         primary: '#313338',
       },
+      width: {
+        '1/7': '14.2857143%',
+      },
     },
   },
-  plugins: [require("tailwind-scrollbar-hide")],
+  plugins: [require('tailwind-scrollbar-hide')],
 };
 export default config;
