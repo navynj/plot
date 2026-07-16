@@ -122,6 +122,8 @@ export const node = pgTable(
 
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    // soft delete (ROADMAP Phase 1); reads filter on IS NULL
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (t) => ({
     byUser: index('node_user_idx').on(t.userId),
@@ -131,6 +133,10 @@ export const node = pgTable(
     byCaptured: index('node_captured_idx').on(t.userId, t.capturedAt),
   })
 );
+
+/** Domain row types — import these anywhere; the table objects stay repository-only. */
+export type Node = typeof node.$inferSelect;
+export type NewNode = typeof node.$inferInsert;
 
 /* ------------------------------------------------------------------ */
 /* link — curation graph (no inheritance ever)                         */
