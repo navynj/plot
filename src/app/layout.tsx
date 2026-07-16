@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import Link from 'next/link';
 
 import { auth, signOut } from '@/auth';
+import { Button } from '@/components/ui/button';
 
 import './globals.css';
 
@@ -29,43 +30,42 @@ export default async function RootLayout({
   const session = await auth();
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">
-        <header className="border-b border-neutral-200 dark:border-neutral-800">
-          <nav className="mx-auto flex w-full max-w-2xl items-baseline gap-4 px-4 py-3">
+      <body className="flex h-dvh flex-col">
+        <header className="border-border border-b">
+          <nav className="mx-auto flex w-full max-w-2xl items-center gap-4 px-4 py-2">
             <span className="text-sm font-semibold tracking-wide">PLOT</span>
             <Link
               href="/"
-              className="text-sm text-neutral-600 hover:underline dark:text-neutral-400"
+              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
             >
               Timeline
             </Link>
             <Link
               href="/inbox"
-              className="text-sm text-neutral-600 hover:underline dark:text-neutral-400"
+              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
             >
               Inbox
             </Link>
             {session?.user && (
-              <span className="ml-auto flex items-baseline gap-3">
-                <span className="text-xs text-neutral-500">{session.user.email}</span>
+              <span className="ml-auto flex items-center gap-2">
+                <span className="text-muted-foreground text-xs">{session.user.email}</span>
                 <form
                   action={async () => {
                     'use server';
                     await signOut({ redirectTo: '/signin' });
                   }}
                 >
-                  <button
-                    type="submit"
-                    className="text-xs text-neutral-600 hover:underline dark:text-neutral-400"
-                  >
+                  <Button type="submit" variant="ghost" size="sm">
                     Sign out
-                  </button>
+                  </Button>
                 </form>
               </span>
             )}
           </nav>
         </header>
-        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 pt-6">{children}</main>
+        <main className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col px-4">
+          {children}
+        </main>
       </body>
     </html>
   );

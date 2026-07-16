@@ -204,6 +204,26 @@ Raw text first; structure (category, fields) is collapsed and optional. Never
 forced. Structuring may happen at capture, at triage, or never — three paths to
 the same entry. A node can live with no parent and no fields.
 
+**Contextual capture — position is inherited, not forced.** Capture inherits the
+current context node as `parentId`: from the home it is `null` (→ inbox); from
+inside a node (e.g. inside `Rio Funk`) the new node's `parentId` is that node.
+The user still only typed text — no category was chosen, no field filled. The
+parent comes free from _where they are standing_, so this does not violate the
+raw-first rule. It is top-down capture: doing position triage up front by
+throwing the entry directly into its room.
+
+Two consequences, both deliberate:
+
+- **Inherited schema, but values are never forced.** When a parent is auto-
+  attached, its `childSchema` is inherited (per §3), so the new node _wears_ those
+  fields — but their values stay empty. A `required` field in the parent's
+  `childSchema` does NOT block capture; it is filled later in field triage. (Raw
+  "30분" does not auto-become `practiceTime=30` — that is deferred NL assist.)
+  Context gives position only, never values.
+- **Context is escapable in one tap.** Inside a node, the default is to belong to
+  that node, but capture offers a one-tap opt-out to throw the entry raw (no
+  parent → inbox). Context is a convenience, not a cage.
+
 ### Inbox = a filter, not a container
 
 The inbox is not a place things pile up. It is the filter `parentId IS NULL`.
@@ -278,8 +298,7 @@ driven by what the node currently has.
 
 Stack: **Drizzle + Neon (Postgres) + Vercel (Node serverless)**.
 
-See [`schema.ts`](../src/db/schema.ts) for the full definitions (moved into
-`src/db/` in Phase 0). Summary:
+See [`schema.ts`](./schema.ts) for the full definitions. Summary:
 
 ### `node`
 

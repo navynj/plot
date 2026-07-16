@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { node, type Node } from '@/db/schema';
@@ -62,7 +62,7 @@ export const nodeRepo = {
       .select()
       .from(node)
       .where(and(eq(node.userId, userId), isNull(node.parentId), notDeleted))
-      .orderBy(desc(node.capturedAt));
+      .orderBy(asc(node.capturedAt));
   },
 
   async findChildren(userId: string, parentId: string): Promise<Node[]> {
@@ -73,11 +73,13 @@ export const nodeRepo = {
       .orderBy(asc(node.rank), asc(node.capturedAt));
   },
 
+  /** Chat-style display order: oldest → newest, so a fresh capture lands
+   *  directly above the bottom-pinned input. */
   async findTimeline(userId: string): Promise<Node[]> {
     return db
       .select()
       .from(node)
       .where(and(eq(node.userId, userId), notDeleted))
-      .orderBy(desc(node.capturedAt));
+      .orderBy(asc(node.capturedAt));
   },
 };

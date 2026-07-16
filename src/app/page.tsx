@@ -1,25 +1,28 @@
 import { requireUserId } from '@/app/_auth/requireUser';
 import { CaptureForm } from '@/components/capture/CaptureForm';
 import { NodeList } from '@/components/node/NodeList';
+import { ScrollAnchor } from '@/components/ui/scroll-anchor';
 import { getTimeline } from '@/service/node';
 
 export const dynamic = 'force-dynamic';
 
+/** Chat-style record river: oldest → newest top → bottom, so a fresh capture
+ *  lands directly above the input. Short content fills from the top; overflow
+ *  anchors to the newest (see ScrollAnchor). */
 export default async function TimelinePage() {
   const userId = await requireUserId();
   const nodes = await getTimeline(userId);
   return (
-    <div className="flex flex-1 flex-col">
-      <section className="flex-1 pb-6">
-        <h1 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-500">
+    <>
+      <ScrollAnchor className="min-h-0 flex-1 py-4">
+        <h1 className="text-muted-foreground mb-2 text-xs font-medium tracking-wider uppercase">
           Timeline
         </h1>
         <NodeList nodes={nodes} emptyMessage="Nothing captured yet." />
-      </section>
-      {/* messenger-style: pinned to the bottom of the screen while the timeline scrolls */}
-      <div className="sticky bottom-0 -mx-4 mt-auto border-t border-neutral-200 bg-background px-4 py-3 dark:border-neutral-800">
+      </ScrollAnchor>
+      <div className="border-border -mx-4 border-t px-4 py-3">
         <CaptureForm />
       </div>
-    </div>
+    </>
   );
 }
