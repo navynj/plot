@@ -10,7 +10,7 @@ export default async function InboxPage() {
   const userId = await requireUserId();
   const nodes = await getInbox(userId);
   return (
-    <section>
+    <section className="pb-6">
       <h1 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-500">
         Inbox — not yet attached
       </h1>

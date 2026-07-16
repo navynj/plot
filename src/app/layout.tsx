@@ -65,7 +65,7 @@ export default async function RootLayout({
             )}
           </nav>
         </header>
-        <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">{children}</main>
+        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 pt-6">{children}</main>
       </body>
     </html>
   );
