@@ -16,6 +16,9 @@ export type UpdateNodePatch = Partial<Pick<Node, 'title' | 'body' | 'icon' | 'ev
 
 const notDeleted = isNull(node.deletedAt);
 
+/** Every read/write is scoped by `userId` — ownership isolation lives in the
+ *  WHERE clause, not in caller discipline. Entry points resolve the id from
+ *  the session and pass it down (CLAUDE.md §1). */
 export const nodeRepo = {
   async create(input: CreateNodeInput): Promise<Node> {
     const rows = await db.insert(node).values(input).returning();
@@ -26,29 +29,29 @@ export const nodeRepo = {
     return created;
   },
 
-  async byId(id: string): Promise<Node | null> {
+  async byId(userId: string, id: string): Promise<Node | null> {
     const rows = await db
       .select()
       .from(node)
-      .where(and(eq(node.id, id), notDeleted))
+      .where(and(eq(node.id, id), eq(node.userId, userId), notDeleted))
       .limit(1);
     return rows[0] ?? null;
   },
 
-  async update(id: string, patch: UpdateNodePatch): Promise<Node | null> {
+  async update(userId: string, id: string, patch: UpdateNodePatch): Promise<Node | null> {
     const rows = await db
       .update(node)
       .set({ ...patch, updatedAt: new Date() })
-      .where(and(eq(node.id, id), notDeleted))
+      .where(and(eq(node.id, id), eq(node.userId, userId), notDeleted))
       .returning();
     return rows[0] ?? null;
   },
 
-  async softDelete(id: string): Promise<boolean> {
+  async softDelete(userId: string, id: string): Promise<boolean> {
     const rows = await db
       .update(node)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(node.id, id), notDeleted))
+      .where(and(eq(node.id, id), eq(node.userId, userId), notDeleted))
       .returning({ id: node.id });
     return rows.length > 0;
   },
@@ -62,11 +65,11 @@ export const nodeRepo = {
       .orderBy(desc(node.capturedAt));
   },
 
-  async findChildren(parentId: string): Promise<Node[]> {
+  async findChildren(userId: string, parentId: string): Promise<Node[]> {
     return db
       .select()
       .from(node)
-      .where(and(eq(node.parentId, parentId), notDeleted))
+      .where(and(eq(node.parentId, parentId), eq(node.userId, userId), notDeleted))
       .orderBy(asc(node.rank), asc(node.capturedAt));
   },
 

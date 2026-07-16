@@ -4,8 +4,7 @@ This file governs how code is written in this repo. It is read on every Claude
 Code session. Follow it over habit or generic convention.
 
 **Read first:** [`_docs/DESIGN.md`](./_docs/DESIGN.md) (the domain model) and
-[`src/db/schema.ts`](./src/db/schema.ts) (the source of truth for data types,
-moved in from `_docs/` in Phase 0).
+[`_docs/schema.ts`](./_docs/schema.ts) (the source of truth for data types).
 Every rule below exists to protect the design in those files.
 
 Stack: **Next.js (App Router, full-stack) · Drizzle · Neon (Postgres) · Vercel
@@ -53,6 +52,11 @@ Hard rules:
   logic. If an action is longer than ~15 lines, the logic belongs in a service.
 - **Components never import `repository/` or `db`.** Only services (or the data
   they return via server components / actions).
+- **Session/auth is read only at entry points** (RSC, route handler, server
+  action). The entry point resolves `userId` and passes it _down_ as a parameter.
+  `service/` and `repository/` never read the session or call auth — they take
+  `userId` as an argument. Grep test: auth/session imports outside `app/` (and
+  the auth config itself) are a violation.
 
 Directory shape:
 

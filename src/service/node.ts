@@ -22,16 +22,20 @@ export async function captureNode(userId: string, input: CaptureInput): Promise<
   return nodeRepo.create({ userId, title, body, capturedAt: new Date() });
 }
 
-export async function updateNode(id: string, patch: UpdateNodePatch): Promise<Node> {
-  const updated = await nodeRepo.update(id, patch);
+export async function updateNode(
+  userId: string,
+  id: string,
+  patch: UpdateNodePatch
+): Promise<Node> {
+  const updated = await nodeRepo.update(userId, id, patch);
   if (!updated) {
     throw new NodeNotFoundError(id);
   }
   return updated;
 }
 
-export async function deleteNode(id: string): Promise<void> {
-  const deleted = await nodeRepo.softDelete(id);
+export async function deleteNode(userId: string, id: string): Promise<void> {
+  const deleted = await nodeRepo.softDelete(userId, id);
   if (!deleted) {
     throw new NodeNotFoundError(id);
   }

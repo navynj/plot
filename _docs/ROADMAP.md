@@ -45,6 +45,31 @@ Done when: you can throw raw text in and see it in the timeline and inbox.
 
 ---
 
+## Phase 1.5 — Auth ⚙️🧪
+
+_(inserted before fields: `userId` scoping must be real before values, triage,
+and views multiply the call sites that read it)_ Replace the `dev-user` stopgap
+with real authentication.
+
+- **Auth.js v5 + Drizzle adapter + Google OAuth.** Add the adapter tables
+  (`user`, `account`, `session`, `verificationToken`) to `schema.ts`; generate +
+  apply the migration.
+- `node.userId` becomes a real FK to `user.id` (it was a bare `text` stopgap).
+  Migrate existing `dev-user` rows to a seeded dev user, or reset the dev branch.
+- **Session is read only at entry points** (RSC / route / server action), which
+  resolve `userId` and inject it downward. `service/` and `repository/` never
+  read the session — they receive `userId` as a parameter. Replace
+  `lib/currentUser.ts` accordingly. (See CLAUDE.md §1.)
+- Protect routes: unauthenticated users hit a sign-in page (reuse the old
+  `signIn('google')` flow, now Drizzle-backed).
+- 🧪 an ownership test: a user's queries never return another user's nodes
+  (the `userId` scope actually isolates).
+
+Done when: Google sign-in works, `node.userId` references a real user, and the
+ownership test passes. `dev-user` is gone.
+
+---
+
 ## Phase 2 — Fields: childSchema + field_value 🧪
 
 _(DESIGN §4)_ Give nodes structure. This is the first domain-core phase.

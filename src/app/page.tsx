@@ -1,12 +1,13 @@
+import { requireUserId } from '@/app/_auth/requireUser';
 import { CaptureForm } from '@/components/capture/CaptureForm';
 import { NodeList } from '@/components/node/NodeList';
-import { getCurrentUserId } from '@/lib/currentUser';
 import { getTimeline } from '@/service/node';
 
 export const dynamic = 'force-dynamic';
 
 export default async function TimelinePage() {
-  const nodes = await getTimeline(getCurrentUserId());
+  const userId = await requireUserId();
+  const nodes = await getTimeline(userId);
   return (
     <div className="flex flex-col gap-6">
       <CaptureForm />
