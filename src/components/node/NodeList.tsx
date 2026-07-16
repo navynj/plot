@@ -1,6 +1,9 @@
+import { CornerLeftUp } from 'lucide-react';
 import Link from 'next/link';
 
 import type { Node } from '@/db/schema';
+import { ParentPicker } from '@/components/node/ParentPicker';
+import { Button } from '@/components/ui/button';
 import { formatTimestamp } from '@/lib/formatTimestamp';
 
 interface NodeListProps {
@@ -15,10 +18,20 @@ export function NodeList({ nodes, emptyMessage }: NodeListProps) {
   return (
     <ul className="divide-border divide-y">
       {nodes.map((n) => (
-        <li key={n.id} className="flex items-baseline justify-between gap-4 py-3">
-          <Link href={`/node/${n.id}`} className="text-sm hover:underline">
+        <li key={n.id} className="group flex items-center justify-between gap-2 py-2">
+          <Link href={`/node/${n.id}`} className="flex-1 truncate text-sm hover:underline">
             {n.title ?? n.body}
           </Link>
+          <ParentPicker nodeId={n.id}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="set parent"
+              className="text-muted-foreground opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
+            >
+              <CornerLeftUp className="size-3.5" />
+            </Button>
+          </ParentPicker>
           <time
             dateTime={n.capturedAt.toISOString()}
             className="text-muted-foreground shrink-0 text-xs"

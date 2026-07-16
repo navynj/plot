@@ -83,6 +83,14 @@ const eslintConfig = defineConfig([
       'no-restricted-imports': 'off',
     },
   },
+  // test files may reach across layers for fixtures/cleanup (e.g. deleting
+  // test users needs db); runtime layering is enforced on production files
+  {
+    files: ['src/**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

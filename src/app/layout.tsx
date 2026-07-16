@@ -46,6 +46,12 @@ export default async function RootLayout({
             >
               Inbox
             </Link>
+            <Link
+              href="/triage"
+              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+            >
+              Triage
+            </Link>
             {session?.user && (
               <span className="ml-auto flex items-center gap-2">
                 <span className="text-muted-foreground text-xs">{session.user.email}</span>

@@ -50,3 +50,22 @@ export class InvalidSchemaError extends DomainError {
     super(`invalid childSchema: ${reason}`);
   }
 }
+
+export class CycleError extends DomainError {
+  readonly code = 'CYCLE';
+
+  constructor(
+    readonly nodeId: string,
+    readonly targetId: string
+  ) {
+    super(`node ${nodeId} cannot become a descendant of itself (target ${targetId})`);
+  }
+}
+
+export class TriageError extends DomainError {
+  readonly code = 'TRIAGE';
+
+  constructor(reason: string) {
+    super(reason);
+  }
+}
