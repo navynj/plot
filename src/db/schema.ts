@@ -197,6 +197,21 @@ export const node = pgTable(
 export type Node = typeof node.$inferSelect;
 export type NewNode = typeof node.$inferInsert;
 
+/** The typed columns of `field_value`; each field type routes to exactly one. */
+export type FieldValueColumn =
+  'textValue' | 'numberValue' | 'boolValue' | 'dateValue' | 'linkValue';
+
+/** A field value as domain code sees it (numeric comes back as `number`). */
+export type FieldPrimitive = string | number | boolean | Date;
+
+/** A validated write, routed to its typed column. Discriminated so the
+ *  repository can store without re-checking value shapes. */
+export type TypedFieldWrite =
+  | { column: 'textValue' | 'linkValue'; value: string }
+  | { column: 'numberValue'; value: number }
+  | { column: 'boolValue'; value: boolean }
+  | { column: 'dateValue'; value: Date };
+
 /* ------------------------------------------------------------------ */
 /* link — curation graph (no inheritance ever)                         */
 /* ------------------------------------------------------------------ */
@@ -260,6 +275,8 @@ export const fieldValue = pgTable(
     uniqNodeKey: uniqueIndex('fv_node_key_uniq').on(t.nodeId, t.key),
   })
 );
+
+export type FieldValue = typeof fieldValue.$inferSelect;
 
 /* ------------------------------------------------------------------ */
 /* relations                                                           */

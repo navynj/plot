@@ -19,3 +19,34 @@ export class EmptyCaptureError extends DomainError {
     super('a capture needs at least a title or a body');
   }
 }
+
+export class FieldTypeMismatchError extends DomainError {
+  readonly code = 'FIELD_TYPE_MISMATCH';
+
+  constructor(
+    readonly key: string,
+    readonly expected: string,
+    readonly got: string
+  ) {
+    super(`field "${key}" expects ${expected}, got: ${got}`);
+  }
+}
+
+export class LinkTargetNotFoundError extends DomainError {
+  readonly code = 'LINK_TARGET_NOT_FOUND';
+
+  constructor(
+    readonly key: string,
+    readonly targetId: string
+  ) {
+    super(`field "${key}" links to a node that does not exist: ${targetId}`);
+  }
+}
+
+export class InvalidSchemaError extends DomainError {
+  readonly code = 'INVALID_SCHEMA';
+
+  constructor(reason: string) {
+    super(`invalid childSchema: ${reason}`);
+  }
+}

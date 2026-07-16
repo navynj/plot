@@ -273,8 +273,17 @@ Graph curation is a plus-alpha, excluded from triage.
 The drag grammar is one _action model_: pick up → set insertion point (vertical)
 and depth (horizontal) → commit. Mobile expresses it with finger position;
 desktop with the keyboard (click to select, arrow keys to move — up/down =
-insertion point, left/right = depth, Enter = commit, Esc = cancel). Two input
-surfaces, one model, so the two UIs never diverge.
+insertion point, left/right = depth, Enter = commit, Esc = cancel). A third
+surface is a **searchable picker** (command-palette style): from a node's
+detail or a list row, search a node by name (showing its tree path) and pick it
+as the new parent — fastest when the target is already known, and available
+outside the triage screen. The picker hides the node's own subtree from
+results, mirroring how drag physically excludes it. All surfaces are optional
+entry points into the same operation; none replaces the triage screen.
+
+Every surface — drag, keyboard, picker, and any future input — goes through the
+single `triage.reparent()` entry point. Cycle rejection, subtree carrying, and
+schema handling live there once; input surfaces are thin adapters.
 
 ### Home
 

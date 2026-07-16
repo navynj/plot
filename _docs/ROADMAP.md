@@ -70,6 +70,31 @@ ownership test passes. `dev-user` is gone.
 
 ---
 
+## Phase 1.6 — shadcn/ui adoption ⚙️🎨
+
+_(inserted before fields: the UI vocabulary must be fixed before Phase 2+ pours
+out field editors, triage, and views)_ Adopt shadcn/ui as the primitive layer and
+migrate the small existing UI onto it, so there's one component vocabulary, not
+two.
+
+- Init shadcn/ui (Tailwind + CSS-variable theme already in place). Settle the
+  design tokens once: color, radius, base font. Components land in
+  `src/components/ui/`.
+- Pull the primitives Phase 2+ will need: button, input, textarea, label,
+  select, dialog, popover, dropdown-menu, checkbox, card, sheet. (Only what's
+  imminently used — don't bulk-import the whole catalog.)
+- **Migrate existing UI** (capture form, sign-in page, timeline/inbox rows) onto
+  the shadcn primitives. Existing UI is minimal, so this is cheap now and avoids
+  a mixed-vocabulary codebase later.
+- Boundary (CLAUDE.md §4): shadcn components live in `components/ui/` and stay
+  generic. Feature components compose them; never push feature/domain logic into
+  a `ui/` primitive.
+
+Done when: capture, sign-in, and the lists render via shadcn primitives; no
+hand-rolled UI remains; tokens are documented.
+
+---
+
 ## Phase 2 — Fields: childSchema + field_value 🧪
 
 _(DESIGN §4)_ Give nodes structure. This is the first domain-core phase.
@@ -104,6 +129,10 @@ new)`, `group(nodes)`, `detachToInbox(node)`. 🧪 **cycle rejection**, subtree
   (grip handle on tree nodes; drag down to inbox to detach).
 - Headless `useTriageMove` hook (CLAUDE.md §4): one action model, pointer +
   keyboard adapters.
+- Parent picker (searchable, command-palette style; shadcn Command): a third
+  input surface for the same `triage.reparent()` — reachable from node detail
+  and list rows, hides the node's own subtree from results. Optional entry
+  point; does not replace the triage screen.
 
 Done when: raw inbox nodes can be dragged into the tree and back, promoted, and
 grouped, with cycles blocked. Tests green for triage ops.

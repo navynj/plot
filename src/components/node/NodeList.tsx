@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import type { Node } from '@/db/schema';
 import { formatTimestamp } from '@/lib/formatTimestamp';
 
@@ -14,7 +16,9 @@ export function NodeList({ nodes, emptyMessage }: NodeListProps) {
     <ul className="divide-border divide-y">
       {nodes.map((n) => (
         <li key={n.id} className="flex items-baseline justify-between gap-4 py-3">
-          <span className="text-sm">{n.title ?? n.body}</span>
+          <Link href={`/node/${n.id}`} className="text-sm hover:underline">
+            {n.title ?? n.body}
+          </Link>
           <time
             dateTime={n.capturedAt.toISOString()}
             className="text-muted-foreground shrink-0 text-xs"

@@ -171,6 +171,11 @@ Reuse boundaries that come from the design:
 - Shared primitives (buttons, chips, sheets) live in `components/ui/`; feature
   components compose them. No feature component reaches into another feature's
   internals.
+- **shadcn/ui primitives stay generic.** They live in `components/ui/` and hold
+  no feature or domain logic. Feature components (`TriageTree`, `NodeDetail`,
+  field editors) compose them; never edit a `ui/` primitive to carry
+  domain-specific behavior. If a primitive needs domain behavior, wrap it in a
+  feature component instead.
 
 Component rules:
 
