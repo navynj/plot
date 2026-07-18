@@ -13,7 +13,7 @@ export interface CreateNodeInput {
 /** Fields a plain update may touch. `parentId` is absent on purpose:
  *  re-parenting goes through the triage service only (CLAUDE.md §3). */
 export type UpdateNodePatch = Partial<
-  Pick<Node, 'title' | 'body' | 'icon' | 'eventDate' | 'childSchema' | 'schemaMode'>
+  Pick<Node, 'title' | 'body' | 'icon' | 'eventDate' | 'childSchema' | 'schemaMode' | 'viewSpec'>
 >;
 
 const notDeleted = isNull(node.deletedAt);

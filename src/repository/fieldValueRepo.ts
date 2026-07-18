@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { fieldValue, node, type FieldValue, type TypedFieldWrite } from '@/db/schema';
@@ -163,6 +163,19 @@ export const fieldValueRepo = {
       .from(fieldValue)
       .innerJoin(node, eq(node.id, fieldValue.nodeId))
       .where(and(eq(fieldValue.nodeId, nodeId), eq(node.userId, userId), isNull(node.deletedAt)));
+    return rows.map((r) => r.fv);
+  },
+
+  /** All values for a set of nodes in one query (item listings). */
+  async readByNodes(userId: string, nodeIds: string[]): Promise<FieldValue[]> {
+    if (nodeIds.length === 0) return [];
+    const rows = await db
+      .select({ fv: fieldValue })
+      .from(fieldValue)
+      .innerJoin(node, eq(node.id, fieldValue.nodeId))
+      .where(
+        and(inArray(fieldValue.nodeId, nodeIds), eq(node.userId, userId), isNull(node.deletedAt))
+      );
     return rows.map((r) => r.fv);
   },
 

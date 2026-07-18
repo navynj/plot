@@ -1,7 +1,21 @@
-import { FIELD_TYPES, type FieldDef, type FieldType, type Node } from '@/db/schema';
+import {
+  FIELD_TYPES,
+  VIEW_LAYOUTS,
+  type FieldDef,
+  type FieldType,
+  type Node,
+  type ViewFilter,
+  type ViewLayout,
+  type ViewSpec,
+} from '@/db/schema';
 import { nodeRepo, type UpdateNodePatch } from '@/repository/nodeRepo';
 
-import { EmptyCaptureError, InvalidSchemaError, NodeNotFoundError } from './errors';
+import {
+  EmptyCaptureError,
+  InvalidSchemaError,
+  InvalidViewSpecError,
+  NodeNotFoundError,
+} from './errors';
 
 export interface CaptureInput {
   title?: string;
@@ -43,6 +57,10 @@ export async function deleteNode(userId: string, id: string): Promise<void> {
 
 export function getNode(userId: string, id: string): Promise<Node | null> {
   return nodeRepo.byId(userId, id);
+}
+
+export function getChildren(userId: string, id: string): Promise<Node[]> {
+  return nodeRepo.findChildren(userId, id);
 }
 
 export function getTimeline(userId: string): Promise<Node[]> {
@@ -100,6 +118,86 @@ function parseFieldDefs(input: unknown): FieldDef[] {
     if (linkTargetParentId !== undefined) def.linkTargetParentId = linkTargetParentId;
     return def;
   });
+}
+
+/** Set (or clear, with null) how this node visualizes its aggregate set.
+ *  Input is untrusted (dev JSON editor this phase) and validated into a
+ *  bounded ViewSpec — lens + layout preset, nothing pixel-level (DESIGN §5). */
+export async function setViewSpec(userId: string, id: string, input: unknown): Promise<Node> {
+  const spec = input === null ? null : parseViewSpec(input);
+  const updated = await nodeRepo.update(userId, id, { viewSpec: spec });
+  if (!updated) {
+    throw new NodeNotFoundError(id);
+  }
+  return updated;
+}
+
+const FILTER_OPS = ['eq', 'neq', 'gt', 'lt', 'gte', 'lte', 'in', 'between'] as const;
+const AGGREGATE_OPS = ['sum', 'avg', 'count', 'none'] as const;
+
+function parseViewSpec(input: unknown): ViewSpec {
+  if (typeof input !== 'object' || input === null) {
+    throw new InvalidViewSpecError('must be an object');
+  }
+  const rec = input as Record<string, unknown>;
+  const { lens, groupBy, layout, sort, filter, aggregate, overlayOwnField } = rec;
+  if (typeof lens !== 'string' || lens.trim() === '') {
+    throw new InvalidViewSpecError('lens must be a non-empty field key');
+  }
+  if (typeof layout !== 'string' || !(VIEW_LAYOUTS as readonly string[]).includes(layout)) {
+    throw new InvalidViewSpecError(`layout must be one of ${VIEW_LAYOUTS.join(' | ')}`);
+  }
+  const spec: ViewSpec = { lens, layout: layout as ViewLayout };
+  if (groupBy !== undefined) {
+    if (typeof groupBy !== 'string') throw new InvalidViewSpecError('groupBy must be a field key');
+    spec.groupBy = groupBy;
+  }
+  if (sort !== undefined) {
+    if (
+      typeof sort !== 'object' ||
+      sort === null ||
+      typeof (sort as Record<string, unknown>).by !== 'string' ||
+      !['asc', 'desc'].includes(String((sort as Record<string, unknown>).dir))
+    ) {
+      throw new InvalidViewSpecError('sort must be { by: key, dir: asc|desc }');
+    }
+    spec.sort = {
+      by: String((sort as Record<string, unknown>).by),
+      dir: (sort as { dir: 'asc' | 'desc' }).dir,
+    };
+  }
+  if (aggregate !== undefined) {
+    if (
+      typeof aggregate !== 'string' ||
+      !(AGGREGATE_OPS as readonly string[]).includes(aggregate)
+    ) {
+      throw new InvalidViewSpecError(`aggregate must be one of ${AGGREGATE_OPS.join(' | ')}`);
+    }
+    spec.aggregate = aggregate as ViewSpec['aggregate'];
+  }
+  if (overlayOwnField !== undefined) {
+    if (typeof overlayOwnField !== 'string') {
+      throw new InvalidViewSpecError('overlayOwnField must be a field key');
+    }
+    spec.overlayOwnField = overlayOwnField;
+  }
+  if (filter !== undefined) {
+    if (!Array.isArray(filter)) throw new InvalidViewSpecError('filter must be an array');
+    spec.filter = filter.map((f, i): ViewFilter => {
+      if (typeof f !== 'object' || f === null) {
+        throw new InvalidViewSpecError(`filter #${i} is not an object`);
+      }
+      const fr = f as Record<string, unknown>;
+      if (typeof fr.key !== 'string' || fr.key === '') {
+        throw new InvalidViewSpecError(`filter #${i} needs a field key`);
+      }
+      if (typeof fr.op !== 'string' || !(FILTER_OPS as readonly string[]).includes(fr.op)) {
+        throw new InvalidViewSpecError(`filter #${i} op must be one of ${FILTER_OPS.join(' | ')}`);
+      }
+      return { key: fr.key, op: fr.op as ViewFilter['op'], value: fr.value };
+    });
+  }
+  return spec;
 }
 
 function isString(v: unknown): v is string {

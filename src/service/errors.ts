@@ -90,6 +90,14 @@ export class TriageError extends DomainError {
   }
 }
 
+export class InvalidViewSpecError extends DomainError {
+  readonly code = 'INVALID_VIEW_SPEC';
+
+  constructor(reason: string) {
+    super(`invalid viewSpec: ${reason}`);
+  }
+}
+
 export class UnsupportedFilterError extends DomainError {
   readonly code = 'UNSUPPORTED_FILTER';
 

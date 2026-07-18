@@ -64,6 +64,11 @@ export interface FieldDef {
   linkTargetParentId?: string; // for type 'link': restrict to children of this node
 }
 
+/** The fixed layout preset vocabulary (DESIGN §5) — runtime const so the
+ *  layout registry can be completeness-tested, like FIELD_TYPES. */
+export const VIEW_LAYOUTS = ['list', 'grid', 'bar', 'line', 'calendar', 'heatmap'] as const;
+export type ViewLayout = (typeof VIEW_LAYOUTS)[number];
+
 /**
  * viewSpec — how a node renders the set it aggregates (its tree children
  * and/or its graph-linked nodes). Deliberately bounded: pick a lens + a
@@ -72,7 +77,7 @@ export interface FieldDef {
 export interface ViewSpec {
   lens: string | 'capturedAt' | 'eventDate' | 'title'; // field key to axis on
   groupBy?: string; // field key to group by (e.g. a tag/link field)
-  layout: 'list' | 'grid' | 'bar' | 'line' | 'calendar' | 'heatmap';
+  layout: ViewLayout;
   sort?: { by: string; dir: 'asc' | 'desc' };
   filter?: ViewFilter[];
   aggregate?: 'sum' | 'avg' | 'count' | 'none';

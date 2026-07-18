@@ -78,7 +78,8 @@ export async function getLinkCandidates(
   return describeCandidates(all, new Set());
 }
 
-function extractValue(row: FieldValue): FieldPrimitive | null {
+/** The one populated typed column of a field_value row, as a JS primitive. */
+export function extractValue(row: FieldValue): FieldPrimitive | null {
   if (row.textValue !== null) return row.textValue;
   if (row.numberValue !== null) return Number(row.numberValue);
   if (row.boolValue !== null) return row.boolValue;

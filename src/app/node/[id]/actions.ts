@@ -10,7 +10,7 @@ import {
   removeFromCollection,
 } from '@/service/collection';
 import { getLinkCandidates, saveOwnValues } from '@/service/field';
-import { setChildSchema } from '@/service/node';
+import { setChildSchema, setViewSpec } from '@/service/node';
 
 import { DomainError, InvalidSchemaError } from '@/service/errors';
 
@@ -57,6 +57,23 @@ export async function collectionCandidates(nodeId: string): Promise<NodeCandidat
 export async function linkCandidates(scopeParentId: string | null): Promise<NodeCandidate[]> {
   const userId = await requireUserId();
   return getLinkCandidates(userId, { linkTargetParentId: scopeParentId ?? undefined });
+}
+
+/** dev-only, see ViewSpecDevEditor; empty or "null" clears the spec */
+export async function saveViewSpecDev(nodeId: string, formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+  const text = formData.get('viewSpec');
+  const raw = typeof text === 'string' ? text.trim() : '';
+  let parsed: unknown = null;
+  if (raw !== '' && raw !== 'null') {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      throw new InvalidSchemaError('not valid JSON');
+    }
+  }
+  await setViewSpec(userId, nodeId, parsed);
+  revalidatePath(`/node/${nodeId}`);
 }
 
 /** dev-only, see ChildSchemaDevEditor */
