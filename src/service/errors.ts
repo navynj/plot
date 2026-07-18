@@ -51,6 +51,26 @@ export class InvalidSchemaError extends DomainError {
   }
 }
 
+export class SelfLinkError extends DomainError {
+  readonly code = 'SELF_LINK';
+
+  constructor(readonly nodeId: string) {
+    super(`a node cannot be linked to itself: ${nodeId}`);
+  }
+}
+
+export class LinkTargetOutOfScopeError extends DomainError {
+  readonly code = 'LINK_TARGET_OUT_OF_SCOPE';
+
+  constructor(
+    readonly key: string,
+    readonly targetId: string,
+    readonly requiredParentId: string
+  ) {
+    super(`field "${key}" must link to a child of ${requiredParentId}; ${targetId} is not one`);
+  }
+}
+
 export class CycleError extends DomainError {
   readonly code = 'CYCLE';
 

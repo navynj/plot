@@ -4,7 +4,11 @@ import type { FieldDef, Node } from '@/db/schema';
 import { fieldValueRepo } from '@/repository/fieldValueRepo';
 import { nodeRepo } from '@/repository/nodeRepo';
 
-import { FieldTypeMismatchError, LinkTargetNotFoundError } from './errors';
+import {
+  FieldTypeMismatchError,
+  LinkTargetNotFoundError,
+  LinkTargetOutOfScopeError,
+} from './errors';
 import { saveOwnValues } from './field';
 
 vi.mock('@/repository/nodeRepo', () => ({
@@ -17,20 +21,23 @@ vi.mock('@/repository/fieldValueRepo', () => ({
 const defs: FieldDef[] = [
   { key: 'amount', label: 'Amount', type: 'number', required: true },
   { key: 'memo', label: 'Memo', type: 'text' },
-  { key: 'category', label: 'Category', type: 'link' },
+  { key: 'category', label: 'Category', type: 'link', linkTargetParentId: 'CATS' },
 ];
 const parent = { id: 'P', parentId: null, childSchema: defs } as Node;
 const child = { id: 'C', parentId: 'P', childSchema: [] } as unknown as Node;
+// 식비 is a child of CATS (in scope); STRAY is a root (out of scope)
+const cats = { id: 'CATS', parentId: null, childSchema: [] } as unknown as Node;
+const inScope = { id: 'FOOD', parentId: 'CATS', childSchema: [] } as unknown as Node;
+const outOfScope = { id: 'STRAY', parentId: null, childSchema: [] } as unknown as Node;
 
 describe('field.saveOwnValues', () => {
   beforeEach(() => {
     vi.mocked(nodeRepo.byId)
       .mockReset()
-      .mockImplementation(async (_u, id) => {
-        if (id === 'C') return child;
-        if (id === 'P') return parent;
-        return null;
-      });
+      .mockImplementation(
+        async (_u, id) =>
+          [child, parent, cats, inScope, outOfScope].find((n) => n.id === id) ?? null
+      );
     vi.mocked(fieldValueRepo.upsert)
       .mockReset()
       .mockResolvedValue({ id: 'fv' } as never);
@@ -67,6 +74,21 @@ describe('field.saveOwnValues', () => {
     await expect(
       saveOwnValues('u1', 'C', { category: 'someone-elses-node' })
     ).rejects.toBeInstanceOf(LinkTargetNotFoundError);
+  });
+
+  it('linkTargetParentId: accepts a target that is a tree child of the declared parent', async () => {
+    await saveOwnValues('u1', 'C', { category: 'FOOD' });
+    expect(fieldValueRepo.upsert).toHaveBeenCalledWith('u1', 'C', 'category', {
+      column: 'linkValue',
+      value: 'FOOD',
+    });
+  });
+
+  it('linkTargetParentId: rejects an out-of-scope target with the typed error', async () => {
+    await expect(saveOwnValues('u1', 'C', { category: 'STRAY' })).rejects.toBeInstanceOf(
+      LinkTargetOutOfScopeError
+    );
+    expect(fieldValueRepo.upsert).not.toHaveBeenCalled();
   });
 
   it('ignores keys outside the worn schema (extra rows are a migration concern, not a save path)', async () => {

@@ -1,10 +1,11 @@
 import './fieldTypes';
 
-import type { FieldPrimitive, FieldValue, TypedFieldWrite } from '@/db/schema';
+import type { FieldDef, FieldPrimitive, FieldValue, TypedFieldWrite } from '@/db/schema';
 import { fieldValueRepo } from '@/repository/fieldValueRepo';
 import { nodeRepo } from '@/repository/nodeRepo';
 
-import { LinkTargetNotFoundError, NodeNotFoundError } from './errors';
+import { describeCandidates, type NodeCandidate } from './candidates';
+import { LinkTargetNotFoundError, LinkTargetOutOfScopeError, NodeNotFoundError } from './errors';
 import { getFieldType } from './fieldRegistry';
 import { resolveSchema } from './inheritance';
 
@@ -33,6 +34,12 @@ export async function saveOwnValues(
     if (entry.valueColumn === 'linkValue' && typeof parsed === 'string') {
       const target = await nodeRepo.byId(userId, parsed);
       if (!target) throw new LinkTargetNotFoundError(def.key, parsed);
+      // linkTargetParentId (FieldDef): the target must be a TREE child of the
+      // declared parent — this is what keeps e.g. budget lines and expenses
+      // on the same category axis (DESIGN §4)
+      if (def.linkTargetParentId && target.parentId !== def.linkTargetParentId) {
+        throw new LinkTargetOutOfScopeError(def.key, parsed, def.linkTargetParentId);
+      }
     }
     // parse() returns the value shape its own column expects, so this cast
     // only re-states what the registry entry guarantees
@@ -55,6 +62,20 @@ export async function getOwnValues(
     if (value !== null) values[row.key] = value;
   }
   return values;
+}
+
+/** Candidates for a link-type field's picker: children of the def's declared
+ *  linkTargetParentId when scoped, every node otherwise. */
+export async function getLinkCandidates(
+  userId: string,
+  def: Pick<FieldDef, 'linkTargetParentId'>
+): Promise<NodeCandidate[]> {
+  if (def.linkTargetParentId) {
+    const children = await nodeRepo.findChildren(userId, def.linkTargetParentId);
+    return describeCandidates(children, new Set());
+  }
+  const all = await nodeRepo.findTimeline(userId);
+  return describeCandidates(all, new Set());
 }
 
 function extractValue(row: FieldValue): FieldPrimitive | null {

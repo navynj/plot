@@ -2,6 +2,7 @@ import type { FieldDef, Node } from '@/db/schema';
 import { rankBetween, spreadRanks } from '@/lib/rank';
 import { nodeRepo } from '@/repository/nodeRepo';
 
+import { describeCandidates, type NodeCandidate } from './candidates';
 import { CycleError, NodeNotFoundError, TriageError } from './errors';
 
 /**
@@ -168,29 +169,14 @@ export async function group(userId: string, nodeIds: string[], title?: string): 
 }
 
 /** Everything a node may be re-parented onto: all of the user's nodes except
- *  the node's own subtree (mirrored by the picker and by drag's exclusion).
- *  Each candidate carries its tree path for display. */
+ *  the node's own subtree (mirrored by the picker and by drag's exclusion). */
 export async function getReparentCandidates(
   userId: string,
   nodeId: string
-): Promise<{ id: string; title: string; path: string }[]> {
+): Promise<NodeCandidate[]> {
   const [all, subtree] = await Promise.all([
     nodeRepo.findTimeline(userId),
     nodeRepo.subtreeIds(userId, nodeId),
   ]);
-  const excluded = new Set(subtree);
-  const byId = new Map(all.map((n) => [n.id, n]));
-  const label = (n: Node) => n.title ?? n.body ?? '(untitled)';
-  const pathOf = (n: Node): string => {
-    const parts: string[] = [];
-    let current: Node | undefined = n.parentId ? byId.get(n.parentId) : undefined;
-    for (let guard = 0; current && guard < 32; guard++) {
-      parts.unshift(label(current));
-      current = current.parentId ? byId.get(current.parentId) : undefined;
-    }
-    return parts.join(' / ');
-  };
-  return all
-    .filter((n) => !excluded.has(n.id))
-    .map((n) => ({ id: n.id, title: label(n), path: pathOf(n) }));
+  return describeCandidates(all, new Set(subtree));
 }

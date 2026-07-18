@@ -230,6 +230,9 @@ inheritance test — they are the executable form of the design.
 - **Before adding a `switch` on field type or layout,** use the registry (§2).
 - **Before writing a DB query in a service/component,** move it to a repository.
 - **Before inlining a domain rule,** find its service function (§3).
+- **Known constraint — no transactions on neon-http.** Multi-write triage ops
+  (`insertLayer`, `group`) are not atomic. Acceptable single-user; revisit by
+  switching to the websocket driver if concurrent editing ever becomes real.
 
 ---
 

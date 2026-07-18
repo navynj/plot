@@ -278,6 +278,8 @@ export const fieldValue = pgTable(
 
 export type FieldValue = typeof fieldValue.$inferSelect;
 
+export type Link = typeof link.$inferSelect;
+
 /* ------------------------------------------------------------------ */
 /* relations                                                           */
 /* ------------------------------------------------------------------ */

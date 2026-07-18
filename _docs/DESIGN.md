@@ -226,7 +226,11 @@ Two consequences, both deliberate:
 
 ### Inbox = a filter, not a container
 
-The inbox is not a place things pile up. It is the filter `parentId IS NULL`.
+The inbox is not a place things pile up. It is the filter `parentId IS NULL AND
+rank IS NULL` — "no parent and never positioned." A confirmed root is also
+parent-less but carries a rank among roots (positioning it was the act of
+confirming), so it leaves the inbox while staying fully derived: no flag, no
+table.
 The permanent home of every entry is the timeline (ordered by `capturedAt`); the
 inbox is just the still-unattached slice. An un-triaged entry is **not a debt** —
 it is a complete raw note. Nothing accrues, because no container holds anything.

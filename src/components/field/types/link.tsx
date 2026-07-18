@@ -1,16 +1,15 @@
-import { Input } from '@/components/ui/input';
-
+import { LinkFieldPicker } from '../LinkFieldPicker';
 import { registerFieldUI } from '../registry';
 
-// minimal this phase: the target node id, entered as text; a real picker
-// arrives with graph curation (Phase 4)
+// searchable picker scoped to children of the def's linkTargetParentId
+// (unscoped when the def declares none); enforcement lives in service/field
 registerFieldUI('link', {
   render: ({ value }) => (typeof value === 'string' ? value : null),
   edit: ({ def, value }) => (
-    <Input
+    <LinkFieldPicker
       name={def.key}
-      placeholder="node id"
-      defaultValue={typeof value === 'string' ? value : undefined}
+      scopeParentId={def.linkTargetParentId ?? null}
+      value={typeof value === 'string' ? value : undefined}
     />
   ),
 });
