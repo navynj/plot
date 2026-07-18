@@ -167,6 +167,23 @@ its graph-linked nodes, or both.
   value (e.g. `status = actual`).
 - **overlayOwnField** — draws the node's _own_ value on top of the child
   aggregation (e.g. a budget line over an actual-spending bar).
+- **Partition reading of a boolean filter under an overlay.** When a spec has
+  `overlayOwnField` AND exactly one boolean `eq` filter, the view service reads
+  the filter as a partition, not a plain exclusion: the matching set renders as
+  the primary ("actual") series, and the complement is also aggregated and
+  exposed as a pending series. This is what makes §8a's remaining = budget −
+  actual − scheduled visible without a new spec field — a richer preset default
+  per the bounded-power rule. A boolean filter without an overlay stays a plain
+  exclusion.
+- **Overlay resolution.** `overlayOwnField` resolves to the node's own field
+  value when present; otherwise to the budget-lines pattern — the tree child
+  whose `childSchema` declares both the lens and the groupBy, aggregated
+  tree-side on the shared axis (§8a's August).
+- **Aggregation source.** Chart views aggregate over both sources (tree
+  children + graph members) as one set; lens-less nodes drop out silently,
+  which keeps dual-role nodes correct without a `source` spec field. Registered
+  debt: if a real case ever needs the two sides separated in one view, add
+  `source` to the spec then.
 
 ### The bounded-power principle
 

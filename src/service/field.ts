@@ -14,16 +14,22 @@ import { resolveSchema } from './inheritance';
  * the registry. Only keys in the node's resolved (worn) schema are considered.
  * An empty value clears the row — required-ness is NEVER a save gate (DESIGN
  * §6-capture: values are never forced; it surfaces in field triage instead).
+ *
+ * `editedKeys` scopes the write to the fields the form actually rendered — a
+ * partial form (field triage) must not clear the schema keys it never showed.
+ * Absent = the form rendered every worn field.
  */
 export async function saveOwnValues(
   userId: string,
   nodeId: string,
-  raw: Record<string, unknown>
+  raw: Record<string, unknown>,
+  editedKeys?: string[]
 ): Promise<void> {
   const node = await nodeRepo.byId(userId, nodeId);
   if (!node) throw new NodeNotFoundError(nodeId);
 
-  const defs = await resolveSchema(userId, node);
+  const worn = await resolveSchema(userId, node);
+  const defs = editedKeys ? worn.filter((d) => editedKeys.includes(d.key)) : worn;
   for (const def of defs) {
     const entry = getFieldType(def.type);
     const parsed = entry.parse(raw[def.key], def);

@@ -17,6 +17,9 @@ interface FieldEditorsProps {
 export function FieldEditors({ defs, values, action }: FieldEditorsProps) {
   return (
     <form action={action} className="flex flex-col gap-4">
+      {/* the save path only touches the keys this form rendered — a partial
+          form (field triage) must never clear fields it didn't show */}
+      <input type="hidden" name="__fieldKeys" value={defs.map((d) => d.key).join(',')} />
       {defs.map((def) => (
         <div key={def.key} className="flex flex-col gap-1.5">
           <Label htmlFor={def.key}>

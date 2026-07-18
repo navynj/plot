@@ -38,7 +38,13 @@ export default async function RootLayout({
               href="/"
               className="text-muted-foreground hover:text-foreground text-sm transition-colors"
             >
-              Timeline
+              Stream
+            </Link>
+            <Link
+              href="/grid"
+              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+            >
+              Grid
             </Link>
             <Link
               href="/inbox"
@@ -51,6 +57,12 @@ export default async function RootLayout({
               className="text-muted-foreground hover:text-foreground text-sm transition-colors"
             >
               Triage
+            </Link>
+            <Link
+              href="/triage/fields"
+              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+            >
+              Fields
             </Link>
             {session?.user && (
               <span className="ml-auto flex items-center gap-2">

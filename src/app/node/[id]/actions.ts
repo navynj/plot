@@ -17,7 +17,10 @@ import { DomainError, InvalidSchemaError } from '@/service/errors';
 export async function saveFields(nodeId: string, formData: FormData): Promise<void> {
   const userId = await requireUserId();
   const raw: Record<string, unknown> = Object.fromEntries(formData.entries());
-  await saveOwnValues(userId, nodeId, raw);
+  const keysField = formData.get('__fieldKeys');
+  const editedKeys =
+    typeof keysField === 'string' && keysField !== '' ? keysField.split(',') : undefined;
+  await saveOwnValues(userId, nodeId, raw, editedKeys);
   revalidatePath(`/node/${nodeId}`);
 }
 

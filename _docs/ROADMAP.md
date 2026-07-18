@@ -201,6 +201,11 @@ pass.
 
 ## Phase 8 — Migration from old PLOT ⚙️🧪
 
+> **SKIPPED — decided at Phase 7: starting fresh, no old data to migrate.**
+> The phase is retained for numbering stability and because §9's mapping table
+> remains useful as the conceptual correspondence between the two models. The
+> importer is not built unless old data ever resurfaces.
+
 _(DESIGN §9)_ One-off importer from the Prisma model.
 
 - Script: `Category → node(childSchema)`, `Plot/Todo → node(parentId)`,
@@ -213,6 +218,9 @@ Done when: a dump of old data lands correctly in the new schema.
 ---
 
 ## Phase 9 — Presets + onboarding 🎨
+
+> **Status: not executed — fresh start chosen. Kept as the model-to-model
+> correspondence reference.**
 
 _(DESIGN §6, decision-log "blank-canvas" risk)_ Fight the empty-canvas problem.
 

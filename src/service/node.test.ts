@@ -9,6 +9,9 @@ import { captureNode } from './node';
 vi.mock('@/repository/nodeRepo', () => ({
   nodeRepo: { create: vi.fn() },
 }));
+vi.mock('@/repository/linkRepo', () => ({
+  linkRepo: { findTargets: vi.fn() },
+}));
 
 const created = { id: 'n1' } as Node;
 

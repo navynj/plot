@@ -2,6 +2,8 @@ import { CornerLeftUp } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import type { FieldPrimitive } from '@/db/schema';
+
 import { requireUserId } from '@/app/_auth/requireUser';
 import { ChildSchemaDevEditor } from '@/components/node/ChildSchemaDevEditor';
 import { CollectionsSection } from '@/components/node/CollectionsSection';
@@ -33,7 +35,9 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
   // worn schema = direct parent's childSchema (depth-1); no parent → no fields
   const defs = await resolveSchema(userId, node);
   const [values, parent, memberships, members, children, view] = await Promise.all([
-    defs.length > 0 ? getOwnValues(userId, id) : Promise.resolve({}),
+    defs.length > 0
+      ? getOwnValues(userId, id)
+      : Promise.resolve<Record<string, FieldPrimitive>>({}),
     node.parentId ? getNode(userId, node.parentId) : Promise.resolve(null),
     getMemberships(userId, id),
     getMembers(userId, id),
@@ -62,9 +66,19 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
       {/* own values */}
       {defs.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-            Fields
-          </h2>
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+              Fields
+            </h2>
+            {defs.some((d) => values[d.key] === undefined) && (
+              <Link
+                href={`/triage/fields?node=${node.id}`}
+                className="text-muted-foreground text-xs hover:underline"
+              >
+                fill fields
+              </Link>
+            )}
+          </div>
           <FieldEditors defs={defs} values={values} action={saveFields.bind(null, node.id)} />
         </section>
       )}

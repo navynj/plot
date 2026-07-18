@@ -12,11 +12,18 @@ import { nodeRepo } from '@/repository/nodeRepo';
  *   original ancestor's schema therefore do not propagate — intended.
  * - A parentless node wears nothing.
  */
+
+/** The pure rule, for callers that already hold the direct parent (e.g. the
+ *  field-triage queue batching over all nodes). Same single implementation —
+ *  `resolveSchema` delegates here. */
+export function resolveSchemaFrom(parent: Pick<Node, 'childSchema'> | null): FieldDef[] {
+  return parent?.childSchema ?? [];
+}
+
 export async function resolveSchema(
   userId: string,
   node: Pick<Node, 'parentId'>
 ): Promise<FieldDef[]> {
   if (!node.parentId) return [];
-  const parent = await nodeRepo.byId(userId, node.parentId);
-  return parent?.childSchema ?? [];
+  return resolveSchemaFrom(await nodeRepo.byId(userId, node.parentId));
 }

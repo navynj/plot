@@ -8,6 +8,7 @@ import {
   type ViewLayout,
   type ViewSpec,
 } from '@/db/schema';
+import { linkRepo } from '@/repository/linkRepo';
 import { nodeRepo, type UpdateNodePatch } from '@/repository/nodeRepo';
 
 import {
@@ -69,6 +70,28 @@ export function getTimeline(userId: string): Promise<Node[]> {
 
 export function getInbox(userId: string): Promise<Node[]> {
   return nodeRepo.findInbox(userId);
+}
+
+export interface GridTile {
+  node: Node;
+  /** tree children + graph members — what the room holds */
+  count: number;
+}
+
+/** The grid home (DESIGN §6): confirmed roots as rooms. The inbox is not a
+ *  tile here — it stays a derived filter the page renders separately (muted:
+ *  un-triaged is not debt). */
+export async function getGridTiles(userId: string): Promise<GridTile[]> {
+  const roots = await nodeRepo.findRoots(userId);
+  return Promise.all(
+    roots.map(async (node) => {
+      const [children, members] = await Promise.all([
+        nodeRepo.findChildren(userId, node.id),
+        linkRepo.findTargets(userId, node.id),
+      ]);
+      return { node, count: new Set([...children, ...members].map((n) => n.id)).size };
+    })
+  );
 }
 
 /** Declare the schema this node imposes on its children. Input is untrusted
