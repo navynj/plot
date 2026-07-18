@@ -10,3 +10,4 @@ import './timestamp';
 import './tag';
 import './link';
 import './url';
+import './duration';

@@ -7,6 +7,7 @@ export interface CreateNodeInput {
   userId: string;
   title?: string | null;
   body?: string | null;
+  icon?: string | null;
   capturedAt: Date;
 }
 
@@ -29,6 +30,17 @@ export const nodeRepo = {
       throw new Error('node insert returned no row');
     }
     return created;
+  },
+
+  /** Has this user EVER had a node? Soft-deleted rows count — this guards
+   *  the one-time seed, which must not rerun after a delete-everything. */
+  async hasAny(userId: string): Promise<boolean> {
+    const rows = await db
+      .select({ id: node.id })
+      .from(node)
+      .where(eq(node.userId, userId))
+      .limit(1);
+    return rows.length > 0;
   },
 
   async byId(userId: string, id: string): Promise<Node | null> {

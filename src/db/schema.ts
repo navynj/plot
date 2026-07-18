@@ -47,6 +47,7 @@ export const FIELD_TYPES = [
   'tag', // free multi-value label
   'link', // reference to another node (e.g. transaction.category -> a category node)
   'url',
+  'duration', // stored in numberValue as MINUTES; aggregation works unchanged
 ] as const;
 export type FieldType = (typeof FIELD_TYPES)[number];
 
@@ -54,6 +55,10 @@ export type FieldType = (typeof FIELD_TYPES)[number];
  * A single field definition a node declares for ITS CHILDREN.
  * Stored as an array in `node.childSchema`. This is the "schema" a child
  * wears when it belongs to this node. It is NOT the node's own value.
+ *
+ * REGISTERED DEBT (Phase 9): no min/max/step/unit expressiveness — old Mood
+ * was a −5..+5 step-1 scale, old Expense had a currency prefix. Park until a
+ * preset needs it; the Mood scale is the likely first repayment.
  */
 export interface FieldDef {
   key: string;
