@@ -89,3 +89,11 @@ export class TriageError extends DomainError {
     super(reason);
   }
 }
+
+export class UnsupportedFilterError extends DomainError {
+  readonly code = 'UNSUPPORTED_FILTER';
+
+  constructor(detail: string) {
+    super(`aggregation filter not supported: ${detail}`);
+  }
+}
