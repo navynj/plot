@@ -5,6 +5,7 @@ import * as React from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
+  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -75,28 +76,30 @@ export function LinkFieldPicker({ name, scopeParentId, value }: LinkFieldPickerP
         </Button>
       )}
       <CommandDialog open={open} onOpenChange={onOpen} title="Pick a node" description="Search">
-        <CommandInput placeholder="Search…" />
-        <CommandList>
-          <CommandEmpty>{candidates === null ? 'Loading…' : 'No candidates.'}</CommandEmpty>
-          <CommandGroup>
-            {(candidates ?? []).map((c) => (
-              <CommandItem
-                key={c.id}
-                value={`${c.title} ${c.path}`}
-                onSelect={() => {
-                  setSelected({ id: c.id, title: c.title });
-                  setCleared(false);
-                  setOpen(false);
-                }}
-              >
-                <span className="truncate">{c.title}</span>
-                {c.path && (
-                  <span className="text-muted-foreground ml-auto truncate text-xs">{c.path}</span>
-                )}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </CommandList>
+        <Command>
+          <CommandInput placeholder="Search…" />
+          <CommandList>
+            <CommandEmpty>{candidates === null ? 'Loading…' : 'No candidates.'}</CommandEmpty>
+            <CommandGroup>
+              {(candidates ?? []).map((c) => (
+                <CommandItem
+                  key={c.id}
+                  value={`${c.title} ${c.path}`}
+                  onSelect={() => {
+                    setSelected({ id: c.id, title: c.title });
+                    setCleared(false);
+                    setOpen(false);
+                  }}
+                >
+                  <span className="truncate">{c.title}</span>
+                  {c.path && (
+                    <span className="text-muted-foreground ml-auto truncate text-xs">{c.path}</span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </CommandDialog>
     </div>
   );

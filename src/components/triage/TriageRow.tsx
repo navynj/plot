@@ -1,5 +1,6 @@
 'use client';
 
+import { useDraggable } from '@dnd-kit/core';
 import { ChevronRight, GripVertical, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 
@@ -22,44 +23,51 @@ interface TriageRowProps {
   isExpanded: boolean;
   isMoving: boolean;
   onToggle(): void;
-  onGripPointerDown(e: React.PointerEvent): void;
-  onKeyDown(e: React.KeyboardEvent): void;
   onInsertLayer(mode: 'inherit' | 'new'): void;
   onDetach(): void;
 }
 
-/** One tree row: grip (drag), chevron (accordion), title, row menu. The grip
- *  is a deliberate small target (DESIGN §6) so scrolling never mis-grabs. */
+/** One tree row. The grip is the drag activator for BOTH sensors: a real
+ *  focusable button (visible ring), pointer-draggable and Space/Enter
+ *  keyboard-draggable via dnd-kit. Deliberately a small target (DESIGN §6)
+ *  so scrolling never mis-grabs; touch-none so touch drag beats scroll. */
 export function TriageRow(props: TriageRowProps) {
   const { node, depth, hasChildren, isExpanded, isMoving } = props;
+  const label = node.title ?? node.body ?? '(untitled)';
+  const { listeners, attributes, setNodeRef, setActivatorNodeRef } = useDraggable({
+    id: `node:${node.id}`,
+    data: { ids: [node.id], label, depth },
+  });
+
   return (
     <div
-      tabIndex={0}
-      onKeyDown={props.onKeyDown}
-      className={cn(
-        'group flex items-center gap-1 rounded-md py-1 pr-1 outline-none',
-        'focus-visible:ring-ring/50 focus-visible:ring-2',
-        isMoving && 'opacity-40'
-      )}
+      ref={setNodeRef}
+      className={cn('group flex items-center gap-1 rounded-md py-1 pr-1', isMoving && 'opacity-40')}
       style={{ paddingLeft: depth * INDENT_PX }}
     >
-      <span
-        onPointerDown={props.onGripPointerDown}
-        className="text-muted-foreground/60 hover:text-foreground cursor-grab touch-none"
-        aria-label="drag handle"
+      <button
+        type="button"
+        ref={setActivatorNodeRef}
+        {...listeners}
+        {...attributes}
+        aria-label={`move ${label}`}
+        className="text-muted-foreground/60 hover:text-foreground focus-visible:ring-ring/60 cursor-grab touch-none rounded-sm p-0.5 focus-visible:ring-2 focus-visible:outline-none"
       >
         <GripVertical className="size-4" />
-      </span>
+      </button>
       <button
         type="button"
         onClick={props.onToggle}
-        className={cn('text-muted-foreground', !hasChildren && 'invisible')}
+        className={cn(
+          'text-muted-foreground focus-visible:ring-ring/60 rounded-sm focus-visible:ring-2 focus-visible:outline-none',
+          !hasChildren && 'invisible'
+        )}
         aria-label={isExpanded ? 'collapse' : 'expand'}
       >
         <ChevronRight className={cn('size-4 transition-transform', isExpanded && 'rotate-90')} />
       </button>
       <Link href={`/node/${node.id}`} className="flex-1 truncate text-sm hover:underline">
-        {node.title ?? node.body}
+        {label}
       </Link>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

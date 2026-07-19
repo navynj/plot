@@ -4,6 +4,7 @@ import * as React from 'react';
 
 import { moveNodes, detachNodes, parentCandidates } from '@/app/triage/actions';
 import {
+  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -59,25 +60,33 @@ export function ParentPicker({ nodeId, children }: ParentPickerProps) {
         title="Set parent"
         description="Search a node"
       >
-        <CommandInput placeholder="Search a node…" />
-        <CommandList>
-          <CommandEmpty>{candidates === null ? 'Loading…' : 'No match.'}</CommandEmpty>
-          <CommandGroup heading="Place">
-            <CommandItem onSelect={confirmRoot}>Root — confirmed top-level</CommandItem>
-            <CommandItem onSelect={() => commit(null)}>No parent — back to inbox</CommandItem>
-          </CommandGroup>
-          <CommandSeparator />
-          <CommandGroup heading="Under">
-            {(candidates ?? []).map((c) => (
-              <CommandItem key={c.id} value={`${c.title} ${c.path}`} onSelect={() => commit(c.id)}>
-                <span className="truncate">{c.title}</span>
-                {c.path && (
-                  <span className="text-muted-foreground ml-auto truncate text-xs">{c.path}</span>
-                )}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </CommandList>
+        {/* this shadcn variant's CommandDialog does NOT wrap children in a
+            Command root — cmdk's Input crashes without one */}
+        <Command>
+          <CommandInput placeholder="Search a node…" />
+          <CommandList>
+            <CommandEmpty>{candidates === null ? 'Loading…' : 'No match.'}</CommandEmpty>
+            <CommandGroup heading="Place">
+              <CommandItem onSelect={confirmRoot}>Root — confirmed top-level</CommandItem>
+              <CommandItem onSelect={() => commit(null)}>No parent — back to inbox</CommandItem>
+            </CommandGroup>
+            <CommandSeparator />
+            <CommandGroup heading="Under">
+              {(candidates ?? []).map((c) => (
+                <CommandItem
+                  key={c.id}
+                  value={`${c.title} ${c.path}`}
+                  onSelect={() => commit(c.id)}
+                >
+                  <span className="truncate">{c.title}</span>
+                  {c.path && (
+                    <span className="text-muted-foreground ml-auto truncate text-xs">{c.path}</span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
         {error && <p className="text-destructive px-3 pb-2 text-xs">blocked: {error}</p>}
       </CommandDialog>
     </>

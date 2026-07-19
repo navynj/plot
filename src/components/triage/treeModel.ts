@@ -71,6 +71,31 @@ export interface DropTarget {
   position: number;
 }
 
+/**
+ * Gap index for a y coordinate over MEASURED row rects (client coordinates,
+ * so scroll offsets are already applied): the gap above row i wins while y is
+ * above that row's midline; below the last midline is the trailing gap.
+ */
+export function gapFromPoint(rects: { top: number; height: number }[], y: number): number {
+  for (let i = 0; i < rects.length; i++) {
+    const rect = rects[i]!;
+    if (y < rect.top + rect.height / 2) return i;
+  }
+  return rects.length;
+}
+
+/** Horizontal drag distance → depth, relative to the picked-up depth, with
+ *  round() giving the generous ±half-step snap. Clamping to the gap's valid
+ *  band happens in resolveGap/depthRange. */
+export function depthFromX(
+  originX: number,
+  x: number,
+  baseDepth: number,
+  indentPx: number
+): number {
+  return baseDepth + Math.round((x - originX) / indentPx);
+}
+
 /** Valid depth band for the gap above rows[gapIndex] (gap 0 = top; gap
  *  rows.length = bottom): deep enough to nest under the row above, never
  *  shallower than the row below. */
