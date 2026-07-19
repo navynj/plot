@@ -5,8 +5,11 @@ import { notFound } from 'next/navigation';
 import type { FieldPrimitive } from '@/db/schema';
 
 import { requireUserId } from '@/app/_auth/requireUser';
+import { ContextCaptureForm } from '@/components/capture/ContextCaptureForm';
 import { ChildSchemaDevEditor } from '@/components/node/ChildSchemaDevEditor';
 import { CollectionsSection } from '@/components/node/CollectionsSection';
+import { NodeHeaderEdit } from '@/components/node/NodeHeaderEdit';
+import { TimelineVisibilityControl } from '@/components/node/TimelineVisibilityControl';
 import { FieldEditors } from '@/components/field/FieldEditors';
 import { ParentPicker } from '@/components/node/ParentPicker';
 import { ViewSpecDevEditor } from '@/components/node/ViewSpecDevEditor';
@@ -48,20 +51,39 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
   return (
     <div className="flex flex-col gap-6 py-6">
       <header className="flex flex-col gap-1">
-        <h1 className="text-lg font-semibold">{node.title ?? node.body}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="flex-1 text-lg font-semibold">
+            {node.icon && <span className="mr-1">{node.icon}</span>}
+            {node.title ?? node.body}
+          </h1>
+          <NodeHeaderEdit
+            nodeId={node.id}
+            title={node.title}
+            icon={node.icon}
+            body={node.body}
+            childCount={children.length}
+            parentLabel={parent ? (parent.title ?? parent.body) : null}
+          />
+        </div>
         <p className="text-muted-foreground text-xs">captured {formatTimestamp(node.capturedAt)}</p>
-        {/* parent row = picker entry point (DESIGN §6 third surface) */}
-        <ParentPicker nodeId={node.id}>
-          <Button variant="ghost" size="sm" className="text-muted-foreground -ml-2 self-start">
-            <CornerLeftUp className="size-3.5" />
-            {parent
-              ? (parent.title ?? parent.body)
-              : node.rank !== null
-                ? 'Root — change parent'
-                : 'No parent — set one'}
-          </Button>
-        </ParentPicker>
+        <div className="flex items-center justify-between">
+          {/* parent row = picker entry point (DESIGN §6 third surface) */}
+          <ParentPicker nodeIds={[node.id]}>
+            <Button variant="ghost" size="sm" className="text-muted-foreground -ml-2 self-start">
+              <CornerLeftUp className="size-3.5" />
+              {parent
+                ? (parent.title ?? parent.body)
+                : node.rank !== null
+                  ? 'Root — change parent'
+                  : 'No parent — set one'}
+            </Button>
+          </ParentPicker>
+          <TimelineVisibilityControl nodeId={node.id} value={node.timelineVisibility} />
+        </div>
       </header>
+
+      {/* contextual capture: position inherited from standing here (DESIGN §6) */}
+      <ContextCaptureForm nodeId={node.id} contextLabel={node.title ?? 'this node'} />
 
       {/* own values */}
       {defs.length > 0 && (

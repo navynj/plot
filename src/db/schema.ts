@@ -189,6 +189,13 @@ export const node = pgTable(
     // when a node was placed under a parent, was its schema inherited or fresh?
     schemaMode: text('schema_mode').$type<'inherit' | 'new'>().default('inherit'),
 
+    // timeline visibility: 'auto' (derived — structural nodes hide), or the
+    // manual overrides 'shown' | 'hidden'. Only the timeline reads this.
+    timelineVisibility: text('timeline_visibility')
+      .$type<'auto' | 'shown' | 'hidden'>()
+      .notNull()
+      .default('auto'),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     // soft delete (ROADMAP Phase 1); reads filter on IS NULL

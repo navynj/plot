@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull, or } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { link, node, type Link, type Node } from '@/db/schema';
@@ -69,6 +69,14 @@ export const linkRepo = {
       .where(and(eq(link.targetId, targetId), eq(node.userId, userId), isNull(node.deletedAt)))
       .orderBy(asc(link.createdAt));
     return rows.map((r) => r.n);
+  },
+
+  /** Remove every edge touching a node (both directions) — the delete path.
+   *  False only when the node is not owned. */
+  async removeAllFor(userId: string, nodeId: string): Promise<boolean> {
+    if (!(await ownsNode(userId, nodeId))) return false;
+    await db.delete(link).where(or(eq(link.sourceId, nodeId), eq(link.targetId, nodeId)));
+    return true;
   },
 
   /** A collection's edges in curation order (ranks live on the edge). */

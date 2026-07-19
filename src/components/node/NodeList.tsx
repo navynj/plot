@@ -22,7 +22,7 @@ export function NodeList({ nodes, emptyMessage }: NodeListProps) {
           <Link href={`/node/${n.id}`} className="flex-1 truncate text-sm hover:underline">
             {n.title ?? n.body}
           </Link>
-          <ParentPicker nodeId={n.id}>
+          <ParentPicker nodeIds={[n.id]}>
             <Button
               variant="ghost"
               size="icon-sm"

@@ -1,5 +1,6 @@
 import type { FieldDef, Node } from '@/db/schema';
 import { rankBetween, spreadRanks } from '@/lib/rank';
+import { linkRepo } from '@/repository/linkRepo';
 import { nodeRepo } from '@/repository/nodeRepo';
 
 import { describeCandidates, type NodeCandidate } from './candidates';
@@ -168,15 +169,57 @@ export async function group(userId: string, nodeIds: string[], title?: string): 
   return groupNode;
 }
 
-/** Everything a node may be re-parented onto: all of the user's nodes except
- *  the node's own subtree (mirrored by the picker and by drag's exclusion). */
+/** Everything the given nodes may be re-parented onto: all of the user's
+ *  nodes except the union of their own subtrees (mirrored by the picker and
+ *  by drag's exclusion). */
 export async function getReparentCandidates(
   userId: string,
-  nodeId: string
+  nodeIds: string[]
 ): Promise<NodeCandidate[]> {
-  const [all, subtree] = await Promise.all([
+  const [all, ...subtrees] = await Promise.all([
     nodeRepo.findTimeline(userId),
-    nodeRepo.subtreeIds(userId, nodeId),
+    ...nodeIds.map((id) => nodeRepo.subtreeIds(userId, id)),
   ]);
-  return describeCandidates(all, new Set(subtree));
+  return describeCandidates(all, new Set(subtrees.flat()));
+}
+
+/**
+ * Delete a node, closing the gap: its tree children re-parent to the deleted
+ * node's parent (same shape as detach, one level up — no cycle is possible,
+ * the destination is an ancestor), placed where the node was; every graph
+ * edge touching it is removed; the row itself soft-deletes. Field values of
+ * the node stay on the soft-deleted row; descendants are untouched.
+ */
+export async function removeNode(userId: string, nodeId: string): Promise<void> {
+  const node = await mustOwn(userId, nodeId);
+  const children = await nodeRepo.findChildren(userId, nodeId);
+
+  if (children.length > 0) {
+    // slot the children into the deleted node's position among its siblings
+    const siblings =
+      node.parentId !== null
+        ? await nodeRepo.findChildren(userId, node.parentId)
+        : node.rank !== null
+          ? await nodeRepo.findRoots(userId)
+          : null; // undetermined parent-less node: children go to the inbox
+    let moves: { id: string; rank: string | null }[];
+    if (siblings === null) {
+      moves = children.map((c) => ({ id: c.id, rank: null }));
+    } else {
+      const index = siblings.findIndex((s) => s.id === nodeId);
+      const after = index >= 0 ? (siblings[index + 1]?.rank ?? null) : null;
+      let prev = node.rank;
+      moves = children.map((c) => {
+        const rank = rankBetween(prev, after) ?? rankBetween(prev, null) ?? spreadRanks(1)[0]!;
+        prev = rank;
+        return { id: c.id, rank };
+      });
+    }
+    await nodeRepo.batchReparent(userId, moves, node.parentId);
+  }
+
+  const unlinked = await linkRepo.removeAllFor(userId, nodeId);
+  if (!unlinked) throw new NodeNotFoundError(nodeId);
+  const deleted = await nodeRepo.softDelete(userId, nodeId);
+  if (!deleted) throw new NodeNotFoundError(nodeId);
 }

@@ -118,7 +118,7 @@ describe.skipIf(!hasDb)('triage integration (real DB)', () => {
   });
 
   it('reparent candidates exclude the node’s own subtree', async () => {
-    const candidates = await triage.getReparentCandidates(uid, root);
+    const candidates = await triage.getReparentCandidates(uid, [root]);
     const ids = candidates.map((c) => c.id);
     expect(ids).not.toContain(root);
     expect(ids).not.toContain(mid);

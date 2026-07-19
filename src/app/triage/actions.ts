@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import { requireUserId } from '@/app/_auth/requireUser';
 import { DomainError } from '@/service/errors';
+import { captureNode } from '@/service/node';
 import {
   createLayerAbove,
   detachToInbox,
@@ -73,8 +74,17 @@ export async function layerAbove(childId: string, mode: 'inherit' | 'new'): Prom
 }
 
 export async function parentCandidates(
-  nodeId: string
+  nodeIds: string[]
 ): Promise<{ id: string; title: string; path: string }[]> {
   const userId = await requireUserId();
-  return getReparentCandidates(userId, nodeId);
+  return getReparentCandidates(userId, nodeIds);
+}
+
+/** Create-in-place from the parent picker: no context implies a parent, so
+ *  the new node lands as a confirmed root. */
+export async function createParentNode(title: string): Promise<{ id: string; title: string }> {
+  const userId = await requireUserId();
+  const created = await captureNode(userId, { title });
+  await reparent(userId, created.id, null);
+  return { id: created.id, title };
 }

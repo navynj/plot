@@ -11,6 +11,8 @@ import {
 import { linkRepo } from '@/repository/linkRepo';
 import { nodeRepo, type UpdateNodePatch } from '@/repository/nodeRepo';
 
+import { reparent } from './triage';
+
 import {
   EmptyCaptureError,
   InvalidSchemaError,
@@ -21,12 +23,18 @@ import {
 export interface CaptureInput {
   title?: string;
   body?: string;
+  /** Contextual capture (DESIGN §6): position inherited from where the user
+   *  is standing — the new node becomes a child of this context node. The
+   *  user still only typed text; values are never forced. Absent = raw
+   *  capture into the inbox. */
+  contextParentId?: string;
 }
 
 /**
  * Raw means raw (DESIGN §6-capture): a captured node is title/body + capturedAt
- * only. No parent (stays in the inbox filter), no field values, no childSchema.
- * Structure arrives later via field triage (Phase 2) and position triage (Phase 3).
+ * only. No field values, no childSchema. Position comes free from context when
+ * a contextParentId is given (through triage.reparent — the single write path);
+ * otherwise the node stays in the inbox filter.
  */
 export async function captureNode(userId: string, input: CaptureInput): Promise<Node> {
   const title = input.title?.trim() || null;
@@ -34,7 +42,11 @@ export async function captureNode(userId: string, input: CaptureInput): Promise<
   if (!title && !body) {
     throw new EmptyCaptureError();
   }
-  return nodeRepo.create({ userId, title, body, capturedAt: new Date() });
+  const created = await nodeRepo.create({ userId, title, body, capturedAt: new Date() });
+  if (input.contextParentId) {
+    return reparent(userId, created.id, input.contextParentId);
+  }
+  return created;
 }
 
 export async function updateNode(
@@ -66,6 +78,12 @@ export function getChildren(userId: string, id: string): Promise<Node[]> {
 
 export function getTimeline(userId: string): Promise<Node[]> {
   return nodeRepo.findTimeline(userId);
+}
+
+/** The timeline PAGE's slice: structural nodes derived out (SQL), overrides
+ *  respected. Everything else (inbox/grid/detail/triage) sees all nodes. */
+export function getTimelineVisible(userId: string): Promise<Node[]> {
+  return nodeRepo.findTimelineVisible(userId);
 }
 
 export function getInbox(userId: string): Promise<Node[]> {

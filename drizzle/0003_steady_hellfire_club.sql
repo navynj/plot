@@ -1,0 +1,1 @@
+ALTER TABLE "node" ADD COLUMN "timeline_visibility" text DEFAULT 'auto' NOT NULL;

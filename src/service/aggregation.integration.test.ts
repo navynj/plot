@@ -218,4 +218,22 @@ describe.skipIf(!hasDb)('aggregation integration — DESIGN §8 worked examples'
     expect(query.sql).toContain('group by 1');
     expect((query.sql.match(/select /gi) ?? []).length).toBe(2); // outer + one EXISTS subquery
   });
+
+  it('date meta-axis keeps the single-statement shape: date_trunc on the joined node, no g join', async () => {
+    const { PgDialect } = await import('drizzle-orm/pg-core');
+    const { buildAggregateSql } = await import('@/repository/fieldValueRepo');
+    const query = new PgDialect().sqlToQuery(
+      buildAggregateSql(uid, ['n1'], { valueKey: 'score', groupByKey: 'eventDate', op: 'avg' })
+    );
+    console.log('[meta-axis SQL]', query.sql.replace(/\s+/g, ' ').trim());
+    expect(query.sql).toContain("date_trunc('day', coalesce(n.event_date, n.captured_at))");
+    expect(query.sql).not.toContain('left join field_value g'); // meta axis needs no value join
+    expect(query.sql).toContain('group by 1');
+    expect((query.sql.match(/select /gi) ?? []).length).toBe(1); // one statement, no subqueries
+
+    const captured = new PgDialect().sqlToQuery(
+      buildAggregateSql(uid, ['n1'], { valueKey: 'score', groupByKey: 'capturedAt', op: 'sum' })
+    );
+    expect(captured.sql).toContain("date_trunc('day', n.captured_at)");
+  });
 });

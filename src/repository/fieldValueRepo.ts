@@ -20,10 +20,15 @@ export interface StorageFilter {
 export interface RepoAggregateSpec {
   /** the lens: nodes lacking this field silently drop out (DESIGN §5) */
   valueKey: string;
+  /** a field key, or a date META-AXIS: 'eventDate' groups on
+   *  date_trunc(day, coalesce(event_date, captured_at)); 'capturedAt' on
+   *  date_trunc(day, captured_at) — via the already-joined node row. */
   groupByKey?: string;
   op: 'sum' | 'avg' | 'count';
   filters?: StorageFilter[];
 }
+
+const META_GROUP_AXES = new Set(['eventDate', 'capturedAt']);
 
 export interface AggregateRow {
   /** group identity: link target id, option text, or timestamp text; null when ungrouped */
@@ -55,12 +60,18 @@ export function buildAggregateSql(userId: string, nodeIds: string[], spec: RepoA
       : spec.op === 'sum'
         ? sql`sum(v.number_value)::float8`
         : sql`avg(v.number_value)::float8`;
-  const groupExpr = spec.groupByKey
-    ? sql`coalesce(g.link_value, g.text_value, g.date_value::text, g.bool_value::text, g.number_value::text)`
-    : sql`null::text`;
-  const joinGroup = spec.groupByKey
-    ? sql`left join field_value g on g.node_id = v.node_id and g.key = ${spec.groupByKey}`
-    : sql.raw('');
+  const metaAxis = spec.groupByKey !== undefined && META_GROUP_AXES.has(spec.groupByKey);
+  const groupExpr = metaAxis
+    ? spec.groupByKey === 'eventDate'
+      ? sql`date_trunc('day', coalesce(n.event_date, n.captured_at))::text`
+      : sql`date_trunc('day', n.captured_at)::text`
+    : spec.groupByKey
+      ? sql`coalesce(g.link_value, g.text_value, g.date_value::text, g.bool_value::text, g.number_value::text)`
+      : sql`null::text`;
+  const joinGroup =
+    spec.groupByKey && !metaAxis
+      ? sql`left join field_value g on g.node_id = v.node_id and g.key = ${spec.groupByKey}`
+      : sql.raw('');
   // sum/avg participate only with an actual numeric value — a text row under
   // the same key must not pollute the count of participants
   const numericGuard = spec.op === 'count' ? sql.raw('') : sql`and v.number_value is not null`;

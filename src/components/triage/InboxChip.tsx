@@ -3,6 +3,7 @@
 import { useDraggable } from '@dnd-kit/core';
 
 import type { Node } from '@/db/schema';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 
 interface InboxChipProps {
@@ -14,9 +15,9 @@ interface InboxChipProps {
   onToggleSelect(): void;
 }
 
-/** An undetermined leaf. Click toggles selection (the pointer sensor's
- *  distance constraint keeps clicks from starting a drag); drag — pointer or
- *  Space/Enter keyboard — picks it up, carrying the selection for a batch. */
+/** An undetermined leaf: a selection checkbox + the draggable chip. Click or
+ *  checkbox toggles selection; drag — pointer or Space/Enter keyboard —
+ *  picks it up, carrying the whole selection as a batch. */
 export function InboxChip({ node, dragIds, isSelected, isMoving, onToggleSelect }: InboxChipProps) {
   const label = node.title ?? node.body ?? '(untitled)';
   const { listeners, attributes, setNodeRef } = useDraggable({
@@ -25,19 +26,28 @@ export function InboxChip({ node, dragIds, isSelected, isMoving, onToggleSelect 
   });
 
   return (
-    <button
-      type="button"
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      onClick={onToggleSelect}
+    <span
       className={cn(
-        'border-border focus-visible:ring-ring/60 cursor-grab touch-none rounded-full border px-3 py-1 text-sm select-none focus-visible:ring-2 focus-visible:outline-none',
+        'border-border flex items-center gap-1.5 rounded-full border py-1 pr-3 pl-2',
         isSelected && 'border-primary ring-primary/30 ring-2',
         isMoving && 'opacity-40'
       )}
     >
-      {label}
-    </button>
+      <Checkbox
+        checked={isSelected}
+        onCheckedChange={onToggleSelect}
+        aria-label={`select ${label}`}
+      />
+      <button
+        type="button"
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        onClick={onToggleSelect}
+        className="focus-visible:ring-ring/60 cursor-grab touch-none rounded-sm text-sm select-none focus-visible:ring-2 focus-visible:outline-none"
+      >
+        {label}
+      </button>
+    </span>
   );
 }

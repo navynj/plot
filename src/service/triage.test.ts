@@ -23,6 +23,9 @@ vi.mock('@/repository/nodeRepo', () => ({
 vi.mock('@/repository/fieldValueRepo', () => ({
   fieldValueRepo: { upsert: vi.fn(), readByNode: vi.fn(), deleteByKey: vi.fn() },
 }));
+vi.mock('@/repository/linkRepo', () => ({
+  linkRepo: { removeAllFor: vi.fn() },
+}));
 
 // tree: A ── B ── C (grandchild), D is a separate root, L is an inbox leaf
 const schemaA: FieldDef[] = [{ key: 'x', label: 'X', type: 'text' }];

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 
-import { moveNodes, detachNodes, parentCandidates } from '@/app/triage/actions';
+import { createParentNode, moveNodes, detachNodes, parentCandidates } from '@/app/triage/actions';
 import {
   Command,
   CommandDialog,
@@ -15,7 +15,8 @@ import {
 } from '@/components/ui/command';
 
 interface ParentPickerProps {
-  nodeId: string;
+  /** one node, or a multi-selected batch — all move together */
+  nodeIds: string[];
   /** the trigger element; the picker adds the dialog + search behavior */
   children: React.ReactNode;
 }
@@ -24,29 +25,30 @@ interface ParentPickerProps {
  *  its tree path) and pick it as the new parent. Same triage.reparent() as
  *  drag and keyboard; the node's own subtree is excluded server-side,
  *  mirroring drag's physical exclusion. */
-export function ParentPicker({ nodeId, children }: ParentPickerProps) {
+export function ParentPicker({ nodeIds, children }: ParentPickerProps) {
   const [open, setOpen] = React.useState(false);
   const [candidates, setCandidates] = React.useState<
     { id: string; title: string; path: string }[] | null
   >(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [query, setQuery] = React.useState('');
 
   const onOpen = async (next: boolean) => {
     setOpen(next);
     if (next && candidates === null) {
-      setCandidates(await parentCandidates(nodeId));
+      setCandidates(await parentCandidates(nodeIds));
     }
   };
 
   const commit = async (parentId: string | null) => {
     const result =
-      parentId === null ? await detachNodes([nodeId]) : await moveNodes([nodeId], parentId);
+      parentId === null ? await detachNodes(nodeIds) : await moveNodes(nodeIds, parentId);
     setError(result.ok ? null : result.error);
     if (result.ok) setOpen(false);
   };
 
   const confirmRoot = async () => {
-    const result = await moveNodes([nodeId], null);
+    const result = await moveNodes(nodeIds, null);
     setError(result.ok ? null : result.error);
     if (result.ok) setOpen(false);
   };
@@ -63,7 +65,7 @@ export function ParentPicker({ nodeId, children }: ParentPickerProps) {
         {/* this shadcn variant's CommandDialog does NOT wrap children in a
             Command root — cmdk's Input crashes without one */}
         <Command>
-          <CommandInput placeholder="Search a node…" />
+          <CommandInput placeholder="Search a node…" value={query} onValueChange={setQuery} />
           <CommandList>
             <CommandEmpty>{candidates === null ? 'Loading…' : 'No match.'}</CommandEmpty>
             <CommandGroup heading="Place">
@@ -85,6 +87,19 @@ export function ParentPicker({ nodeId, children }: ParentPickerProps) {
                 </CommandItem>
               ))}
             </CommandGroup>
+            {query.trim() !== '' && (
+              <CommandGroup heading="New">
+                <CommandItem
+                  value={`${query} create-new`}
+                  onSelect={async () => {
+                    const created = await createParentNode(query.trim());
+                    await commit(created.id); // new node is a confirmed root
+                  }}
+                >
+                  + Create “{query.trim()}” and move here
+                </CommandItem>
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
         {error && <p className="text-destructive px-3 pb-2 text-xs">blocked: {error}</p>}

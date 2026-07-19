@@ -14,7 +14,17 @@ export interface CreateNodeInput {
 /** Fields a plain update may touch. `parentId` is absent on purpose:
  *  re-parenting goes through the triage service only (CLAUDE.md §3). */
 export type UpdateNodePatch = Partial<
-  Pick<Node, 'title' | 'body' | 'icon' | 'eventDate' | 'childSchema' | 'schemaMode' | 'viewSpec'>
+  Pick<
+    Node,
+    | 'title'
+    | 'body'
+    | 'icon'
+    | 'eventDate'
+    | 'childSchema'
+    | 'schemaMode'
+    | 'viewSpec'
+    | 'timelineVisibility'
+  >
 >;
 
 const notDeleted = isNull(node.deletedAt);
@@ -105,6 +115,36 @@ export const nodeRepo = {
       .select()
       .from(node)
       .where(and(eq(node.userId, userId), notDeleted))
+      .orderBy(asc(node.capturedAt));
+  },
+
+  /** The timeline view's slice: same order, minus non-record nodes. Derived
+   *  in SQL — under 'auto' a node hides when it is STRUCTURAL (tree children
+   *  or a non-empty childSchema) or CONSTRUCTED (body IS NULL: seeded /
+   *  picker-created / grouped — never captured as text; the timeline is the
+   *  river of captured text). 'shown'/'hidden' override. Only the timeline
+   *  uses this; inbox/grid/detail see everything. */
+  async findTimelineVisible(userId: string): Promise<Node[]> {
+    return db
+      .select()
+      .from(node)
+      .where(
+        and(
+          eq(node.userId, userId),
+          notDeleted,
+          sql`(
+            ${node.timelineVisibility} = 'shown'
+            or (
+              ${node.timelineVisibility} = 'auto'
+              and ${node.body} is not null
+              and coalesce(jsonb_array_length(${node.childSchema}), 0) = 0
+              and not exists (
+                select 1 from node c where c.parent_id = ${node.id} and c.deleted_at is null
+              )
+            )
+          )`
+        )
+      )
       .orderBy(asc(node.capturedAt));
   },
 

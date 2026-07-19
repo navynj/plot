@@ -66,19 +66,13 @@ export async function ensureSeed(userId: string): Promise<boolean> {
     await create(category.title, category.icon, categories);
   }
 
-  /* 2 — childSchemas. Sleep/Mood carry an explicit `date` field: the seeded
-     views group by it (a field_value axis — capturedAt is a column, not a
-     groupable field). */
+  /* 2 — childSchemas. Sleep/Mood need no date field: their views group on
+     the eventDate META-AXIS (falls back to capturedAt), so a bare capture
+     lands on today with zero field-filling. */
   const schemas: [string, FieldDef[]][] = [
     [todo, [{ key: 'done', label: 'Done', type: 'checkbox' }]],
     [schedule, [{ key: 'when', label: 'When', type: 'timestamp' }]],
-    [
-      sleep,
-      [
-        { key: 'duration', label: 'Duration', type: 'duration' },
-        { key: 'date', label: 'Date', type: 'date' },
-      ],
-    ],
+    [sleep, [{ key: 'duration', label: 'Duration', type: 'duration' }]],
     [
       expense,
       [
@@ -90,13 +84,7 @@ export async function ensureSeed(userId: string): Promise<boolean> {
       ],
     ],
     [categories, [{ key: 'name', label: 'Name', type: 'text' }]],
-    [
-      mood,
-      [
-        { key: 'score', label: 'Score', type: 'number' },
-        { key: 'date', label: 'Date', type: 'date' },
-      ],
-    ],
+    [mood, [{ key: 'score', label: 'Score', type: 'number' }]],
   ];
   for (const [id, defs] of schemas) {
     await setChildSchema(userId, id, defs);
@@ -104,7 +92,7 @@ export async function ensureSeed(userId: string): Promise<boolean> {
 
   /* 3 — viewSpecs last */
   const views: [string, ViewSpec][] = [
-    [sleep, { lens: 'duration', groupBy: 'date', layout: 'bar' }],
+    [sleep, { lens: 'duration', groupBy: 'eventDate', layout: 'bar' }],
     [
       expense,
       {
@@ -115,7 +103,7 @@ export async function ensureSeed(userId: string): Promise<boolean> {
         overlayOwnField: 'amount', // §8a partition reading applies
       },
     ],
-    [mood, { lens: 'score', groupBy: 'date', layout: 'line' }],
+    [mood, { lens: 'score', groupBy: 'eventDate', layout: 'line' }],
   ];
   for (const [id, spec] of views) {
     await setViewSpec(userId, id, spec);

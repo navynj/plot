@@ -2,7 +2,7 @@ import { requireUserId } from '@/app/_auth/requireUser';
 import { CaptureForm } from '@/components/capture/CaptureForm';
 import { NodeList } from '@/components/node/NodeList';
 import { ScrollAnchor } from '@/components/ui/scroll-anchor';
-import { getTimeline } from '@/service/node';
+import { getTimelineVisible } from '@/service/node';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
  *  anchors to the newest (see ScrollAnchor). */
 export default async function TimelinePage() {
   const userId = await requireUserId();
-  const nodes = await getTimeline(userId);
+  const nodes = await getTimelineVisible(userId);
   return (
     <>
       <ScrollAnchor className="min-h-0 flex-1 py-4">

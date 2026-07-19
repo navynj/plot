@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 
-import { addCollection, collectionCandidates } from '@/app/node/[id]/actions';
+import { addCollection, collectionCandidates, createCollectionNode } from '@/app/node/[id]/actions';
 import {
   Command,
   CommandDialog,
@@ -28,6 +28,7 @@ export function CollectionPicker({
     { id: string; title: string; path: string }[] | null
   >(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [query, setQuery] = React.useState('');
 
   const onOpen = async (next: boolean) => {
     setOpen(next);
@@ -50,7 +51,7 @@ export function CollectionPicker({
         description="Search a node"
       >
         <Command>
-          <CommandInput placeholder="Search a collection…" />
+          <CommandInput placeholder="Search a collection…" value={query} onValueChange={setQuery} />
           <CommandList>
             <CommandEmpty>{candidates === null ? 'Loading…' : 'No match.'}</CommandEmpty>
             <CommandGroup heading="Add to">
@@ -67,6 +68,19 @@ export function CollectionPicker({
                 </CommandItem>
               ))}
             </CommandGroup>
+            {query.trim() !== '' && (
+              <CommandGroup heading="New">
+                <CommandItem
+                  value={`${query} create-new`}
+                  onSelect={async () => {
+                    const created = await createCollectionNode(query.trim());
+                    await commit(created.id); // new collection is a confirmed root
+                  }}
+                >
+                  + Create collection “{query.trim()}”
+                </CommandItem>
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
         {error && <p className="text-destructive px-3 pb-2 text-xs">blocked: {error}</p>}

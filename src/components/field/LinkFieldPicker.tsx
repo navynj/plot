@@ -30,6 +30,7 @@ export function LinkFieldPicker({ name, scopeParentId, value }: LinkFieldPickerP
     { id: string; title: string; path: string }[] | null
   >(null);
   const [selected, setSelected] = React.useState<{ id: string; title: string } | null>(null);
+  const [query, setQuery] = React.useState('');
   const [cleared, setCleared] = React.useState(false);
 
   const currentId = cleared ? '' : (selected?.id ?? value ?? '');
@@ -77,7 +78,7 @@ export function LinkFieldPicker({ name, scopeParentId, value }: LinkFieldPickerP
       )}
       <CommandDialog open={open} onOpenChange={onOpen} title="Pick a node" description="Search">
         <Command>
-          <CommandInput placeholder="Search…" />
+          <CommandInput placeholder="Search…" value={query} onValueChange={setQuery} />
           <CommandList>
             <CommandEmpty>{candidates === null ? 'Loading…' : 'No candidates.'}</CommandEmpty>
             <CommandGroup>
@@ -98,6 +99,23 @@ export function LinkFieldPicker({ name, scopeParentId, value }: LinkFieldPickerP
                 </CommandItem>
               ))}
             </CommandGroup>
+            {query.trim() !== '' && (
+              <CommandGroup heading="New">
+                <CommandItem
+                  value={`${query} create-new`}
+                  onSelect={async () => {
+                    const { createLinkTargetNode } = await import('@/app/node/[id]/actions');
+                    const created = await createLinkTargetNode(query.trim(), scopeParentId);
+                    setSelected(created); // created inside the scope → a valid candidate
+                    setCandidates(null); // refresh on next open
+                    setCleared(false);
+                    setOpen(false);
+                  }}
+                >
+                  + Create “{query.trim()}”{scopeParentId ? ' in scope' : ''}
+                </CommandItem>
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </CommandDialog>

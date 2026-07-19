@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 
 import { requireUserId } from '@/app/_auth/requireUser';
 import type { NodeCandidate } from '@/service/candidates';
@@ -10,7 +11,8 @@ import {
   removeFromCollection,
 } from '@/service/collection';
 import { getLinkCandidates, saveOwnValues } from '@/service/field';
-import { setChildSchema, setViewSpec } from '@/service/node';
+import { captureNode, setChildSchema, setViewSpec, updateNode } from '@/service/node';
+import { removeNode, reparent } from '@/service/triage';
 
 import { DomainError, InvalidSchemaError } from '@/service/errors';
 
@@ -22,6 +24,71 @@ export async function saveFields(nodeId: string, formData: FormData): Promise<vo
     typeof keysField === 'string' && keysField !== '' ? keysField.split(',') : undefined;
   await saveOwnValues(userId, nodeId, raw, editedKeys);
   revalidatePath(`/node/${nodeId}`);
+}
+
+export async function saveNodeMeta(nodeId: string, formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+  const text = (key: string) => {
+    const v = formData.get(key);
+    return typeof v === 'string' && v.trim() !== '' ? v.trim() : null;
+  };
+  await updateNode(userId, nodeId, {
+    title: text('title'),
+    icon: text('icon'),
+    body: text('body'),
+  });
+  revalidatePath(`/node/${nodeId}`);
+}
+
+export async function deleteNodeAction(nodeId: string): Promise<void> {
+  const userId = await requireUserId();
+  await removeNode(userId, nodeId);
+  redirect('/');
+}
+
+export async function setTimelineVisibility(
+  nodeId: string,
+  visibility: 'auto' | 'shown' | 'hidden'
+): Promise<void> {
+  const userId = await requireUserId();
+  await updateNode(userId, nodeId, { timelineVisibility: visibility });
+  revalidatePath(`/node/${nodeId}`);
+}
+
+/** Contextual capture (DESIGN §6): child of the context node by default; the
+ *  one-tap opt-out (dest=inbox) throws it raw instead. */
+export async function captureHere(nodeId: string, formData: FormData): Promise<void> {
+  const userId = await requireUserId();
+  const raw = formData.get('text');
+  const text = typeof raw === 'string' ? raw.trim() : '';
+  if (!text) return;
+  const toInbox = formData.get('dest') === 'inbox';
+  await captureNode(userId, { body: text, contextParentId: toInbox ? undefined : nodeId });
+  revalidatePath(`/node/${nodeId}`);
+}
+
+/** Create-in-place from the collection picker: a fresh CONFIRMED-ROOT node
+ *  (an intentionally named collection reads as top-level, not inbox debt). */
+export async function createCollectionNode(title: string): Promise<{ id: string; title: string }> {
+  const userId = await requireUserId();
+  const created = await captureNode(userId, { title });
+  await reparent(userId, created.id, null);
+  return { id: created.id, title };
+}
+
+/** Create-in-place from a link-field picker: a tree child of the field's
+ *  declared scope (which is exactly what makes it a valid candidate); an
+ *  unscoped field creates into the inbox. */
+export async function createLinkTargetNode(
+  title: string,
+  scopeParentId: string | null
+): Promise<{ id: string; title: string }> {
+  const userId = await requireUserId();
+  const created = await captureNode(userId, {
+    title,
+    contextParentId: scopeParentId ?? undefined,
+  });
+  return { id: created.id, title };
 }
 
 export type CollectionResult = { ok: true } | { ok: false; error: string };

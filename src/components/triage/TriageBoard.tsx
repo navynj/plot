@@ -16,7 +16,9 @@ import * as React from 'react';
 
 import type { Node } from '@/db/schema';
 import { detachNodes, groupNodes, layerAbove, moveNodes } from '@/app/triage/actions';
+import { ParentPicker } from '@/components/node/ParentPicker';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 
 import { InboxChip } from './InboxChip';
@@ -349,21 +351,39 @@ export function TriageBoard({ nodes }: { nodes: Node[] }) {
             move.moving?.zone === 'inbox' && 'border-primary'
           )}
         >
-          <div className="mb-2 flex items-baseline justify-between">
-            <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <label className="text-muted-foreground flex items-center gap-2 text-xs font-medium tracking-wider uppercase">
+              {inbox.length > 0 && (
+                <Checkbox
+                  aria-label="select all inbox items"
+                  checked={selected.size > 0 && selected.size === inbox.length}
+                  onCheckedChange={(checked) =>
+                    setSelected(checked ? new Set(inbox.map((n) => n.id)) : new Set())
+                  }
+                />
+              )}
               Inbox — drag up to place, drop here to detach
-            </h2>
-            {selected.size >= 2 && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  run(groupNodes([...selected]));
-                  setSelected(new Set());
-                }}
-              >
-                Group {selected.size}
-              </Button>
+            </label>
+            {selected.size >= 1 && (
+              <span className="flex items-center gap-1">
+                <ParentPicker nodeIds={[...selected]}>
+                  <Button size="sm" variant="outline">
+                    Move {selected.size} to…
+                  </Button>
+                </ParentPicker>
+                {selected.size >= 2 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      run(groupNodes([...selected]));
+                      setSelected(new Set());
+                    }}
+                  >
+                    Group into new
+                  </Button>
+                )}
+              </span>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
