@@ -18,7 +18,17 @@ declare module 'next-auth' {
   }
 }
 
+// fail fast, naming the missing var — a half-configured deploy must not boot
+const REQUIRED_ENV = ['AUTH_SECRET', 'AUTH_GOOGLE_ID', 'AUTH_GOOGLE_SECRET'] as const;
+const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
+if (missing.length > 0) {
+  throw new Error(`missing required env: ${missing.join(', ')}`);
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Vercel terminates TLS at the proxy; trust its Host/X-Forwarded headers
+  // (the standard Auth.js v5 setting for Vercel; AUTH_URL not needed)
+  trustHost: true,
   adapter: DrizzleAdapter(db, {
     usersTable: user,
     accountsTable: account,

@@ -8,7 +8,8 @@ export function TimezoneSync() {
   React.useEffect(() => {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (tz) {
-      document.cookie = `tz=${encodeURIComponent(tz)}; path=/; max-age=31536000; samesite=lax`;
+      const secure = window.location.protocol === 'https:' ? '; secure' : '';
+      document.cookie = `tz=${encodeURIComponent(tz)}; path=/; max-age=31536000; samesite=lax${secure}`;
     }
   }, []);
   return null;

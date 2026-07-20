@@ -20,4 +20,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      # integration tests (ownership, triage, aggregation, seed) run against
+      # the Neon DEV branch via this Actions secret; they self-skip loudly if
+      # it is absent
       - run: pnpm test
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
