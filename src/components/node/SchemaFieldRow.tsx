@@ -1,7 +1,8 @@
 'use client';
 
 import { useDraggable } from '@dnd-kit/core';
-import { GripVertical, Trash2 } from 'lucide-react';
+import { ArrowUpRight, GripVertical, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 import * as React from 'react';
 
 import { FIELD_TYPES, type FieldDef, type FieldType } from '@/db/schema';
@@ -123,9 +124,19 @@ export function SchemaFieldRow(props: SchemaFieldRowProps) {
           />
         )}
         {def.type === 'link' && (
-          <Button type="button" variant="outline" size="sm" onClick={props.onPickScope}>
-            scope: {props.scopeLabel ?? 'any node'}
-          </Button>
+          <span className="flex items-center gap-0.5">
+            <Button type="button" variant="outline" size="sm" onClick={props.onPickScope}>
+              scope: {props.scopeLabel ?? 'any node'}
+            </Button>
+            {/* the schema relationship, navigable: tap goes to the scope node */}
+            {def.linkTargetParentId && (
+              <Button variant="ghost" size="icon-sm" asChild aria-label={`open ${props.scopeLabel ?? 'scope node'}`}>
+                <Link href={`/node/${def.linkTargetParentId}`}>
+                  <ArrowUpRight className="size-3.5" />
+                </Link>
+              </Button>
+            )}
+          </span>
         )}
         {def.type === 'number' &&
           (['min', 'max', 'step'] as const).map((bound) => (

@@ -110,7 +110,7 @@ export async function layerAbove(childId: string, mode: 'inherit' | 'new'): Prom
 
 export async function parentCandidates(
   nodeIds: string[]
-): Promise<{ id: string; title: string; path: string }[]> {
+): Promise<import('@/service/candidates').NodeCandidate[]> {
   const userId = await requireUserId();
   return getReparentCandidates(userId, nodeIds);
 }
@@ -119,7 +119,7 @@ export async function parentCandidates(
  *  the new node lands as a confirmed root. */
 export async function createParentNode(title: string): Promise<{ id: string; title: string }> {
   const userId = await requireUserId();
-  const created = await captureNode(userId, { title });
+  const created = await captureNode(userId, { title, origin: 'constructed' });
   await reparent(userId, created.id, null);
   return { id: created.id, title };
 }

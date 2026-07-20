@@ -41,6 +41,10 @@ interface BulkBarProps {
   parentedCount: number;
   /** how many of the selected have live children */
   withChildrenCount: number;
+  /** false on the children-list surface: everything selected belongs to the
+   *  room by definition, so moving is unambiguously intentional — warning on
+   *  every use would be noise */
+  warnOnMove?: boolean;
   onClear(): void;
 }
 
@@ -48,14 +52,20 @@ interface BulkBarProps {
  *  "Set parent…" (warns when moving already-placed nodes) and "Delete"
  *  (always confirms; notes the children-move-up rule). Both run through the
  *  existing triage service operations and record ONE undoable op. */
-export function BulkBar({ selectedIds, parentedCount, withChildrenCount, onClear }: BulkBarProps) {
+export function BulkBar({
+  selectedIds,
+  parentedCount,
+  withChildrenCount,
+  warnOnMove = true,
+  onClear,
+}: BulkBarProps) {
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
   const { pending: deleting, run: runDelete } = usePendingLock();
   const count = selectedIds.length;
   if (count === 0) return null;
 
   const warning =
-    parentedCount > 0
+    warnOnMove && parentedCount > 0
       ? `${parentedCount} of these already belong${parentedCount === 1 ? 's' : ''} somewhere — move ${parentedCount === 1 ? 'it' : 'them'} anyway?`
       : undefined;
 

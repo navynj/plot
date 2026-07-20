@@ -7,6 +7,7 @@ import type { FieldPrimitive } from '@/db/schema';
 import { requireUserId } from '@/app/_auth/requireUser';
 import { ContextCaptureForm } from '@/components/capture/ContextCaptureForm';
 import { ChildSchemaEditor } from '@/components/node/ChildSchemaEditor';
+import { SelectableList } from '@/components/node/SelectableList';
 import { CollectionsSection } from '@/components/node/CollectionsSection';
 import { EventDateControl } from '@/components/node/EventDateControl';
 import { NodeHeaderEdit } from '@/components/node/NodeHeaderEdit';
@@ -19,11 +20,12 @@ import { Button } from '@/components/ui/button';
 import { getMembers, getMemberships } from '@/service/collection';
 import { getOwnValues, getValueDisplays } from '@/service/field';
 import { resolveSchema } from '@/service/inheritance';
-import { getChildren, getNode } from '@/service/node';
+import { getChildren, getNode, getSchemaScopeTargets, nodeChildCounts } from '@/service/node';
 import { resolveView } from '@/service/view';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
 import { dayInTz, todayInTz } from '@/lib/day';
 import { formatTimestamp } from '@/lib/formatTimestamp';
+import { displayName } from '@/lib/identity';
 
 import { saveFields, saveViewSpecDev } from './actions';
 
@@ -53,14 +55,29 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
   ]);
 
   const displays = await getValueDisplays(userId, defs, values);
+  const grandchildCounts = await nodeChildCounts(
+    userId,
+    children.map((c) => c.id)
+  );
+  // the schema relationships, made navigable (nothing stored): the worn
+  // schema's link scopes (for the fields-section editor) and this node's own
+  // childSchema scopes (the "related" line)
+  const [wornScopes, ownScopes] = await Promise.all([
+    getSchemaScopeTargets(userId, defs),
+    getSchemaScopeTargets(userId, node.childSchema ?? []),
+  ]);
+  const scopeLabelMap = (ts: typeof wornScopes) =>
+    Object.fromEntries(ts.map((t) => [t.id, `${t.icon ? `${t.icon} ` : ''}${t.name}`]));
+  const editorTitle = (n: { displayIcon?: string | null; title: string | null; body: string | null }) =>
+    `Fields of ${n.displayIcon ? `${n.displayIcon} ` : ''}${displayName(n)}`;
 
   return (
     <div className="flex flex-col gap-6 py-6">
       <header className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <h1 className="flex-1 text-lg font-semibold">
-            {node.icon && <span className="mr-1">{node.icon}</span>}
-            {node.title ?? node.body}
+            {node.displayIcon && <span className="mr-1">{node.displayIcon}</span>}
+            {displayName(node)}
           </h1>
           <NodeHeaderEdit
             nodeId={node.id}
@@ -68,19 +85,32 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
             icon={node.icon}
             body={node.body}
             childCount={children.length}
-            parentLabel={parent ? (parent.title ?? parent.body) : null}
+            parentLabel={parent ? displayName(parent) : null}
             pinned={node.pinned}
           />
         </div>
         <p className="text-muted-foreground text-xs">captured {formatTimestamp(node.capturedAt)}</p>
+        {ownScopes.length > 0 && (
+          <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
+            {ownScopes.map((t) => (
+              <span key={t.id}>
+                {t.fieldLabel}:{' '}
+                <Link href={`/node/${t.id}`} className="hover:underline">
+                  {t.icon && <span className="mr-0.5">{t.icon}</span>}
+                  {t.name}
+                </Link>
+              </span>
+            ))}
+          </p>
+        )}
         <div className="flex items-center justify-between">
           {/* the parent's NAME walks up the tree; the ↰ icon changes it */}
           <span className="-ml-2 flex items-center gap-0.5">
             {parent ? (
               <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
                 <Link href={`/node/${parent.id}`}>
-                  {parent.icon && <span>{parent.icon}</span>}
-                  {parent.title ?? parent.body}
+                  {parent.displayIcon && <span>{parent.displayIcon}</span>}
+                  {displayName(parent)}
                 </Link>
               </Button>
             ) : (
@@ -123,14 +153,24 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
             <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
               Fields
             </h2>
-            {defs.some((d) => values[d.key] === undefined) && (
-              <Link
-                href={`/triage/fields?node=${node.id}`}
-                className="text-muted-foreground text-xs hover:underline"
-              >
-                fill fields
-              </Link>
-            )}
+            <span className="flex items-center gap-3">
+              {defs.some((d) => values[d.key] === undefined) && (
+                <Link
+                  href={`/triage/fields?node=${node.id}`}
+                  className="text-muted-foreground text-xs hover:underline"
+                >
+                  fill fields
+                </Link>
+              )}
+              {parent && (
+                <ChildSchemaEditor
+                  nodeId={parent.id}
+                  childSchema={parent.childSchema ?? []}
+                  title={editorTitle(parent)}
+                  initialScopeLabels={scopeLabelMap(wornScopes)}
+                />
+              )}
+            </span>
           </div>
           <FieldEditors
             defs={defs}
@@ -157,15 +197,28 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
           <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
             Children
           </h2>
-          <ul className="divide-border divide-y">
-            {children.map((c) => (
-              <li key={c.id} className="py-2">
-                <Link href={`/node/${c.id}`} className="text-sm hover:underline">
-                  {c.title ?? c.body}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {/* the FOURTH selection surface: same bulk bar, same ?ids= walk,
+              rank order — a room's children share a schema, so "select the
+              unfilled, walk them" is the flow at its best. Set parent skips
+              the already-belongs warning here: everything selected belongs
+              to this room by definition. */}
+          <SelectableList
+            warnOnMove={false}
+            groups={[
+              {
+                key: 'children',
+                header: null,
+                rows: children.map((c) => ({
+                  id: c.id,
+                  label: displayName(c),
+                  icon: c.displayIcon ?? null,
+                  time: formatTimestamp(c.capturedAt),
+                  parented: true,
+                  childCount: grandchildCounts.get(c.id) ?? 0,
+                })),
+              },
+            ]}
+          />
         </section>
       )}
 
@@ -181,7 +234,12 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
         viewSpec={node.viewSpec ?? null}
         action={saveViewSpecDev.bind(null, node.id)}
       />
-      <ChildSchemaEditor nodeId={node.id} childSchema={node.childSchema ?? []} />
+      <ChildSchemaEditor
+        nodeId={node.id}
+        childSchema={node.childSchema ?? []}
+        title={editorTitle(node)}
+        initialScopeLabels={scopeLabelMap(ownScopes)}
+      />
     </div>
   );
 }

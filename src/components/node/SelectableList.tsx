@@ -12,6 +12,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 export interface SelectableRow {
   id: string;
   label: string;
+  /** resolved display icon (own -> link target -> ancestors); null = none anywhere */
+  icon: string | null;
   time: string;
   parented: boolean;
   childCount: number;
@@ -27,7 +29,14 @@ export interface SelectableGroup {
 /** The primary triage surface: checkboxes on every row, a global select-all,
  *  per-day select-alls on stream section headers, and the bulk action bar on
  *  selection. Single-row ↰ pickers stay for one-off moves. */
-export function SelectableList({ groups }: { groups: SelectableGroup[] }) {
+export function SelectableList({
+  groups,
+  warnOnMove = true,
+}: {
+  groups: SelectableGroup[];
+  /** false on the children-list surface (see BulkBar.warnOnMove) */
+  warnOnMove?: boolean;
+}) {
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const allRows = React.useMemo(() => groups.flatMap((g) => g.rows), [groups]);
   const byId = React.useMemo(() => new Map(allRows.map((r) => [r.id, r])), [allRows]);
@@ -99,6 +108,7 @@ export function SelectableList({ groups }: { groups: SelectableGroup[] }) {
                     href={`/node/${row.id}`}
                     className="flex-1 truncate text-sm hover:underline"
                   >
+                    {row.icon && <span className="mr-1.5">{row.icon}</span>}
                     {row.label}
                   </Link>
                   <ParentPicker nodeIds={[row.id]} onMoved={() => toastWithUndo('Moved')}>
@@ -122,6 +132,7 @@ export function SelectableList({ groups }: { groups: SelectableGroup[] }) {
         selectedIds={liveSelected}
         parentedCount={liveSelected.filter((id) => byId.get(id)?.parented).length}
         withChildrenCount={liveSelected.filter((id) => (byId.get(id)?.childCount ?? 0) > 0).length}
+        warnOnMove={warnOnMove}
         onClear={() => setSelected(new Set())}
       />
     </>

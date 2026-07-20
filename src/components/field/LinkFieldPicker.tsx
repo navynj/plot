@@ -30,7 +30,7 @@ interface LinkFieldPickerProps {
 export function LinkFieldPicker({ name, scopeParentId, value, display }: LinkFieldPickerProps) {
   const [open, setOpen] = React.useState(false);
   const [candidates, setCandidates] = React.useState<
-    { id: string; title: string; path: string }[] | null
+    { id: string; title: string; path: string; icon: string | null }[] | null
   >(null);
   const [selected, setSelected] = React.useState<{ id: string; title: string } | null>(null);
   const [query, setQuery] = React.useState('');
@@ -105,6 +105,7 @@ export function LinkFieldPicker({ name, scopeParentId, value, display }: LinkFie
                     setOpen(false);
                   }}
                 >
+                  {c.icon && <span className="shrink-0">{c.icon}</span>}
                   <span className="truncate">{c.title}</span>
                   {c.path && (
                     <span className="text-muted-foreground ml-auto truncate text-xs">{c.path}</span>

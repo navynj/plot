@@ -49,7 +49,7 @@ export function ParentPicker({ nodeIds, warning, onMoved, children }: ParentPick
   const [open, setOpen] = React.useState(false);
   const [warningConfirmed, setWarningConfirmed] = React.useState(false);
   const [candidates, setCandidates] = React.useState<
-    { id: string; title: string; path: string }[] | null
+    { id: string; title: string; path: string; icon: string | null }[] | null
   >(null);
   const [error, setError] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState('');
@@ -145,6 +145,7 @@ export function ParentPicker({ nodeIds, warning, onMoved, children }: ParentPick
                     onSelect={() => commit(c.id, c.id)}
                   >
                     {spinner(c.id)}
+                    {c.icon && <span className="shrink-0">{c.icon}</span>}
                     <span className="truncate">{c.title}</span>
                     {c.path && (
                       <span className="text-muted-foreground ml-auto truncate text-xs">

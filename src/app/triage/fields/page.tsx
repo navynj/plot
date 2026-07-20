@@ -1,14 +1,36 @@
 import Link from 'next/link';
 
 import { requireUserId } from '@/app/_auth/requireUser';
+import { ChildSchemaEditor } from '@/components/node/ChildSchemaEditor';
 import { FieldWalkStep } from '@/components/triage/FieldWalkStep';
 import { Button } from '@/components/ui/button';
+import { displayName } from '@/lib/identity';
+import type { NodeRow } from '@/repository/nodeRepo';
 import { getOwnValues, getValueDisplays } from '@/service/field';
 import { getFieldTriageQueue, getUnfilledFields } from '@/service/fieldTriage';
 import { resolveSchema } from '@/service/inheritance';
-import { getNode } from '@/service/node';
+import { getNode, getSchemaScopeTargets } from '@/service/node';
 
 import { saveAndAdvance, saveAndAdvanceSelection } from './actions';
+
+/** The worn schema's editor, mounted against the PARENT: schema gaps become
+ *  visible exactly while filling ("Store should've been required"), so the
+ *  fix must not require leaving the walk. Same sheet, same validated save
+ *  path as everywhere else — the title names whose schema is edited. */
+async function wornSchemaEditor(userId: string, parent: NodeRow | null) {
+  if (!parent) return undefined;
+  const targets = await getSchemaScopeTargets(userId, parent.childSchema ?? []);
+  return (
+    <ChildSchemaEditor
+      nodeId={parent.id}
+      childSchema={parent.childSchema ?? []}
+      title={`Fields of ${parent.displayIcon ? `${parent.displayIcon} ` : ''}${displayName(parent)}`}
+      initialScopeLabels={Object.fromEntries(
+        targets.map((t) => [t.id, `${t.icon ? `${t.icon} ` : ''}${t.name}`])
+      )}
+    />
+  );
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -48,6 +70,7 @@ export default async function FieldTriagePage({
     }
 
     const current = await getNode(userId, ids[index]!);
+    const parent = current?.parentId ? await getNode(userId, current.parentId) : null;
     // ALL worn fields, in schema order — a selected node may be revisited to
     // correct values, so filled fields render too (pre-populated)
     const defs = current ? await resolveSchema(userId, current) : [];
@@ -78,6 +101,7 @@ export default async function FieldTriagePage({
           }
           action={defs.length > 0 ? saveAndAdvanceSelection.bind(null, ids, index) : null}
           skipHref={nextHref}
+          schemaEditor={await wornSchemaEditor(userId, parent)}
         />
       </div>
     );
@@ -119,6 +143,10 @@ export default async function FieldTriagePage({
           emptyMessage="This node has no unfilled fields."
           action={saveAndAdvance.bind(null, current.id)}
           skipHref={scopedId ? null : `/triage/fields?after=${current.id}`}
+          schemaEditor={await wornSchemaEditor(
+            userId,
+            current.parentId ? await getNode(userId, current.parentId) : null
+          )}
         />
       )}
     </div>

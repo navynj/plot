@@ -87,7 +87,9 @@ describe.skipIf(!hasDb)('bundle A integration (real DB)', () => {
   });
 
   it('timeline derivation in SQL: structural + constructed hide under auto; shown/hidden override; captured leaves unaffected', async () => {
-    // captured entries carry body (the capture artifact); constructed nodes don't
+    // origin is the birth record: captureNode writes 'captured', every other
+    // creator defaults 'constructed' — body no longer distinguishes them
+    // (a single-line capture is body-null since the first-line split)
     const captured = async (body: string, parentId?: string) => {
       const n = await nodeService.captureNode(uid, { body, contextParentId: parentId });
       return n.id;
@@ -110,10 +112,68 @@ describe.skipIf(!hasDb)('bundle A integration (real DB)', () => {
     expect(visible).not.toContain('has-children'); // structural via children
     expect(visible).not.toContain('declares-schema'); // structural via childSchema
     expect(visible).toContain('the-child'); // captured leaf child unaffected
-    expect(visible).toContain('plain-leaf');
-    expect(visible).not.toContain('constructed-leaf'); // never captured → not a record
+    expect(visible).toContain('plain-leaf'); // single-line capture: body-null yet VISIBLE (origin)
+    expect(visible).not.toContain('constructed-leaf'); // born constructed → not a record
     expect(visible).toContain('shown-constructed'); // manual override in
     expect(visible).not.toContain('hidden-leaf'); // manual override out
+  });
+
+  it('capture splits the first line into title at the service path; multi-line keeps the rest as body', async () => {
+    const single = await nodeService.captureNode(uid, { body: 'Croissant (12pc)' });
+    expect(single.title).toBe('Croissant (12pc)');
+    expect(single.body).toBeNull();
+    expect(single.origin).toBe('captured');
+
+    const multi = await nodeService.captureNode(uid, { body: 'Rio Funk\n30분 연습' });
+    expect(multi.title).toBe('Rio Funk');
+    expect(multi.body).toBe('30분 연습');
+
+    const rows = await nodeRepo.findTimelineVisible(uid, undefined, 'UTC');
+    const titles = rows.map((n) => n.title);
+    expect(titles).toContain('Croissant (12pc)'); // single-line capture on the timeline
+    expect(titles).toContain('Rio Funk');
+  });
+
+  it('origin migration fixture: legacy shapes split and mark correctly (mirrors .migrate-origin.mjs)', async () => {
+    const { sql: rawSql } = await import('drizzle-orm');
+    const mig = (k: string) => `mig-${uid.slice(0, 6)}-${k}`; // ids unique per run
+    // legacy capture shape: body only, pre-split, origin default 'constructed'
+    await db.insert(schema.node).values([
+      { id: mig('single'), userId: uid, body: 'buy stamps' },
+      { id: mig('multi'), userId: uid, body: 'trip notes\npack light\nbook early' },
+      { id: mig('both'), userId: uid, title: 'Renamed', body: 'original capture text' },
+      { id: mig('room'), userId: uid, title: 'A room' },
+    ]);
+
+    // the same statements the one-off migration runs
+    await db.execute(rawSql`update node set origin='captured'
+      where body is not null and title is not null and origin <> 'captured' and user_id=${uid}`);
+    await db.execute(rawSql`update node set
+      title = nullif(trim(split_part(body, e'\n', 1)), ''),
+      body = case when position(e'\n' in body) = 0 then null
+                  else nullif(trim(substring(body from position(e'\n' in body) + 1)), '') end,
+      origin = 'captured'
+      where body is not null and title is null and user_id=${uid}`);
+
+    const byIdRow = async (id: string) => (await nodeRepo.byId(uid, id))!;
+    const single = await byIdRow(mig('single'));
+    expect([single.title, single.body, single.origin]).toEqual(['buy stamps', null, 'captured']);
+    const multi = await byIdRow(mig('multi'));
+    expect([multi.title, multi.body, multi.origin]).toEqual([
+      'trip notes',
+      'pack light\nbook early',
+      'captured',
+    ]);
+    // both-set: FLAGGED not split — text untouched, marked captured
+    const both = await byIdRow(mig('both'));
+    expect([both.title, both.body, both.origin]).toEqual([
+      'Renamed',
+      'original capture text',
+      'captured',
+    ]);
+    // constructed shape untouched
+    const room = await byIdRow(mig('room'));
+    expect([room.title, room.body, room.origin]).toEqual(['A room', null, 'constructed']);
   });
 
   it('timeline event axis: event_date wins, capturedAt falls back, day boundaries follow the USER timezone', async () => {
@@ -129,21 +189,22 @@ describe.skipIf(!hasDb)('bundle A integration (real DB)', () => {
     await captured('axis-mid', new Date('2026-06-02T23:30:00Z'));
 
     const all = await nodeRepo.findTimelineVisible(uid, undefined, 'UTC');
-    const bodies = all.map((n) => n.body).filter((b) => b?.startsWith('axis-'));
+    // single-line captures land in TITLE since the first-line split
+    const titles = all.map((n) => n.title).filter((t) => t?.startsWith('axis-'));
     // event axis order (pure UTC instants): dated entries first, then today
-    expect(bodies).toEqual(['axis-early', 'axis-mid', 'axis-late', 'axis-today']);
+    expect(titles).toEqual(['axis-early', 'axis-mid', 'axis-late', 'axis-today']);
 
     // a UTC user finds the 23:30Z entry on 06-02…
     const utcDay = await nodeRepo.findTimelineVisible(uid, '2026-06-02', 'UTC');
-    expect(utcDay.map((n) => n.body)).toEqual(['axis-mid']);
+    expect(utcDay.map((n) => n.title)).toEqual(['axis-mid']);
     // …a KST user finds the SAME entry on 06-03 (their morning), sharing the
     // day with axis-late (06-03T00:00Z = 09:00 KST same day)
     const kstDay = await nodeRepo.findTimelineVisible(uid, '2026-06-03', 'Asia/Seoul');
-    expect(kstDay.map((n) => n.body).sort()).toEqual(['axis-late', 'axis-mid']);
+    expect(kstDay.map((n) => n.title).sort()).toEqual(['axis-late', 'axis-mid']);
     expect((await nodeRepo.findTimelineVisible(uid, '2026-06-02', 'Asia/Seoul')).length).toBe(0);
     // boundary day, nothing bleeding
     const june1 = await nodeRepo.findTimelineVisible(uid, '2026-06-01', 'UTC');
-    expect(june1.map((n) => n.body)).toEqual(['axis-early']);
+    expect(june1.map((n) => n.title)).toEqual(['axis-early']);
 
     // THE TIEBREAKER: same eventDate (same midnight) → capture order within
     // the day, matching the displayed times
@@ -152,7 +213,7 @@ describe.skipIf(!hasDb)('bundle A integration (real DB)', () => {
     await captured('tie-second', sameDay);
     await captured('tie-third', sameDay);
     const june10 = await nodeRepo.findTimelineVisible(uid, '2026-06-10', 'UTC');
-    expect(june10.map((n) => n.body)).toEqual(['tie-first', 'tie-second', 'tie-third']);
+    expect(june10.map((n) => n.title)).toEqual(['tie-first', 'tie-second', 'tie-third']);
   });
 
   it('date meta-axis: eventDate groups on coalesce(event_date, captured_at) day', async () => {

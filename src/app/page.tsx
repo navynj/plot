@@ -4,6 +4,7 @@ import { DayNavigator } from '@/components/capture/DayNavigator';
 import { SelectableList, type SelectableGroup } from '@/components/node/SelectableList';
 import { ScrollAnchor } from '@/components/ui/scroll-anchor';
 import { formatTimestamp } from '@/lib/formatTimestamp';
+import { displayName } from '@/lib/identity';
 import { nodeChildCounts } from '@/service/node';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
 import { dayInTz, isValidDay, todayInTz } from '@/lib/day';
@@ -32,8 +33,8 @@ export default async function TimelinePage({
   ]);
   const chips: CaptureChip[] = chipNodes.map((n) => ({
     id: n.id,
-    icon: n.icon,
-    title: n.title ?? n.body ?? '(untitled)',
+    icon: n.displayIcon ?? null,
+    title: displayName(n),
   }));
 
   // section the river by event-axis day (presentation grouping only)
@@ -46,7 +47,8 @@ export default async function TimelinePage({
     const nodeDay = dayInTz(n.eventDate ?? n.capturedAt, tz);
     const row = {
       id: n.id,
-      label: n.title ?? n.body ?? '(untitled)',
+      label: displayName(n),
+      icon: n.displayIcon ?? null,
       time: formatTimestamp(n.capturedAt),
       parented: n.parentId !== null,
       childCount: childCounts.get(n.id) ?? 0,

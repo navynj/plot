@@ -43,6 +43,13 @@
       "when": 1784523473211,
       "tag": "0005_lucky_dragon_lord",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784559313006,
+      "tag": "0006_orange_imperial_guard",
+      "breakpoints": true
     }
   ]
 }

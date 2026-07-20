@@ -9,7 +9,9 @@ import {
   type ViewSpec,
 } from '@/db/schema';
 import { linkRepo } from '@/repository/linkRepo';
-import { nodeRepo, type UpdateNodePatch } from '@/repository/nodeRepo';
+import { nodeRepo, type NodeRow, type UpdateNodePatch } from '@/repository/nodeRepo';
+
+import { displayName } from '@/lib/identity';
 
 import { reparent } from './triage';
 
@@ -32,6 +34,10 @@ export interface CaptureInput {
    *  entry's eventDate. Absent (the common case, "today") leaves eventDate
    *  null — capturedAt speaks for it. */
   eventDate?: Date;
+  /** Birth record. Default 'captured' — this IS the capture path; the
+   *  create-in-place actions that borrow it for naming+placement pass
+   *  'constructed'. */
+  origin?: 'captured' | 'constructed';
 }
 
 /**
@@ -41,12 +47,27 @@ export interface CaptureInput {
  * otherwise the node stays in the inbox filter.
  */
 export async function captureNode(userId: string, input: CaptureInput): Promise<Node> {
-  const title = input.title?.trim() || null;
-  const body = input.body?.trim() || null;
+  let title = input.title?.trim() || null;
+  let body = input.body?.trim() || null;
   if (!title && !body) {
     throw new EmptyCaptureError();
   }
-  let created = await nodeRepo.create({ userId, title, body, capturedAt: new Date() });
+  // FIRST LINE IS THE NAME: a capture's first line becomes the node's title
+  // ("Croissant (12pc)" is a name, not prose); anything after the newline
+  // stays body, null for single-line captures. Callers that already named
+  // the node (title given) skip the split.
+  if (!title && body) {
+    const newline = body.indexOf('\n');
+    title = (newline === -1 ? body : body.slice(0, newline)).trim();
+    body = newline === -1 ? null : body.slice(newline + 1).trim() || null;
+  }
+  let created = await nodeRepo.create({
+    userId,
+    title,
+    body,
+    origin: input.origin ?? 'captured',
+    capturedAt: new Date(),
+  });
   if (input.eventDate) {
     created =
       (await nodeRepo.update(userId, created.id, { eventDate: input.eventDate })) ?? created;
@@ -76,15 +97,15 @@ export async function deleteNode(userId: string, id: string): Promise<void> {
   }
 }
 
-export function getNode(userId: string, id: string): Promise<Node | null> {
+export function getNode(userId: string, id: string): Promise<NodeRow | null> {
   return nodeRepo.byId(userId, id);
 }
 
-export function getChildren(userId: string, id: string): Promise<Node[]> {
+export function getChildren(userId: string, id: string): Promise<NodeRow[]> {
   return nodeRepo.findChildren(userId, id);
 }
 
-export function getTimeline(userId: string): Promise<Node[]> {
+export function getTimeline(userId: string): Promise<NodeRow[]> {
   return nodeRepo.findTimeline(userId);
 }
 
@@ -95,11 +116,11 @@ export function getTimelineVisible(
   userId: string,
   day: string | undefined,
   tz: string
-): Promise<Node[]> {
+): Promise<NodeRow[]> {
   return nodeRepo.findTimelineVisible(userId, day, tz);
 }
 
-export function getInbox(userId: string): Promise<Node[]> {
+export function getInbox(userId: string): Promise<NodeRow[]> {
   return nodeRepo.findInbox(userId);
 }
 
@@ -109,13 +130,13 @@ export function nodeChildCounts(userId: string, ids: string[]): Promise<Map<stri
 }
 
 export interface GridTile {
-  node: Node;
+  node: NodeRow;
   /** tree children + graph members — what the room holds */
   count: number;
 }
 
 export interface GridSection {
-  root: Node;
+  root: NodeRow;
   tiles: GridTile[];
 }
 
@@ -143,7 +164,7 @@ export async function getGridSections(userId: string): Promise<GridSection[]> {
 
 /** The capture chip row: pinned nodes first (stored preference), then the
  *  level-2 nodes (children of confirmed roots), deduped, rank order. */
-export async function getCaptureChips(userId: string): Promise<Node[]> {
+export async function getCaptureChips(userId: string): Promise<NodeRow[]> {
   const [pinned, roots] = await Promise.all([
     nodeRepo.findPinned(userId),
     nodeRepo.findRoots(userId),
@@ -152,6 +173,42 @@ export async function getCaptureChips(userId: string): Promise<Node[]> {
     await Promise.all(roots.map((root) => nodeRepo.findChildren(userId, root.id)))
   ).flat();
   return [...new Map([...pinned, ...levelTwo].map((n) => [n.id, n])).values()];
+}
+
+export interface ScopeTarget {
+  fieldKey: string;
+  fieldLabel: string;
+  id: string;
+  icon: string | null;
+  name: string;
+}
+
+/** The DISTINCT linkTargetParentId targets a childSchema's link fields point
+ *  at — the schema relationship made navigable (nothing stored; this reads
+ *  what's already declared). */
+export async function getSchemaScopeTargets(
+  userId: string,
+  defs: FieldDef[]
+): Promise<ScopeTarget[]> {
+  const seen = new Set<string>();
+  const out: ScopeTarget[] = [];
+  for (const def of defs) {
+    if (def.type !== 'link' || !def.linkTargetParentId || seen.has(def.linkTargetParentId)) {
+      continue;
+    }
+    seen.add(def.linkTargetParentId);
+    const target = await nodeRepo.byId(userId, def.linkTargetParentId);
+    if (target) {
+      out.push({
+        fieldKey: def.key,
+        fieldLabel: def.label,
+        id: target.id,
+        icon: target.displayIcon ?? null,
+        name: displayName(target),
+      });
+    }
+  }
+  return out;
 }
 
 /** Grid inline add: a NEW ROOM under a section's root. Title, not body — a

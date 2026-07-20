@@ -56,9 +56,18 @@ function keyFromLabel(label: string): string {
 export function ChildSchemaEditor({
   nodeId,
   childSchema,
+  title,
+  initialScopeLabels,
 }: {
+  /** the node whose childSchema is edited — from the walk / a child's
+   *  detail this is the PARENT, so the title must say so */
   nodeId: string;
   childSchema: FieldDef[];
+  /** names WHOSE schema is being edited ("Fields of 💸 Expense") — editing
+   *  it affects every sibling wearing it, not just the node on screen */
+  title?: string;
+  /** server-resolved icon+name for existing link-field scopes */
+  initialScopeLabels?: Record<string, string>;
 }) {
   const initialRows = React.useCallback(
     () => childSchema.map((def, i) => ({ uid: i, def, persisted: true })),
@@ -74,7 +83,9 @@ export function ChildSchemaEditor({
   const [scopeCandidates, setScopeCandidates] = React.useState<
     { id: string; title: string; path: string }[] | null
   >(null);
-  const [scopeLabels, setScopeLabels] = React.useState<Record<string, string>>({});
+  const [scopeLabels, setScopeLabels] = React.useState<Record<string, string>>(
+    initialScopeLabels ?? {}
+  );
   const [draggingUid, setDraggingUid] = React.useState<number | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
@@ -163,9 +174,9 @@ export function ChildSchemaEditor({
         </SheetTrigger>
         <SheetContent className="flex w-full flex-col gap-3 overflow-y-auto sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>Fields for children</SheetTitle>
+            <SheetTitle>{title ?? 'Fields for children'}</SheetTitle>
             <SheetDescription>
-              The template children of this node wear. Types are fixed after creation (storage
+              The template EVERY child of that node wears — editing here changes all siblings. Types are fixed after creation (storage
               differs per type) — to change one, remove the field and add it anew. Removing a field
               never deletes data: stored values stay with each child and resurface if the same key
               is ever re-declared.

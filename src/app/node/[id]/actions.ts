@@ -99,7 +99,7 @@ export async function captureHere(nodeId: string, formData: FormData): Promise<v
  *  (an intentionally named collection reads as top-level, not inbox debt). */
 export async function createCollectionNode(title: string): Promise<{ id: string; title: string }> {
   const userId = await requireUserId();
-  const created = await captureNode(userId, { title });
+  const created = await captureNode(userId, { title, origin: 'constructed' });
   await reparent(userId, created.id, null);
   return { id: created.id, title };
 }
@@ -114,6 +114,7 @@ export async function createLinkTargetNode(
   const userId = await requireUserId();
   const created = await captureNode(userId, {
     title,
+    origin: 'constructed',
     contextParentId: scopeParentId ?? undefined,
   });
   return { id: created.id, title };
@@ -189,6 +190,8 @@ export async function saveChildSchemaAction(
     if (err instanceof InvalidSchemaError) return { ok: false, error: err.message };
     throw err;
   }
-  revalidatePath(`/node/${nodeId}`);
+  // layout-wide: the walk (and any sibling's detail) must re-render the NEW
+  // schema in place when the sheet saves mid-walk
+  revalidatePath('/', 'layout');
   return { ok: true };
 }

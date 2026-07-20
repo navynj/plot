@@ -1,12 +1,15 @@
 import Link from 'next/link';
+import * as React from 'react';
 
-import type { FieldDef, FieldPrimitive, Node } from '@/db/schema';
+import type { FieldDef, FieldPrimitive } from '@/db/schema';
+import type { NodeRow } from '@/repository/nodeRepo';
 import { FieldEditors } from '@/components/field/FieldEditors';
 import { Button } from '@/components/ui/button';
+import { displayName } from '@/lib/identity';
 
 interface FieldWalkStepProps {
   /** null = the queued id no longer resolves (deleted mid-walk) */
-  node: Node | null;
+  node: NodeRow | null;
   defs: FieldDef[];
   values: Record<string, FieldPrimitive>;
   displays?: Record<string, string>;
@@ -17,6 +20,9 @@ interface FieldWalkStepProps {
   action: ((formData: FormData) => Promise<void>) | null;
   /** absent in the single-node (?node=) scope, where there is no "next" */
   skipHref: string | null;
+  /** the worn schema's editor (ChildSchemaEditor mounted against the PARENT
+   *  by the page) — schema gaps become visible exactly while filling */
+  schemaEditor?: React.ReactNode;
 }
 
 /** ONE step of the field-filling walk — body for reference, the registry
@@ -31,6 +37,7 @@ export function FieldWalkStep({
   emptyMessage,
   action,
   skipHref,
+  schemaEditor,
 }: FieldWalkStepProps) {
   return (
     <section className="flex flex-col gap-4">
@@ -38,7 +45,8 @@ export function FieldWalkStep({
         {node ? (
           <>
             <Link href={`/node/${node.id}`} className="text-sm font-medium hover:underline">
-              {node.title ?? '(untitled)'}
+              {node.displayIcon && <span className="mr-1">{node.displayIcon}</span>}
+              {displayName(node)}
             </Link>
             {node.body && (
               <p className="text-muted-foreground mt-1 text-sm whitespace-pre-wrap">{node.body}</p>
@@ -48,6 +56,7 @@ export function FieldWalkStep({
           <p className="text-muted-foreground text-sm">This item no longer exists.</p>
         )}
       </div>
+      {schemaEditor && <div className="-mb-2 flex justify-end">{schemaEditor}</div>}
       {defs.length > 0 && action ? (
         <FieldEditors defs={defs} values={values} displays={displays} action={action} />
       ) : (

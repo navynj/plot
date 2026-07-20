@@ -1,7 +1,8 @@
 import { and, asc, eq, isNull, or } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { link, node, type Link, type Node } from '@/db/schema';
+import { link, node, type Link } from '@/db/schema';
+import { displayIcon as nodeDisplayIcon, type NodeRow } from './displayIconSql';
 
 /** Curation graph (DESIGN §2): pure membership edges, NO inheritance ever —
  *  this repo never reads or writes parentId, rank (the node's), or schema.
@@ -48,27 +49,27 @@ export const linkRepo = {
   },
 
   /** A collection's members (target nodes), in curation order. */
-  async findTargets(userId: string, sourceId: string): Promise<Node[]> {
+  async findTargets(userId: string, sourceId: string): Promise<NodeRow[]> {
     if (!(await ownsNode(userId, sourceId))) return [];
     const rows = await db
-      .select({ n: node })
+      .select({ n: node, displayIcon: nodeDisplayIcon })
       .from(link)
       .innerJoin(node, eq(node.id, link.targetId))
       .where(and(eq(link.sourceId, sourceId), eq(node.userId, userId), isNull(node.deletedAt)))
       .orderBy(asc(link.rank), asc(link.createdAt));
-    return rows.map((r) => r.n);
+    return rows.map((r) => ({ ...r.n, displayIcon: r.displayIcon }));
   },
 
   /** The collections a node sits in (source nodes). */
-  async findSources(userId: string, targetId: string): Promise<Node[]> {
+  async findSources(userId: string, targetId: string): Promise<NodeRow[]> {
     if (!(await ownsNode(userId, targetId))) return [];
     const rows = await db
-      .select({ n: node })
+      .select({ n: node, displayIcon: nodeDisplayIcon })
       .from(link)
       .innerJoin(node, eq(node.id, link.sourceId))
       .where(and(eq(link.targetId, targetId), eq(node.userId, userId), isNull(node.deletedAt)))
       .orderBy(asc(link.createdAt));
-    return rows.map((r) => r.n);
+    return rows.map((r) => ({ ...r.n, displayIcon: r.displayIcon }));
   },
 
   /** Remove every edge touching a node (both directions) — the delete path.

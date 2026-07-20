@@ -134,6 +134,11 @@ never inline it.
 - **A tree link inherits; a graph link never does.** Inheritance is decided by
   the link kind, not the node. Graph aggregation reads borrowed fields but
   imposes no schema.
+  - **Schema inherits at depth 1; display fallbacks (icon) may walk ancestors.**
+    A display fallback changes what's painted, never what's stored — the icon
+    ladder (own → first-link-field target → nearest ancestor) resolves at
+    render time in the repository's list SQL, so re-parenting or
+    re-categorizing re-resolves with zero writes and nothing goes stale.
 - **Inbox is a derived filter,** `parentId IS NULL`. Never store an "in inbox"
   flag. → `nodeRepo.findInbox(userId)`.
 - **No cycles.** A node cannot become a descendant of itself. Every re-parent /

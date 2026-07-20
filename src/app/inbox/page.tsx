@@ -4,6 +4,7 @@ import { requireUserId } from '@/app/_auth/requireUser';
 import { SelectableList } from '@/components/node/SelectableList';
 import { ScrollAnchor } from '@/components/ui/scroll-anchor';
 import { formatTimestamp } from '@/lib/formatTimestamp';
+import { displayName } from '@/lib/identity';
 import { getInbox, nodeChildCounts } from '@/service/node';
 
 export const dynamic = 'force-dynamic';
@@ -36,7 +37,8 @@ export default async function InboxPage() {
               header: null,
               rows: nodes.map((n) => ({
                 id: n.id,
-                label: n.title ?? n.body ?? '(untitled)',
+                label: displayName(n),
+                icon: n.displayIcon ?? null,
                 time: formatTimestamp(n.capturedAt),
                 parented: false,
                 childCount: childCounts.get(n.id) ?? 0,

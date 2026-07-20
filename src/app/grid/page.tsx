@@ -5,6 +5,7 @@ import { addRoomAction } from '@/app/actions';
 import { requireUserId } from '@/app/_auth/requireUser';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Input } from '@/components/ui/input';
+import { displayName } from '@/lib/identity';
 import { getGridSections, getInbox } from '@/service/node';
 
 export const dynamic = 'force-dynamic';
@@ -24,8 +25,8 @@ export default async function GridHomePage() {
             href={`/node/${root.id}`}
             className="text-muted-foreground hover:text-foreground mb-2 block text-xs font-medium tracking-wider uppercase"
           >
-            {root.icon && <span className="mr-1">{root.icon}</span>}
-            {root.title ?? root.body}
+            {root.displayIcon && <span className="mr-1">{root.displayIcon}</span>}
+            {displayName(root)}
           </Link>
           {tiles.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -35,10 +36,10 @@ export default async function GridHomePage() {
                   href={`/node/${node.id}`}
                   className="border-border hover:bg-muted/50 flex aspect-square flex-col justify-between rounded-xl border p-4"
                 >
-                  <span className="text-2xl">{node.icon ?? '·'}</span>
+                  <span className="text-2xl">{node.displayIcon ?? '·'}</span>
                   <span>
                     <span className="block truncate text-sm font-medium">
-                      {node.title ?? node.body}
+                      {displayName(node)}
                     </span>
                     <span className="text-muted-foreground text-xs">{count} inside</span>
                   </span>

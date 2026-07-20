@@ -1,13 +1,20 @@
-import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, getTableColumns, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { node, type Node } from '@/db/schema';
+
+import { displayIcon, type NodeRow } from './displayIconSql';
+
+export type { NodeRow };
 
 export interface CreateNodeInput {
   userId: string;
   title?: string | null;
   body?: string | null;
   icon?: string | null;
+  /** birth record; omitted = 'constructed' (column default) — captureNode
+   *  is the only caller that writes 'captured' */
+  origin?: 'captured' | 'constructed';
   capturedAt: Date;
 }
 
@@ -29,6 +36,9 @@ export type UpdateNodePatch = Partial<
 >;
 
 const notDeleted = isNull(node.deletedAt);
+
+const nodeWithIcon = { ...getTableColumns(node), displayIcon };
+
 
 /** Every read/write is scoped by `userId` — ownership isolation lives in the
  *  WHERE clause, not in caller discipline. Entry points resolve the id from
@@ -54,9 +64,9 @@ export const nodeRepo = {
     return rows.length > 0;
   },
 
-  async byId(userId: string, id: string): Promise<Node | null> {
+  async byId(userId: string, id: string): Promise<NodeRow | null> {
     const rows = await db
-      .select()
+      .select(nodeWithIcon)
       .from(node)
       .where(and(eq(node.id, id), eq(node.userId, userId), notDeleted))
       .limit(1);
@@ -105,26 +115,26 @@ export const nodeRepo = {
   /** Inbox is a derived filter — never stored state (DESIGN §6): no parent AND
    *  never positioned. A confirmed root is also parent-less but carries a rank
    *  (its position among roots), which is what "leaves the inbox" means. */
-  async findInbox(userId: string): Promise<Node[]> {
+  async findInbox(userId: string): Promise<NodeRow[]> {
     return db
-      .select()
+      .select(nodeWithIcon)
       .from(node)
       .where(and(eq(node.userId, userId), isNull(node.parentId), isNull(node.rank), notDeleted))
       .orderBy(asc(node.capturedAt));
   },
 
   /** Confirmed top-level nodes: parent-less with a position among roots. */
-  async findRoots(userId: string): Promise<Node[]> {
+  async findRoots(userId: string): Promise<NodeRow[]> {
     return db
-      .select()
+      .select(nodeWithIcon)
       .from(node)
       .where(and(eq(node.userId, userId), isNull(node.parentId), isNotNull(node.rank), notDeleted))
       .orderBy(asc(node.rank), asc(node.capturedAt));
   },
 
-  async findChildren(userId: string, parentId: string): Promise<Node[]> {
+  async findChildren(userId: string, parentId: string): Promise<NodeRow[]> {
     return db
-      .select()
+      .select(nodeWithIcon)
       .from(node)
       .where(and(eq(node.parentId, parentId), eq(node.userId, userId), notDeleted))
       .orderBy(asc(node.rank), asc(node.capturedAt));
@@ -132,28 +142,31 @@ export const nodeRepo = {
 
   /** Chat-style display order: oldest → newest, so a fresh capture lands
    *  directly above the bottom-pinned input. */
-  async findTimeline(userId: string): Promise<Node[]> {
+  async findTimeline(userId: string): Promise<NodeRow[]> {
     return db
-      .select()
+      .select(nodeWithIcon)
       .from(node)
       .where(and(eq(node.userId, userId), notDeleted))
       .orderBy(asc(node.capturedAt));
   },
 
-  /** The timeline view's slice: same order, minus non-record nodes. Derived
-   *  in SQL — under 'auto' a node hides when it is STRUCTURAL (tree children
-   *  or a non-empty childSchema) or CONSTRUCTED (body IS NULL: seeded /
-   *  picker-created / grouped — never captured as text; the timeline is the
-   *  river of captured text). 'shown'/'hidden' override. Only the timeline
-   *  uses this; inbox/grid/detail see everything. */
-  async findTimelineVisible(userId: string, day: string | undefined, tz: string): Promise<Node[]> {
+  /** The timeline view's slice: same order, minus non-record nodes. Under
+   *  'auto' a node hides when it is STRUCTURAL (tree children or a non-empty
+   *  childSchema) or CONSTRUCTED by birth (origin column: seeded / picker-
+   *  created / grouped — never captured as text; the timeline is the river
+   *  of captured text). origin replaced the old body-IS-NULL inference,
+   *  which stopped being derivable when captures began splitting their
+   *  first line into title (single-line captures are body-null). 'shown'/
+   *  'hidden' override. Only the timeline uses this; inbox/grid/detail see
+   *  everything. */
+  async findTimelineVisible(userId: string, day: string | undefined, tz: string): Promise<NodeRow[]> {
     // the EVENT AXIS: when it happened wins over when it was captured —
     // exactly the aggregation engine's date axis. Day boundaries follow the
     // USER's calendar: AT TIME ZONE converts to their wall clock first.
     const axis = sql`coalesce(${node.eventDate}, ${node.capturedAt})`;
     return (
       db
-        .select()
+        .select(nodeWithIcon)
         .from(node)
         .where(
           and(
@@ -166,7 +179,7 @@ export const nodeRepo = {
             ${node.timelineVisibility} = 'shown'
             or (
               ${node.timelineVisibility} = 'auto'
-              and ${node.body} is not null
+              and ${node.origin} = 'captured'
               and coalesce(jsonb_array_length(${node.childSchema}), 0) = 0
               and not exists (
                 select 1 from node c where c.parent_id = ${node.id} and c.deleted_at is null
@@ -186,9 +199,9 @@ export const nodeRepo = {
   },
 
   /** Pinned nodes (a stored preference) in rank order — the chip row lead. */
-  async findPinned(userId: string): Promise<Node[]> {
+  async findPinned(userId: string): Promise<NodeRow[]> {
     return db
-      .select()
+      .select(nodeWithIcon)
       .from(node)
       .where(and(eq(node.userId, userId), eq(node.pinned, true), notDeleted))
       .orderBy(asc(node.rank), asc(node.capturedAt));

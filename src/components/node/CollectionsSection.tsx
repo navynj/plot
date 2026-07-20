@@ -1,7 +1,8 @@
 import { Plus, X } from 'lucide-react';
 import Link from 'next/link';
 
-import type { Node } from '@/db/schema';
+import type { NodeRow } from '@/repository/nodeRepo';
+import { displayName } from '@/lib/identity';
 import { removeMembership } from '@/app/node/[id]/actions';
 import { CollectionPicker } from '@/components/node/CollectionPicker';
 import { Button } from '@/components/ui/button';
@@ -9,8 +10,8 @@ import { SubmitButton } from '@/components/ui/submit-button';
 
 interface CollectionsSectionProps {
   nodeId: string;
-  memberships: Node[]; // collections this node sits in
-  members: Node[]; // nodes linked INTO this node (it reads as a collection)
+  memberships: NodeRow[]; // collections this node sits in
+  members: NodeRow[]; // nodes linked INTO this node (it reads as a collection)
 }
 
 /** Curation surface on node detail (DESIGN §2): membership chips + add
@@ -30,14 +31,15 @@ export function CollectionsSection({ nodeId, memberships, members }: Collections
               className="border-border flex items-center gap-1 rounded-full border py-0.5 pr-1 pl-3 text-sm"
             >
               <Link href={`/node/${m.id}`} className="hover:underline">
-                {m.title ?? m.body}
+                {m.displayIcon && <span className="mr-1">{m.displayIcon}</span>}
+                {displayName(m)}
               </Link>
               <form action={removeMembership.bind(null, m.id, nodeId, nodeId)}>
                 <SubmitButton
                   iconOnly
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`remove from ${m.title ?? 'collection'}`}
+                  aria-label={`remove from ${displayName(m)}`}
                 >
                   <X className="size-3" />
                 </SubmitButton>
@@ -61,7 +63,8 @@ export function CollectionsSection({ nodeId, memberships, members }: Collections
             {members.map((m) => (
               <li key={m.id} className="flex items-center justify-between gap-2 py-2">
                 <Link href={`/node/${m.id}`} className="flex-1 truncate text-sm hover:underline">
-                  {m.title ?? m.body}
+                  {m.displayIcon && <span className="mr-1">{m.displayIcon}</span>}
+                  {displayName(m)}
                 </Link>
                 <form action={removeMembership.bind(null, nodeId, m.id, nodeId)}>
                   <SubmitButton iconOnly variant="ghost" size="icon-sm" aria-label="unlink">

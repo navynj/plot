@@ -235,6 +235,16 @@ export const node = pgTable(
     // nodes lead the capture chip row
     pinned: boolean('pinned').notNull().default(false),
 
+    // how the node was BORN (a stored fact, like pinned — it replaced the
+    // body-null derivation, which stopped being derivable once captures
+    // started splitting their first line into title): captured entries are
+    // records, constructed nodes are structure. Only the timeline's auto
+    // rule reads it. Default 'constructed' so every structural creator
+    // (rooms, layers, groups, create-in-place, seed — and future ones) is
+    // constructed without saying so; captureNode is the single place that
+    // writes 'captured'.
+    origin: text('origin').$type<'captured' | 'constructed'>().notNull().default('constructed'),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     // soft delete (ROADMAP Phase 1); reads filter on IS NULL

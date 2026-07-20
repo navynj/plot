@@ -4,7 +4,7 @@ import { linkRepo } from '@/repository/linkRepo';
 import { nodeRepo } from '@/repository/nodeRepo';
 
 import { aggregate, type AggregateBucket, type AggregationOp } from './aggregation';
-import { labelOf } from './candidates';
+import { displayName } from '@/lib/identity';
 import { extractValue } from './field';
 
 /**
@@ -157,7 +157,7 @@ async function groupLabels(
     if (group === null) {
       map.set(group, '(total)');
     } else if (byId.has(group)) {
-      map.set(group, labelOf(byId.get(group)!));
+      map.set(group, displayName(byId.get(group)!));
     } else if (/^\d{4}-\d{2}-\d{2}/.test(group)) {
       map.set(group, group.slice(0, 10));
     } else {
@@ -237,7 +237,7 @@ async function resolveItemsView(userId: string, node: Node, spec: ViewSpec): Pro
 
   // a link-lens value is a node id — render its label, never the raw id
   const everything = await nodeRepo.findTimeline(userId);
-  const labelById = new Map(everything.map((n) => [n.id, labelOf(n)]));
+  const labelById = new Map(everything.map((n) => [n.id, displayName(n)]));
   const resolveLens = (v: FieldPrimitive | null): FieldPrimitive | null =>
     typeof v === 'string' && labelById.has(v) ? labelById.get(v)! : v;
 
@@ -254,7 +254,7 @@ async function resolveItemsView(userId: string, node: Node, spec: ViewSpec): Pro
     })
     .map((n) => ({
       id: n.id,
-      label: labelOf(n),
+      label: displayName(n),
       lensValue: resolveLens(lensOf(n)),
       capturedAt: n.capturedAt,
     }));
