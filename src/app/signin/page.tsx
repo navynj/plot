@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 
 import { auth, signIn } from '@/auth';
-import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default async function SignInPage() {
@@ -23,9 +23,9 @@ export default async function SignInPage() {
               await signIn('google', { redirectTo: '/' });
             }}
           >
-            <Button type="submit" variant="outline" className="w-full">
+            <SubmitButton variant="outline" className="w-full">
               Continue with Google
-            </Button>
+            </SubmitButton>
           </form>
         </CardContent>
       </Card>

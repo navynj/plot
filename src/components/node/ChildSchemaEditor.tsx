@@ -7,6 +7,7 @@ import * as React from 'react';
 import type { FieldDef } from '@/db/schema';
 import { saveChildSchemaAction } from '@/app/node/[id]/actions';
 import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/ui/submit-button';
 import {
   Command,
   CommandDialog,
@@ -206,7 +207,9 @@ export function ChildSchemaEditor({
 
           {error && <p className="text-destructive px-4 text-xs">{error}</p>}
           <SheetFooter>
-            <Button onClick={() => void save()}>{saved ? 'Saved ✓' : 'Save fields'}</Button>
+            <form action={save}>
+              <SubmitButton className="w-full">{saved ? 'Saved ✓' : 'Save fields'}</SubmitButton>
+            </form>
           </SheetFooter>
         </SheetContent>
       </Sheet>

@@ -32,6 +32,7 @@ export function ParentPicker({ nodeIds, children }: ParentPickerProps) {
   >(null);
   const [error, setError] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState('');
+  const [creating, setCreating] = React.useState(false);
 
   const onOpen = async (next: boolean) => {
     setOpen(next);
@@ -91,12 +92,19 @@ export function ParentPicker({ nodeIds, children }: ParentPickerProps) {
               <CommandGroup heading="New">
                 <CommandItem
                   value={`${query} create-new`}
+                  disabled={creating}
                   onSelect={async () => {
-                    const created = await createParentNode(query.trim());
-                    await commit(created.id); // new node is a confirmed root
+                    if (creating) return;
+                    setCreating(true);
+                    try {
+                      const created = await createParentNode(query.trim());
+                      await commit(created.id); // new node is a confirmed root
+                    } finally {
+                      setCreating(false);
+                    }
                   }}
                 >
-                  + Create “{query.trim()}” and move here
+                  {creating ? 'Creating…' : `+ Create “${query.trim()}” and move here`}
                 </CommandItem>
               </CommandGroup>
             )}

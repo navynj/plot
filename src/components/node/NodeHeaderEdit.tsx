@@ -5,6 +5,7 @@ import * as React from 'react';
 
 import { deleteNodeAction, saveNodeMeta, setPinned } from '@/app/node/[id]/actions';
 import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/ui/submit-button';
 import {
   Dialog,
   DialogContent,
@@ -86,9 +87,7 @@ export function NodeHeaderEdit(props: NodeHeaderEditProps) {
             <Textarea id="body" name="body" rows={2} defaultValue={props.body ?? ''} />
           </div>
           <div className="flex gap-2">
-            <Button type="submit" size="sm">
-              Save
-            </Button>
+            <SubmitButton size="sm">Save</SubmitButton>
             <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>
               Cancel
             </Button>
@@ -113,9 +112,7 @@ export function NodeHeaderEdit(props: NodeHeaderEditProps) {
               Cancel
             </Button>
             <form action={deleteNodeAction.bind(null, props.nodeId)}>
-              <Button type="submit" variant="destructive">
-                Delete
-              </Button>
+              <SubmitButton variant="destructive">Delete</SubmitButton>
             </form>
           </DialogFooter>
         </DialogContent>

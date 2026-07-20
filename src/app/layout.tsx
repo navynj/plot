@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { auth, signOut } from '@/auth';
 import { PwaRegister } from '@/components/PwaRegister';
 import { TimezoneSync } from '@/components/TimezoneSync';
-import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/ui/submit-button';
 
 import './globals.css';
 
@@ -93,9 +93,9 @@ export default async function RootLayout({
                     await signOut({ redirectTo: '/signin' });
                   }}
                 >
-                  <Button type="submit" variant="ghost" size="sm">
+                  <SubmitButton variant="ghost" size="sm">
                     Sign out
-                  </Button>
+                  </SubmitButton>
                 </form>
               </span>
             )}

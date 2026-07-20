@@ -1,7 +1,7 @@
 import '@/components/field/types';
 
 import type { FieldDef, FieldPrimitive } from '@/db/schema';
-import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { Label } from '@/components/ui/label';
 
 import { getFieldUI } from './registry';
@@ -29,9 +29,7 @@ export function FieldEditors({ defs, values, action }: FieldEditorsProps) {
           {getFieldUI(def.type).edit({ def, value: values[def.key] })}
         </div>
       ))}
-      <Button type="submit" className="self-start">
-        Save fields
-      </Button>
+      <SubmitButton className="self-start">Save fields</SubmitButton>
     </form>
   );
 }

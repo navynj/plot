@@ -5,6 +5,7 @@ import type { Node } from '@/db/schema';
 import { removeMembership } from '@/app/node/[id]/actions';
 import { CollectionPicker } from '@/components/node/CollectionPicker';
 import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/ui/submit-button';
 
 interface CollectionsSectionProps {
   nodeId: string;
@@ -32,14 +33,14 @@ export function CollectionsSection({ nodeId, memberships, members }: Collections
                 {m.title ?? m.body}
               </Link>
               <form action={removeMembership.bind(null, m.id, nodeId, nodeId)}>
-                <Button
-                  type="submit"
+                <SubmitButton
+                  iconOnly
                   variant="ghost"
                   size="icon-sm"
                   aria-label={`remove from ${m.title ?? 'collection'}`}
                 >
                   <X className="size-3" />
-                </Button>
+                </SubmitButton>
               </form>
             </span>
           ))}
@@ -63,9 +64,9 @@ export function CollectionsSection({ nodeId, memberships, members }: Collections
                   {m.title ?? m.body}
                 </Link>
                 <form action={removeMembership.bind(null, nodeId, m.id, nodeId)}>
-                  <Button type="submit" variant="ghost" size="icon-sm" aria-label="unlink">
+                  <SubmitButton iconOnly variant="ghost" size="icon-sm" aria-label="unlink">
                     <X className="size-3.5" />
-                  </Button>
+                  </SubmitButton>
                 </form>
               </li>
             ))}

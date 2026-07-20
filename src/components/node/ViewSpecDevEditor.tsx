@@ -1,5 +1,5 @@
 import type { ViewSpec } from '@/db/schema';
-import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { Textarea } from '@/components/ui/textarea';
 
 interface ViewSpecDevEditorProps {
@@ -22,9 +22,9 @@ export function ViewSpecDevEditor({ viewSpec, action }: ViewSpecDevEditorProps) 
           placeholder='{"lens":"amount","groupBy":"category","layout":"bar"} — or "null" to clear'
           defaultValue={viewSpec ? JSON.stringify(viewSpec, null, 2) : ''}
         />
-        <Button type="submit" variant="outline" size="sm" className="self-start">
+        <SubmitButton variant="outline" size="sm" className="self-start">
           Save view spec
-        </Button>
+        </SubmitButton>
       </form>
     </details>
   );

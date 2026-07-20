@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 import { addRoomAction } from '@/app/actions';
 import { requireUserId } from '@/app/_auth/requireUser';
-import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { Input } from '@/components/ui/input';
 import { getGridSections, getInbox } from '@/service/node';
 
@@ -48,14 +48,14 @@ export default async function GridHomePage() {
           ) : (
             <form action={addRoomAction.bind(null, root.id)} className="flex max-w-xs gap-2">
               <Input name="title" placeholder={`Add a room to ${root.title}`} autoComplete="off" />
-              <Button
-                type="submit"
+              <SubmitButton
+                iconOnly
                 variant="outline"
                 size="icon"
                 aria-label={`add room to ${root.title}`}
               >
                 <Plus className="size-4" />
-              </Button>
+              </SubmitButton>
             </form>
           )}
         </section>

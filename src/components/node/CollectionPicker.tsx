@@ -29,6 +29,7 @@ export function CollectionPicker({
   >(null);
   const [error, setError] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState('');
+  const [creating, setCreating] = React.useState(false);
 
   const onOpen = async (next: boolean) => {
     setOpen(next);
@@ -72,12 +73,19 @@ export function CollectionPicker({
               <CommandGroup heading="New">
                 <CommandItem
                   value={`${query} create-new`}
+                  disabled={creating}
                   onSelect={async () => {
-                    const created = await createCollectionNode(query.trim());
-                    await commit(created.id); // new collection is a confirmed root
+                    if (creating) return;
+                    setCreating(true);
+                    try {
+                      const created = await createCollectionNode(query.trim());
+                      await commit(created.id); // new collection is a confirmed root
+                    } finally {
+                      setCreating(false);
+                    }
                   }}
                 >
-                  + Create collection “{query.trim()}”
+                  {creating ? 'Creating…' : `+ Create collection “${query.trim()}”`}
                 </CommandItem>
               </CommandGroup>
             )}

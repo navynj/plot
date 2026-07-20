@@ -3,7 +3,7 @@
 import * as React from 'react';
 
 import { capture } from '@/app/actions';
-import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { cn } from '@/lib/utils';
 
 import { CaptureDateField } from './CaptureDateField';
@@ -29,7 +29,11 @@ interface CaptureFormProps {
 export function CaptureForm({ chips, defaultDay }: CaptureFormProps) {
   const [parent, setParent] = React.useState<CaptureChip | null>(null);
   const [resetSignal, setResetSignal] = React.useState(0);
-  const formRef = React.useRef<HTMLFormElement>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  // controlled: opts the text out of React's automatic post-action form
+  // reset, so a failed submit keeps the text and a success won't wipe a
+  // next thought the user already started typing
+  const [text, setText] = React.useState('');
 
   const hint = parent
     ? `→ ${parent.icon ?? ''} ${parent.title}`
@@ -37,10 +41,16 @@ export function CaptureForm({ chips, defaultDay }: CaptureFormProps) {
 
   return (
     <form
-      ref={formRef}
       action={async (fd) => {
-        await capture(fd);
-        formRef.current?.reset();
+        const submitted = String(fd.get('text') ?? '');
+        try {
+          await capture(fd);
+        } catch {
+          setError('capture failed — check the inbox before retrying');
+          return; // text + chip/date state intact for the retry
+        }
+        setError(null);
+        setText((current) => (current === submitted ? '' : current)); // keep a next thought
         setParent(null);
         setResetSignal((n) => n + 1);
       }}
@@ -48,9 +58,15 @@ export function CaptureForm({ chips, defaultDay }: CaptureFormProps) {
     >
       <div className="flex gap-2">
         <input type="hidden" name="parentId" value={parent?.id ?? ''} />
-        <CaptureTextInput name="text" placeholder={hint} />
-        <Button type="submit">Capture</Button>
+        <CaptureTextInput
+          name="text"
+          placeholder={hint}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <SubmitButton>Capture</SubmitButton>
       </div>
+      {error && <p className="text-destructive text-xs">{error}</p>}
       <div className="flex items-center justify-between gap-2">
         {chips.length > 0 ? (
           <div className="no-scrollbar flex gap-1.5 overflow-x-auto">

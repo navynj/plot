@@ -18,6 +18,7 @@ import type { Node } from '@/db/schema';
 import { detachNodes, groupNodes, layerAbove, moveNodes } from '@/app/triage/actions';
 import { ParentPicker } from '@/components/node/ParentPicker';
 import { Button } from '@/components/ui/button';
+import { SubmitButton } from '@/components/ui/submit-button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 
@@ -372,16 +373,16 @@ export function TriageBoard({ nodes }: { nodes: Node[] }) {
                   </Button>
                 </ParentPicker>
                 {selected.size >= 2 && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      run(groupNodes([...selected]));
+                  <form
+                    action={async () => {
+                      await run(groupNodes([...selected]));
                       setSelected(new Set());
                     }}
                   >
-                    Group into new
-                  </Button>
+                    <SubmitButton size="sm" variant="outline">
+                      Group into new
+                    </SubmitButton>
+                  </form>
                 )}
               </span>
             )}

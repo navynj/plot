@@ -31,6 +31,7 @@ export function LinkFieldPicker({ name, scopeParentId, value }: LinkFieldPickerP
   >(null);
   const [selected, setSelected] = React.useState<{ id: string; title: string } | null>(null);
   const [query, setQuery] = React.useState('');
+  const [creating, setCreating] = React.useState(false);
   const [cleared, setCleared] = React.useState(false);
 
   const currentId = cleared ? '' : (selected?.id ?? value ?? '');
@@ -103,16 +104,25 @@ export function LinkFieldPicker({ name, scopeParentId, value }: LinkFieldPickerP
               <CommandGroup heading="New">
                 <CommandItem
                   value={`${query} create-new`}
+                  disabled={creating}
                   onSelect={async () => {
-                    const { createLinkTargetNode } = await import('@/app/node/[id]/actions');
-                    const created = await createLinkTargetNode(query.trim(), scopeParentId);
-                    setSelected(created); // created inside the scope → a valid candidate
-                    setCandidates(null); // refresh on next open
-                    setCleared(false);
-                    setOpen(false);
+                    if (creating) return;
+                    setCreating(true);
+                    try {
+                      const { createLinkTargetNode } = await import('@/app/node/[id]/actions');
+                      const created = await createLinkTargetNode(query.trim(), scopeParentId);
+                      setSelected(created); // created inside the scope → a valid candidate
+                      setCandidates(null); // refresh on next open
+                      setCleared(false);
+                      setOpen(false);
+                    } finally {
+                      setCreating(false);
+                    }
                   }}
                 >
-                  + Create “{query.trim()}”{scopeParentId ? ' in scope' : ''}
+                  {creating
+                    ? 'Creating…'
+                    : `+ Create “${query.trim()}”${scopeParentId ? ' in scope' : ''}`}
                 </CommandItem>
               </CommandGroup>
             )}
