@@ -80,7 +80,8 @@ export async function ensureSeed(userId: string): Promise<boolean> {
         { key: 'inOut', label: 'In/Out', type: 'option', options: ['expense', 'income'] },
         { key: 'category', label: 'Category', type: 'link', linkTargetParentId: categories },
         { key: 'scheduled', label: 'Scheduled', type: 'boolean' },
-        { key: 'when', label: 'When', type: 'timestamp' },
+        // no `when` field: the expense's date is eventDate (capture date
+        // control), and the date meta-axis covers aggregation
       ],
     ],
     [categories, [{ key: 'name', label: 'Name', type: 'text' }]],

@@ -373,15 +373,18 @@ Expense (node) — childSchema: {
     inOut      : option (expense | income)
     amount     : number (>= 0)
     scheduled  : boolean
-    when       : timestamp
   }
-  ├─ Coffee   values: {category: 식비, inOut: expense, amount: 4500,  scheduled: false, when: 8/3}
-  └─ Taxi     values: {category: 교통, inOut: expense, amount: 12000, scheduled: true,  when: 8/5}
+  ├─ Coffee   values: {category: 식비, inOut: expense, amount: 4500,  scheduled: false}  eventDate: 8/3
+  └─ Taxi    values: {category: 교통, inOut: expense, amount: 12000, scheduled: true}   eventDate: 8/5
 
 Budget categories (node) — childSchema: { name: text, icon: icon }
   ├─ 식비 (🍚)
   └─ 교통 (🚕)
 ```
+
+The expense's date is `eventDate` (node meta, set by the capture date
+control), not a schema field — the aggregation date meta-axis
+(`groupBy: 'eventDate'`) covers everything a `when` field would have.
 
 **August as a node that is BOTH a tree parent and a graph parent:**
 
