@@ -235,6 +235,12 @@ async function resolveItemsView(userId: string, node: Node, spec: ViewSpec): Pro
     return v === null ? '' : String(v);
   };
 
+  // a link-lens value is a node id — render its label, never the raw id
+  const everything = await nodeRepo.findTimeline(userId);
+  const labelById = new Map(everything.map((n) => [n.id, labelOf(n)]));
+  const resolveLens = (v: FieldPrimitive | null): FieldPrimitive | null =>
+    typeof v === 'string' && labelById.has(v) ? labelById.get(v)! : v;
+
   const items: ViewItem[] = nodes
     .filter((n) => (spec.filter ?? []).every((f) => passes(n, f)))
     .sort((a, b) => {
@@ -246,7 +252,12 @@ async function resolveItemsView(userId: string, node: Node, spec: ViewSpec): Pro
           : String(va).localeCompare(String(vb));
       return dir * cmp;
     })
-    .map((n) => ({ id: n.id, label: labelOf(n), lensValue: lensOf(n), capturedAt: n.capturedAt }));
+    .map((n) => ({
+      id: n.id,
+      label: labelOf(n),
+      lensValue: resolveLens(lensOf(n)),
+      capturedAt: n.capturedAt,
+    }));
 
   return { kind: 'items', spec, items };
 }

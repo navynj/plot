@@ -51,7 +51,8 @@ export function CaptureForm({ chips, defaultDay }: CaptureFormProps) {
         }
         setError(null);
         setText((current) => (current === submitted ? '' : current)); // keep a next thought
-        setParent(null);
+        // the chip PERSISTS — repeated captures into the same room are the
+        // rhythm; deselect stays an explicit re-tap. Date resets as before.
         setResetSignal((n) => n + 1);
       }}
       className="flex flex-col gap-2"

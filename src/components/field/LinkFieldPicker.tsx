@@ -19,12 +19,14 @@ interface LinkFieldPickerProps {
   /** children of this node are the only legal targets (FieldDef.linkTargetParentId) */
   scopeParentId: string | null;
   value: string | undefined;
+  /** server-resolved icon+title of the current target — never show a raw id */
+  display?: string;
 }
 
 /** Editor for link-type fields: a searchable picker scoped to the declared
  *  target parent's children (unscoped when the def declares none). Selection
  *  lands in a hidden input — saving stays part of the one fields form. */
-export function LinkFieldPicker({ name, scopeParentId, value }: LinkFieldPickerProps) {
+export function LinkFieldPicker({ name, scopeParentId, value, display }: LinkFieldPickerProps) {
   const [open, setOpen] = React.useState(false);
   const [candidates, setCandidates] = React.useState<
     { id: string; title: string; path: string }[] | null
@@ -39,7 +41,7 @@ export function LinkFieldPicker({ name, scopeParentId, value }: LinkFieldPickerP
     selected?.title ??
     (cleared || !value
       ? 'Pick a node…'
-      : (candidates?.find((c) => c.id === value)?.title ?? value));
+      : (display ?? candidates?.find((c) => c.id === value)?.title ?? value));
 
   const onOpen = async (next: boolean) => {
     setOpen(next);

@@ -77,7 +77,13 @@ export async function ensureSeed(userId: string): Promise<boolean> {
       expense,
       [
         { key: 'amount', label: 'Amount', type: 'number' },
-        { key: 'inOut', label: 'In/Out', type: 'option', options: ['expense', 'income'] },
+        {
+          key: 'inOut',
+          label: 'In/Out',
+          type: 'option',
+          options: ['expense', 'income'],
+          defaultValue: 'expense',
+        },
         { key: 'category', label: 'Category', type: 'link', linkTargetParentId: categories },
         { key: 'scheduled', label: 'Scheduled', type: 'boolean' },
         // no `when` field: the expense's date is eventDate (capture date

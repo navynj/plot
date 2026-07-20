@@ -1,0 +1,36 @@
+'use client';
+
+import * as React from 'react';
+import { toast } from 'sonner';
+
+import { redoAction, undoAction } from '@/app/triage/actions';
+
+/** Ctrl/Cmd+Z undo · Ctrl/Cmd+Shift+Z and Ctrl/Cmd+Y redo. Never fires during
+ *  IME composition, and never hijacks text-editing undo inside inputs. */
+export function UndoHotkeys() {
+  React.useEffect(() => {
+    const onKeyDown = async (e: KeyboardEvent) => {
+      if (e.isComposing || e.keyCode === 229) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      ) {
+        return; // native text undo owns the keys inside editors
+      }
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod) return;
+      const key = e.key.toLowerCase();
+      const isUndo = key === 'z' && !e.shiftKey;
+      const isRedo = (key === 'z' && e.shiftKey) || key === 'y';
+      if (!isUndo && !isRedo) return;
+      e.preventDefault();
+      const result = isUndo ? await undoAction() : await redoAction();
+      if (result.ok) toast(result.description ?? (isUndo ? 'undone' : 'redone'));
+      else toast(`nothing to ${isUndo ? 'undo' : 'redo'}`);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+  return null;
+}

@@ -32,6 +32,9 @@ interface SchemaFieldRowProps {
   onRemove(): void;
   onPickScope(): void;
   scopeLabel: string | null;
+  /** the per-type default-value editor, rendered by the sheet via the field
+   *  registry (typed per the field's type) */
+  defaultControl?: React.ReactNode;
 }
 
 export function SchemaFieldRow(props: SchemaFieldRowProps) {
@@ -125,6 +128,12 @@ export function SchemaFieldRow(props: SchemaFieldRowProps) {
           </Button>
         )}
       </div>
+      {props.defaultControl && (
+        <div className="text-muted-foreground flex items-center gap-2 pl-6 text-xs">
+          default:
+          <div className="flex-1">{props.defaultControl}</div>
+        </div>
+      )}
     </div>
   );
 }

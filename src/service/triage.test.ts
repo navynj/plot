@@ -23,6 +23,9 @@ vi.mock('@/repository/nodeRepo', () => ({
 vi.mock('@/repository/fieldValueRepo', () => ({
   fieldValueRepo: { upsert: vi.fn(), readByNode: vi.fn(), deleteByKey: vi.fn() },
 }));
+vi.mock('@/repository/undoRepo', () => ({
+  undoRepo: { push: vi.fn(), pop: vi.fn(), clearRedo: vi.fn(), list: vi.fn() },
+}));
 vi.mock('@/repository/linkRepo', () => ({
   linkRepo: { removeAllFor: vi.fn() },
 }));

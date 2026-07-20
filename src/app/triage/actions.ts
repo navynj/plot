@@ -4,13 +4,16 @@ import { revalidatePath } from 'next/cache';
 
 import { requireUserId } from '@/app/_auth/requireUser';
 import { DomainError } from '@/service/errors';
+import { redo, undo } from '@/service/history';
 import { captureNode } from '@/service/node';
 import {
   createLayerAbove,
-  detachToInbox,
+  detachMany,
   getReparentCandidates,
   group,
+  removeMany,
   reparent,
+  reparentMany,
 } from '@/service/triage';
 
 export type TriageResult = { ok: true } | { ok: false; error: string };
@@ -28,27 +31,59 @@ export async function moveNodes(
 ): Promise<TriageResult> {
   const userId = await requireUserId();
   try {
-    for (let i = 0; i < ids.length; i++) {
-      await reparent(userId, ids[i]!, parentId, {
-        position: position === undefined ? undefined : position + i,
-      });
-    }
+    await reparentMany(userId, ids, parentId, { position });
   } catch (err) {
     return asResult(err);
   }
-  revalidatePath('/triage');
+  revalidatePath('/', 'layout');
   return { ok: true };
 }
 
 export async function detachNodes(ids: string[]): Promise<TriageResult> {
   const userId = await requireUserId();
   try {
-    for (const id of ids) await detachToInbox(userId, id);
+    await detachMany(userId, ids);
   } catch (err) {
     return asResult(err);
   }
-  revalidatePath('/triage');
+  revalidatePath('/', 'layout');
   return { ok: true };
+}
+
+/** Bulk delete with one recorded op — always behind a confirm in the UI. */
+export async function deleteNodes(ids: string[]): Promise<TriageResult> {
+  const userId = await requireUserId();
+  try {
+    await removeMany(userId, ids);
+  } catch (err) {
+    return asResult(err);
+  }
+  revalidatePath('/', 'layout');
+  return { ok: true };
+}
+
+export async function undoAction(): Promise<{ ok: boolean; description?: string }> {
+  const userId = await requireUserId();
+  try {
+    const result = await undo(userId);
+    if (result.ok) revalidatePath('/', 'layout');
+    return result;
+  } catch (err) {
+    if (err instanceof DomainError) return { ok: false, description: err.code };
+    throw err;
+  }
+}
+
+export async function redoAction(): Promise<{ ok: boolean; description?: string }> {
+  const userId = await requireUserId();
+  try {
+    const result = await redo(userId);
+    if (result.ok) revalidatePath('/', 'layout');
+    return result;
+  } catch (err) {
+    if (err instanceof DomainError) return { ok: false, description: err.code };
+    throw err;
+  }
 }
 
 export async function groupNodes(ids: string[], title?: string): Promise<TriageResult> {

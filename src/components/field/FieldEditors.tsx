@@ -9,12 +9,14 @@ import { getFieldUI } from './registry';
 interface FieldEditorsProps {
   defs: FieldDef[];
   values: Record<string, FieldPrimitive>;
+  /** server-resolved labels for reference values, keyed by field key */
+  displays?: Record<string, string>;
   action: (formData: FormData) => Promise<void>;
 }
 
 /** One form over the node's worn schema; each field's editor comes from the
  *  registry. Empty inputs save fine — required-ness is never a save gate. */
-export function FieldEditors({ defs, values, action }: FieldEditorsProps) {
+export function FieldEditors({ defs, values, displays, action }: FieldEditorsProps) {
   return (
     <form action={action} className="flex flex-col gap-4">
       {/* the save path only touches the keys this form rendered — a partial
@@ -26,7 +28,13 @@ export function FieldEditors({ defs, values, action }: FieldEditorsProps) {
             {def.label}
             {def.required && <span className="text-muted-foreground text-xs"> (required)</span>}
           </Label>
-          {getFieldUI(def.type).edit({ def, value: values[def.key] })}
+          {getFieldUI(def.type).edit({
+            def,
+            // defaultValue is a PRE-FILL for new children: shown, and saved
+            // as-is on submit like any value (not a phantom)
+            value: values[def.key] ?? def.defaultValue,
+            display: displays?.[def.key],
+          })}
         </div>
       ))}
       <SubmitButton className="self-start">Save fields</SubmitButton>

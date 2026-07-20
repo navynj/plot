@@ -9,6 +9,9 @@ import { captureNode } from './node';
 vi.mock('@/repository/nodeRepo', () => ({
   nodeRepo: { create: vi.fn() },
 }));
+vi.mock('@/repository/undoRepo', () => ({
+  undoRepo: { push: vi.fn(), pop: vi.fn(), clearRedo: vi.fn(), list: vi.fn() },
+}));
 vi.mock('@/repository/linkRepo', () => ({
   linkRepo: { findTargets: vi.fn() },
 }));

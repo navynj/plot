@@ -36,6 +36,13 @@
       "when": 1784509138981,
       "tag": "0004_white_thunderbolt_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784523473211,
+      "tag": "0005_lucky_dragon_lord",
+      "breakpoints": true
     }
   ]
 }

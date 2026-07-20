@@ -1,4 +1,4 @@
-import { and, asc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { node, type Node } from '@/db/schema';
@@ -70,6 +70,27 @@ export const nodeRepo = {
       .where(and(eq(node.id, id), eq(node.userId, userId), notDeleted))
       .returning();
     return rows[0] ?? null;
+  },
+
+  /** Reverse a soft delete (the undo path). */
+  async restore(userId: string, id: string): Promise<boolean> {
+    const rows = await db
+      .update(node)
+      .set({ deletedAt: null, updatedAt: new Date() })
+      .where(and(eq(node.id, id), eq(node.userId, userId)))
+      .returning({ id: node.id });
+    return rows.length > 0;
+  },
+
+  /** Live-children counts for a set of nodes in one pass (bulk-delete UI). */
+  async childCounts(userId: string, ids: string[]): Promise<Map<string, number>> {
+    if (ids.length === 0) return new Map();
+    const rows = await db
+      .select({ parentId: node.parentId, count: sql<number>`count(*)::int` })
+      .from(node)
+      .where(and(eq(node.userId, userId), inArray(node.parentId, ids), notDeleted))
+      .groupBy(node.parentId);
+    return new Map(rows.filter((r) => r.parentId !== null).map((r) => [r.parentId!, r.count]));
   },
 
   async softDelete(userId: string, id: string): Promise<boolean> {

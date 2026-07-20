@@ -12,6 +12,9 @@ import type { FieldDef, FieldPrimitive, FieldType } from '@/db/schema';
 export interface FieldUIProps {
   def: FieldDef;
   value: FieldPrimitive | undefined;
+  /** resolved human label for reference values (a link target's icon+title) —
+   *  provided by the server, since a raw id must never render as the value */
+  display?: string;
 }
 
 export interface FieldUIEntry {

@@ -103,6 +103,11 @@ export function getInbox(userId: string): Promise<Node[]> {
   return nodeRepo.findInbox(userId);
 }
 
+/** Live-children counts for a node set (bulk-action confirms). */
+export function nodeChildCounts(userId: string, ids: string[]): Promise<Map<string, number>> {
+  return nodeRepo.childCounts(userId, ids);
+}
+
 export interface GridTile {
   node: Node;
   /** tree children + graph members — what the room holds */
@@ -196,6 +201,13 @@ function parseFieldDefs(input: unknown): FieldDef[] {
     if (linkTargetParentId !== undefined && typeof linkTargetParentId !== 'string') {
       throw new InvalidSchemaError(`def "${key}" linkTargetParentId must be a string`);
     }
+    const { defaultValue } = rec;
+    if (
+      defaultValue !== undefined &&
+      !['string', 'number', 'boolean'].includes(typeof defaultValue)
+    ) {
+      throw new InvalidSchemaError(`def "${key}" defaultValue must be a scalar`);
+    }
     const def: FieldDef = {
       key,
       label: typeof label === 'string' && label.trim() !== '' ? label : key,
@@ -204,6 +216,7 @@ function parseFieldDefs(input: unknown): FieldDef[] {
     if (required !== undefined) def.required = required;
     if (options !== undefined) def.options = options as string[];
     if (linkTargetParentId !== undefined) def.linkTargetParentId = linkTargetParentId;
+    if (defaultValue !== undefined) def.defaultValue = defaultValue as string | number | boolean;
     return def;
   });
 }

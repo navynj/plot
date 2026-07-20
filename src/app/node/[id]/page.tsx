@@ -52,6 +52,19 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
     resolveView(userId, node, tz),
   ]);
 
+  // link-type values render as their target's icon+title, never a raw id
+  const displays: Record<string, string> = {};
+  for (const def of defs) {
+    const value = values[def.key];
+    if (def.type === 'link' && typeof value === 'string') {
+      const target = await getNode(userId, value);
+      if (target) {
+        displays[def.key] =
+          `${target.icon ? `${target.icon} ` : ''}${target.title ?? target.body ?? value}`;
+      }
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6 py-6">
       <header className="flex flex-col gap-1">
@@ -72,17 +85,31 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
         </div>
         <p className="text-muted-foreground text-xs">captured {formatTimestamp(node.capturedAt)}</p>
         <div className="flex items-center justify-between">
-          {/* parent row = picker entry point (DESIGN §6 third surface) */}
-          <ParentPicker nodeIds={[node.id]}>
-            <Button variant="ghost" size="sm" className="text-muted-foreground -ml-2 self-start">
-              <CornerLeftUp className="size-3.5" />
-              {parent
-                ? (parent.title ?? parent.body)
-                : node.rank !== null
-                  ? 'Root — change parent'
-                  : 'No parent — set one'}
-            </Button>
-          </ParentPicker>
+          {/* the parent's NAME walks up the tree; the ↰ icon changes it */}
+          <span className="-ml-2 flex items-center gap-0.5">
+            {parent ? (
+              <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
+                <Link href={`/node/${parent.id}`}>
+                  {parent.icon && <span>{parent.icon}</span>}
+                  {parent.title ?? parent.body}
+                </Link>
+              </Button>
+            ) : (
+              <span className="text-muted-foreground px-3 text-sm">
+                {node.rank !== null ? 'Root' : 'No parent'}
+              </span>
+            )}
+            <ParentPicker nodeIds={[node.id]}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="change parent"
+                className="text-muted-foreground"
+              >
+                <CornerLeftUp className="size-3.5" />
+              </Button>
+            </ParentPicker>
+          </span>
           <span className="flex items-center gap-3">
             <EventDateControl
               nodeId={node.id}
@@ -116,7 +143,12 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
               </Link>
             )}
           </div>
-          <FieldEditors defs={defs} values={values} action={saveFields.bind(null, node.id)} />
+          <FieldEditors
+            defs={defs}
+            values={values}
+            displays={displays}
+            action={saveFields.bind(null, node.id)}
+          />
         </section>
       )}
 

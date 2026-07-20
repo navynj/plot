@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { auth, signOut } from '@/auth';
 import { PwaRegister } from '@/components/PwaRegister';
 import { TimezoneSync } from '@/components/TimezoneSync';
+import { UndoHotkeys } from '@/components/UndoHotkeys';
+import { Toaster } from '@/components/ui/sonner';
 import { SubmitButton } from '@/components/ui/submit-button';
 
 import './globals.css';
@@ -51,6 +53,8 @@ export default async function RootLayout({
       <body className="flex h-dvh flex-col">
         <PwaRegister />
         <TimezoneSync />
+        <UndoHotkeys />
+        <Toaster position="top-center" />
         <header className="border-border border-b">
           <nav className="mx-auto flex w-full max-w-2xl items-center gap-4 px-4 py-2">
             <span className="text-sm font-semibold tracking-wide">PLOT</span>
@@ -71,12 +75,6 @@ export default async function RootLayout({
               className="text-muted-foreground hover:text-foreground text-sm transition-colors"
             >
               Inbox
-            </Link>
-            <Link
-              href="/triage"
-              className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-            >
-              Triage
             </Link>
             <Link
               href="/triage/fields"

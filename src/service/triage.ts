@@ -5,6 +5,7 @@ import { nodeRepo } from '@/repository/nodeRepo';
 
 import { describeCandidates, type NodeCandidate } from './candidates';
 import { CycleError, NodeNotFoundError, TriageError } from './errors';
+import { recordDelete, recordReparent, type DeleteOpPayload, type Placement } from './history';
 
 /**
  * THE single entry point for every position change (DESIGN §6): drag,
@@ -79,6 +80,53 @@ export async function reparent(
   const moved = await nodeRepo.setParent(userId, nodeId, newParentId, rank);
   if (!moved) throw new NodeNotFoundError(nodeId);
   return moved;
+}
+
+/** Bulk move — the primary triage surface. One recorded op for the whole
+ *  batch, so a single undo restores every node's previous parent AND rank. */
+export async function reparentMany(
+  userId: string,
+  nodeIds: string[],
+  newParentId: string | null,
+  opts: { position?: number; record?: boolean } = {}
+): Promise<void> {
+  const moves: { id: string; from: Placement; to: Placement }[] = [];
+  for (let i = 0; i < nodeIds.length; i++) {
+    const id = nodeIds[i]!;
+    const before = await mustOwn(userId, id);
+    const after = await reparent(userId, id, newParentId, {
+      position: opts.position === undefined ? undefined : opts.position + i,
+    });
+    moves.push({
+      id,
+      from: { parentId: before.parentId, rank: before.rank },
+      to: { parentId: after.parentId, rank: after.rank },
+    });
+  }
+  if (opts.record !== false && moves.length > 0) {
+    await recordReparent(userId, { moves });
+  }
+}
+
+/** Bulk detach to the inbox — one recorded op. */
+export async function detachMany(
+  userId: string,
+  nodeIds: string[],
+  opts: { record?: boolean } = {}
+): Promise<void> {
+  const moves: { id: string; from: Placement; to: Placement }[] = [];
+  for (const id of nodeIds) {
+    const before = await mustOwn(userId, id);
+    await detachToInbox(userId, id);
+    moves.push({
+      id,
+      from: { parentId: before.parentId, rank: before.rank },
+      to: { parentId: null, rank: null },
+    });
+  }
+  if (opts.record !== false && moves.length > 0) {
+    await recordReparent(userId, { moves });
+  }
 }
 
 /** Back to undetermined: no parent, no position → the inbox filter. The
@@ -190,9 +238,18 @@ export async function getReparentCandidates(
  * edge touching it is removed; the row itself soft-deletes. Field values of
  * the node stay on the soft-deleted row; descendants are untouched.
  */
-export async function removeNode(userId: string, nodeId: string): Promise<void> {
+export async function removeNode(
+  userId: string,
+  nodeId: string,
+  opts: { record?: boolean } = {}
+): Promise<DeleteOpPayload['deletions'][number]> {
   const node = await mustOwn(userId, nodeId);
   const children = await nodeRepo.findChildren(userId, nodeId);
+  const inverse: DeleteOpPayload['deletions'][number] = {
+    nodeId,
+    placement: { parentId: node.parentId, rank: node.rank },
+    childMoves: children.map((c) => ({ id: c.id, from: { parentId: c.parentId, rank: c.rank } })),
+  };
 
   if (children.length > 0) {
     // slot the children into the deleted node's position among its siblings
@@ -222,4 +279,19 @@ export async function removeNode(userId: string, nodeId: string): Promise<void> 
   if (!unlinked) throw new NodeNotFoundError(nodeId);
   const deleted = await nodeRepo.softDelete(userId, nodeId);
   if (!deleted) throw new NodeNotFoundError(nodeId);
+  if (opts.record !== false) {
+    await recordDelete(userId, { deletions: [inverse] });
+  }
+  return inverse;
+}
+
+/** Bulk delete — one recorded op covering every node's restoration data. */
+export async function removeMany(userId: string, nodeIds: string[]): Promise<void> {
+  const deletions: DeleteOpPayload['deletions'] = [];
+  for (const id of nodeIds) {
+    deletions.push(await removeNode(userId, id, { record: false }));
+  }
+  if (deletions.length > 0) {
+    await recordDelete(userId, { deletions });
+  }
 }

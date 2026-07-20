@@ -4,8 +4,14 @@ import { DndContext, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { Plus, SlidersHorizontal } from 'lucide-react';
 import * as React from 'react';
 
+import '@/components/field/types';
+import '@/service/fieldTypes';
+
 import type { FieldDef } from '@/db/schema';
 import { saveChildSchemaAction } from '@/app/node/[id]/actions';
+import { getFieldUI } from '@/components/field/registry';
+import { FieldTypeMismatchError } from '@/service/errors';
+import { getFieldType } from '@/service/fieldRegistry';
 import { Button } from '@/components/ui/button';
 import { SubmitButton } from '@/components/ui/submit-button';
 import {
@@ -88,11 +94,25 @@ export function ChildSchemaEditor({
     setNewLabel('');
   };
 
-  const save = async () => {
-    const result = await saveChildSchemaAction(
-      nodeId,
-      rows.map((r) => r.def)
-    );
+  const save = async (formData: FormData) => {
+    let defs: FieldDef[];
+    try {
+      defs = rows.map((r) => {
+        // the default editor is a real registry editor; parse its submitted
+        // value through the SERVICE facet so defaults are typed like values
+        const raw = formData.get(`__default_${r.uid}`);
+        const parsed =
+          raw === null || raw === '' ? null : getFieldType(r.def.type).parse(raw, r.def);
+        const def = { ...r.def };
+        if (parsed === null || parsed instanceof Date) delete def.defaultValue;
+        else def.defaultValue = parsed;
+        return def;
+      });
+    } catch (err) {
+      if (err instanceof FieldTypeMismatchError) return setError(`default: ${err.message}`);
+      throw err;
+    }
+    const result = await saveChildSchemaAction(nodeId, defs);
     if (!result.ok) return setError(result.error);
     setError(null);
     setSaved(true);
@@ -136,81 +156,87 @@ export function ChildSchemaEditor({
             </SheetDescription>
           </SheetHeader>
 
-          <DndContext
-            sensors={sensors}
-            onDragStart={(e) => setDraggingUid((e.active.data.current as { uid: number }).uid)}
-            onDragMove={(e) => {
-              const rect = e.active.rect.current.translated;
-              if (!rect) return;
-              const centerY = rect.top + rect.height / 2;
-              setRows((rs) => {
-                const from = rs.findIndex((r) => r.uid === draggingUid);
-                if (from < 0) return rs;
-                const els = Array.from(document.querySelectorAll<HTMLElement>('[data-schema-row]'));
-                let to = rs.length - 1;
-                for (let i = 0; i < els.length; i++) {
-                  const b = els[i]!.getBoundingClientRect();
-                  if (centerY < b.top + b.height / 2) {
-                    to = i;
-                    break;
+          <form action={save} className="contents">
+            <DndContext
+              sensors={sensors}
+              onDragStart={(e) => setDraggingUid((e.active.data.current as { uid: number }).uid)}
+              onDragMove={(e) => {
+                const rect = e.active.rect.current.translated;
+                if (!rect) return;
+                const centerY = rect.top + rect.height / 2;
+                setRows((rs) => {
+                  const from = rs.findIndex((r) => r.uid === draggingUid);
+                  if (from < 0) return rs;
+                  const els = Array.from(
+                    document.querySelectorAll<HTMLElement>('[data-schema-row]')
+                  );
+                  let to = rs.length - 1;
+                  for (let i = 0; i < els.length; i++) {
+                    const b = els[i]!.getBoundingClientRect();
+                    if (centerY < b.top + b.height / 2) {
+                      to = i;
+                      break;
+                    }
                   }
-                }
-                if (to === from) return rs;
-                const next = [...rs];
-                const [moved] = next.splice(from, 1);
-                next.splice(to, 0, moved!);
-                return next;
-              });
-            }}
-            onDragEnd={() => setDraggingUid(null)}
-            onDragCancel={() => setDraggingUid(null)}
-          >
-            <div className="flex flex-col gap-2 px-4">
-              {rows.length === 0 && (
-                <p className="text-muted-foreground text-sm">No fields yet — add one below.</p>
-              )}
-              {rows.map((row) => (
-                <SchemaFieldRow
-                  key={row.uid}
-                  row={row}
-                  isDragging={draggingUid === row.uid}
-                  onChange={(def) => update(row.uid, def)}
-                  onRemove={() => setRows((rs) => rs.filter((r) => r.uid !== row.uid))}
-                  onPickScope={() => void openScopePicker(row.uid)}
-                  scopeLabel={
-                    row.def.linkTargetParentId
-                      ? (scopeLabels[row.def.linkTargetParentId] ?? row.def.linkTargetParentId)
-                      : null
-                  }
-                />
-              ))}
-            </div>
-          </DndContext>
-
-          <div className="flex gap-2 px-4">
-            <Input
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              placeholder="New field label"
-              aria-label="new field label"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                  e.preventDefault();
-                  addField();
-                }
+                  if (to === from) return rs;
+                  const next = [...rs];
+                  const [moved] = next.splice(from, 1);
+                  next.splice(to, 0, moved!);
+                  return next;
+                });
               }}
-            />
-            <Button type="button" variant="outline" onClick={addField} aria-label="add field">
-              <Plus className="size-4" />
-            </Button>
-          </div>
+              onDragEnd={() => setDraggingUid(null)}
+              onDragCancel={() => setDraggingUid(null)}
+            >
+              <div className="flex flex-col gap-2 px-4">
+                {rows.length === 0 && (
+                  <p className="text-muted-foreground text-sm">No fields yet — add one below.</p>
+                )}
+                {rows.map((row) => (
+                  <SchemaFieldRow
+                    key={row.uid}
+                    row={row}
+                    isDragging={draggingUid === row.uid}
+                    onChange={(def) => update(row.uid, def)}
+                    onRemove={() => setRows((rs) => rs.filter((r) => r.uid !== row.uid))}
+                    onPickScope={() => void openScopePicker(row.uid)}
+                    scopeLabel={
+                      row.def.linkTargetParentId
+                        ? (scopeLabels[row.def.linkTargetParentId] ?? row.def.linkTargetParentId)
+                        : null
+                    }
+                    defaultControl={getFieldUI(row.def.type).edit({
+                      def: { ...row.def, key: `__default_${row.uid}` },
+                      value: row.def.defaultValue,
+                    })}
+                  />
+                ))}
+              </div>
+            </DndContext>
 
-          {error && <p className="text-destructive px-4 text-xs">{error}</p>}
-          <SheetFooter>
-            <form action={save}>
+            <div className="flex gap-2 px-4">
+              <Input
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                placeholder="New field label"
+                aria-label="new field label"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    addField();
+                  }
+                }}
+              />
+              <Button type="button" variant="outline" onClick={addField} aria-label="add field">
+                <Plus className="size-4" />
+              </Button>
+            </div>
+
+            {error && <p className="text-destructive px-4 text-xs">{error}</p>}
+            <SheetFooter>
               <SubmitButton className="w-full">{saved ? 'Saved ✓' : 'Save fields'}</SubmitButton>
-            </form>
-          </SheetFooter>
+            </SheetFooter>
+          </form>
         </SheetContent>
       </Sheet>
 

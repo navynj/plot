@@ -1,8 +1,10 @@
 import { requireUserId } from '@/app/_auth/requireUser';
 import { CaptureForm, type CaptureChip } from '@/components/capture/CaptureForm';
 import { DayNavigator } from '@/components/capture/DayNavigator';
-import { NodeList } from '@/components/node/NodeList';
+import { SelectableList, type SelectableGroup } from '@/components/node/SelectableList';
 import { ScrollAnchor } from '@/components/ui/scroll-anchor';
+import { formatTimestamp } from '@/lib/formatTimestamp';
+import { nodeChildCounts } from '@/service/node';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
 import { dayInTz, isValidDay, todayInTz } from '@/lib/day';
 import { getCaptureChips, getTimelineVisible } from '@/service/node';
@@ -35,12 +37,23 @@ export default async function TimelinePage({
   }));
 
   // section the river by event-axis day (presentation grouping only)
-  const groups: { day: string; nodes: typeof nodes }[] = [];
+  const childCounts = await nodeChildCounts(
+    userId,
+    nodes.map((n) => n.id)
+  );
+  const groups: SelectableGroup[] = [];
   for (const n of nodes) {
     const nodeDay = dayInTz(n.eventDate ?? n.capturedAt, tz);
+    const row = {
+      id: n.id,
+      label: n.title ?? n.body ?? '(untitled)',
+      time: formatTimestamp(n.capturedAt),
+      parented: n.parentId !== null,
+      childCount: childCounts.get(n.id) ?? 0,
+    };
     const last = groups[groups.length - 1];
-    if (last?.day === nodeDay) last.nodes.push(n);
-    else groups.push({ day: nodeDay, nodes: [n] });
+    if (last?.key === nodeDay) last.rows.push(row);
+    else groups.push({ key: nodeDay, header: nodeDay === today ? 'Today' : nodeDay, rows: [row] });
   }
 
   return (
@@ -54,14 +67,7 @@ export default async function TimelinePage({
             {day ? `Nothing on ${day}.` : 'Nothing captured yet.'}
           </p>
         )}
-        {groups.map((group) => (
-          <section key={group.day}>
-            <h2 className="text-muted-foreground bg-background sticky top-0 py-1 text-xs font-medium tracking-wider uppercase">
-              {group.day === today ? 'Today' : group.day}
-            </h2>
-            <NodeList nodes={group.nodes} emptyMessage="" />
-          </section>
-        ))}
+        <SelectableList groups={groups} />
       </ScrollAnchor>
       <div className="border-border -mx-4 border-t px-4 py-3">
         <CaptureForm chips={chips} defaultDay={day ?? today} />

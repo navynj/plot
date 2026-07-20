@@ -67,6 +67,8 @@ export interface FieldDef {
   required?: boolean;
   options?: string[]; // for type 'option'
   linkTargetParentId?: string; // for type 'link': restrict to children of this node
+  /** pre-fill for new-child forms — a real value once saved, not a phantom */
+  defaultValue?: string | number | boolean;
 }
 
 /** The fixed layout preset vocabulary (DESIGN §5) — runtime const so the
@@ -138,6 +140,33 @@ export const session = pgTable('session', {
     .references(() => user.id, { onDelete: 'cascade' }),
   expires: timestamp('expires', { withTimezone: true }).notNull(),
 });
+
+/**
+ * Per-user undo/redo stacks for triage operations (reparent/delete). DB-backed
+ * because serverless instances don't share memory — an in-memory stack would
+ * evaporate between lambda invocations. Payload holds the exact inverse
+ * (previous parentId+rank per node; delete restoration data).
+ */
+export const undoOp = pgTable(
+  'undo_op',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    stack: text('stack').$type<'undo' | 'redo'>().notNull(),
+    kind: text('kind').$type<'reparent' | 'delete'>().notNull(),
+    payload: jsonb('payload').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byUserStack: index('undo_user_stack_idx').on(t.userId, t.stack, t.createdAt),
+  })
+);
+
+export type UndoOp = typeof undoOp.$inferSelect;
 
 export const verificationToken = pgTable(
   'verification_token',
