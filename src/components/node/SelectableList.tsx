@@ -31,8 +31,10 @@ export function SelectableList({ groups }: { groups: SelectableGroup[] }) {
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const allRows = React.useMemo(() => groups.flatMap((g) => g.rows), [groups]);
   const byId = React.useMemo(() => new Map(allRows.map((r) => [r.id, r])), [allRows]);
-  // prune selections that vanished (moved away / deleted / undone)
-  const liveSelected = [...selected].filter((id) => byId.has(id));
+  // prune selections that vanished (moved away / deleted / undone), and keep
+  // DISPLAYED order (stream: timeline, inbox: rank), not click order — the
+  // field walk runs over this list in this order
+  const liveSelected = allRows.filter((r) => selected.has(r.id)).map((r) => r.id);
 
   const toggle = (id: string) =>
     setSelected((s) => {

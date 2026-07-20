@@ -17,7 +17,7 @@ import { ViewSpecDevEditor } from '@/components/node/ViewSpecDevEditor';
 import { NodeView } from '@/components/view/NodeView';
 import { Button } from '@/components/ui/button';
 import { getMembers, getMemberships } from '@/service/collection';
-import { getOwnValues } from '@/service/field';
+import { getOwnValues, getValueDisplays } from '@/service/field';
 import { resolveSchema } from '@/service/inheritance';
 import { getChildren, getNode } from '@/service/node';
 import { resolveView } from '@/service/view';
@@ -52,18 +52,7 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
     resolveView(userId, node, tz),
   ]);
 
-  // link-type values render as their target's icon+title, never a raw id
-  const displays: Record<string, string> = {};
-  for (const def of defs) {
-    const value = values[def.key];
-    if (def.type === 'link' && typeof value === 'string') {
-      const target = await getNode(userId, value);
-      if (target) {
-        displays[def.key] =
-          `${target.icon ? `${target.icon} ` : ''}${target.title ?? target.body ?? value}`;
-      }
-    }
-  }
+  const displays = await getValueDisplays(userId, defs, values);
 
   return (
     <div className="flex flex-col gap-6 py-6">

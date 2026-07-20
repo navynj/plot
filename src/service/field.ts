@@ -84,6 +84,27 @@ export async function getLinkCandidates(
   return describeCandidates(all, new Set());
 }
 
+/** Link-type values render as their target's icon+title, never a raw id —
+ *  one implementation for every surface that pre-populates editors. */
+export async function getValueDisplays(
+  userId: string,
+  defs: FieldDef[],
+  values: Record<string, FieldPrimitive>
+): Promise<Record<string, string>> {
+  const displays: Record<string, string> = {};
+  for (const def of defs) {
+    const value = values[def.key];
+    if (def.type === 'link' && typeof value === 'string') {
+      const target = await nodeRepo.byId(userId, value);
+      if (target) {
+        displays[def.key] =
+          `${target.icon ? `${target.icon} ` : ''}${target.title ?? target.body ?? value}`;
+      }
+    }
+  }
+  return displays;
+}
+
 /** The one populated typed column of a field_value row, as a JS primitive. */
 export function extractValue(row: FieldValue): FieldPrimitive | null {
   if (row.textValue !== null) return row.textValue;

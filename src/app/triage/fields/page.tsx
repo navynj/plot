@@ -1,27 +1,87 @@
 import Link from 'next/link';
 
 import { requireUserId } from '@/app/_auth/requireUser';
-import { FieldEditors } from '@/components/field/FieldEditors';
+import { FieldWalkStep } from '@/components/triage/FieldWalkStep';
 import { Button } from '@/components/ui/button';
-import { getOwnValues } from '@/service/field';
+import { getOwnValues, getValueDisplays } from '@/service/field';
 import { getFieldTriageQueue, getUnfilledFields } from '@/service/fieldTriage';
+import { resolveSchema } from '@/service/inheritance';
 import { getNode } from '@/service/node';
 
-import { saveAndAdvance } from './actions';
+import { saveAndAdvance, saveAndAdvanceSelection } from './actions';
 
 export const dynamic = 'force-dynamic';
 
 /** Field triage (DESIGN §6): one node at a time — body visible for reference,
- *  unfilled fields via the registry editors (required first). Save-partial
- *  and skip are both one tap; nothing gates. `?node=` scopes the same flow to
- *  one node (the detail-page entry point); `?after=` is the skip cursor. */
+ *  fields via the registry editors. ONE flow implementation (FieldWalkStep),
+ *  TWO queue sources:
+ *  - derived: the required-missing queue (`?after=` is the skip cursor;
+ *    `?node=` scopes to one node) — unfilled fields only, required first;
+ *  - selection: `?ids=` + `?i=` from the bulk "Fill fields" action — the
+ *    selected nodes in displayed order, ALL worn fields (revisits correct
+ *    existing values). The queue lives entirely in the URL: nothing persists,
+ *    leaving simply stops, re-selection recreates it. */
 export default async function FieldTriagePage({
   searchParams,
 }: {
-  searchParams: Promise<{ node?: string; after?: string }>;
+  searchParams: Promise<{ node?: string; after?: string; ids?: string; i?: string }>;
 }) {
-  const { node: scopedId, after } = await searchParams;
+  const { node: scopedId, after, ids: idsParam, i: iParam } = await searchParams;
   const userId = await requireUserId();
+
+  if (idsParam !== undefined) {
+    const ids = idsParam.split(',').filter(Boolean);
+    const index = Math.max(0, Number.parseInt(iParam ?? '0', 10) || 0);
+    const total = ids.length;
+
+    if (index >= total) {
+      return (
+        <div className="flex flex-col items-center gap-3 py-16">
+          <p className="text-muted-foreground text-sm">
+            Done — walked {total} item{total === 1 ? '' : 's'}.
+          </p>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/">Back to the stream</Link>
+          </Button>
+        </div>
+      );
+    }
+
+    const current = await getNode(userId, ids[index]!);
+    // ALL worn fields, in schema order — a selected node may be revisited to
+    // correct values, so filled fields render too (pre-populated)
+    const defs = current ? await resolveSchema(userId, current) : [];
+    const values = current && defs.length > 0 ? await getOwnValues(userId, current.id) : {};
+    const displays =
+      current && defs.length > 0 ? await getValueDisplays(userId, defs, values) : undefined;
+    const nextHref = `/triage/fields?ids=${idsParam}&i=${index + 1}`;
+
+    return (
+      <div className="flex flex-col gap-6 py-6">
+        <header className="flex items-baseline justify-between">
+          <h1 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+            Fill fields
+          </h1>
+          <span className="text-muted-foreground text-xs">
+            {index + 1} of {total}
+          </span>
+        </header>
+        <FieldWalkStep
+          node={current}
+          defs={defs}
+          values={values}
+          displays={displays}
+          emptyMessage={
+            current?.parentId
+              ? 'No fields — its room declares none.'
+              : "No fields — this isn't in a room yet; set a parent first."
+          }
+          action={defs.length > 0 ? saveAndAdvanceSelection.bind(null, ids, index) : null}
+          skipHref={nextHref}
+        />
+      </div>
+    );
+  }
 
   const queue = await getFieldTriageQueue(userId);
   let current = scopedId ? await getNode(userId, scopedId) : null;
@@ -52,28 +112,14 @@ export default async function FieldTriagePage({
           {scopedId ? 'This node has no unfilled fields.' : 'All caught up — nothing needs values.'}
         </p>
       ) : (
-        <section className="flex flex-col gap-4">
-          <div className="border-border rounded-lg border p-4">
-            <Link href={`/node/${current.id}`} className="text-sm font-medium hover:underline">
-              {current.title ?? '(untitled)'}
-            </Link>
-            {current.body && (
-              <p className="text-muted-foreground mt-1 text-sm whitespace-pre-wrap">
-                {current.body}
-              </p>
-            )}
-          </div>
-          <FieldEditors
-            defs={defs}
-            values={values}
-            action={saveAndAdvance.bind(null, current.id)}
-          />
-          {!scopedId && (
-            <Button variant="ghost" size="sm" className="text-muted-foreground self-start" asChild>
-              <Link href={`/triage/fields?after=${current.id}`}>Skip</Link>
-            </Button>
-          )}
-        </section>
+        <FieldWalkStep
+          node={current}
+          defs={defs}
+          values={values}
+          emptyMessage="This node has no unfilled fields."
+          action={saveAndAdvance.bind(null, current.id)}
+          skipHref={scopedId ? null : `/triage/fields?after=${current.id}`}
+        />
       )}
     </div>
   );
