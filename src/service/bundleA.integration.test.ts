@@ -144,6 +144,15 @@ describe.skipIf(!hasDb)('bundle A integration (real DB)', () => {
     // boundary day, nothing bleeding
     const june1 = await nodeRepo.findTimelineVisible(uid, '2026-06-01', 'UTC');
     expect(june1.map((n) => n.body)).toEqual(['axis-early']);
+
+    // THE TIEBREAKER: same eventDate (same midnight) → capture order within
+    // the day, matching the displayed times
+    const sameDay = startOfDayInTz('2026-06-10', 'UTC');
+    await captured('tie-first', sameDay);
+    await captured('tie-second', sameDay);
+    await captured('tie-third', sameDay);
+    const june10 = await nodeRepo.findTimelineVisible(uid, '2026-06-10', 'UTC');
+    expect(june10.map((n) => n.body)).toEqual(['tie-first', 'tie-second', 'tie-third']);
   });
 
   it('date meta-axis: eventDate groups on coalesce(event_date, captured_at) day', async () => {

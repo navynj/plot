@@ -151,17 +151,18 @@ export const nodeRepo = {
     // exactly the aggregation engine's date axis. Day boundaries follow the
     // USER's calendar: AT TIME ZONE converts to their wall clock first.
     const axis = sql`coalesce(${node.eventDate}, ${node.capturedAt})`;
-    return db
-      .select()
-      .from(node)
-      .where(
-        and(
-          eq(node.userId, userId),
-          notDeleted,
-          day !== undefined
-            ? sql`date_trunc('day', ${axis} at time zone ${tz})::date = ${day}::date`
-            : undefined,
-          sql`(
+    return (
+      db
+        .select()
+        .from(node)
+        .where(
+          and(
+            eq(node.userId, userId),
+            notDeleted,
+            day !== undefined
+              ? sql`date_trunc('day', ${axis} at time zone ${tz})::date = ${day}::date`
+              : undefined,
+            sql`(
             ${node.timelineVisibility} = 'shown'
             or (
               ${node.timelineVisibility} = 'auto'
@@ -172,9 +173,16 @@ export const nodeRepo = {
               )
             )
           )`
+          )
         )
-      )
-      .orderBy(sql`${axis} asc`);
+        // capturedAt is the TIEBREAKER: same-day entries all carry that day's
+        // midnight as eventDate (the capture control defaults to today), so the
+        // primary key alone is an N-way tie — within a day, capture order runs,
+        // matching the times shown. (Registered, not built: true within-day
+        // event times would need eventDate to carry time — a capture-friction
+        // tradeoff deferred until real use demands it.)
+        .orderBy(sql`${axis} asc`, asc(node.capturedAt))
+    );
   },
 
   /** Pinned nodes (a stored preference) in rank order — the chip row lead. */

@@ -18,9 +18,32 @@ export function isValidTimeZone(tz: string): boolean {
   }
 }
 
-/** Raw cookie value → usable IANA timezone. */
+/**
+ * Raw cookie value → usable IANA timezone. Cookie parsers DIFFER on
+ * percent-decoding (the local Next server decodes; the deployed Vercel
+ * runtime does not — the bug that pinned a Vancouver user to the Seoul
+ * fallback for days), so both the raw and decoded forms are accepted.
+ * A present-but-invalid value falls back loudly outside production —
+ * silent fallback is what hid this.
+ */
 export function resolveTimezone(raw: string | undefined): string {
-  return raw && isValidTimeZone(raw) ? raw : DEFAULT_TIMEZONE;
+  if (!raw) return DEFAULT_TIMEZONE;
+  const candidates = [raw];
+  try {
+    const decoded = decodeURIComponent(raw);
+    if (decoded !== raw) candidates.push(decoded);
+  } catch {
+    // malformed escape — fall through to validation of the raw form
+  }
+  for (const candidate of candidates) {
+    if (isValidTimeZone(candidate)) return candidate;
+  }
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(
+      `[tz] present-but-invalid tz cookie ${JSON.stringify(raw)} — falling back to ${DEFAULT_TIMEZONE}`
+    );
+  }
+  return DEFAULT_TIMEZONE;
 }
 
 /** 'YYYY-MM-DD' of an instant, as read on the wall clock of `tz`. */

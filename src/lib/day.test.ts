@@ -32,6 +32,12 @@ describe('resolveTimezone — cookie-absent fallback', () => {
     expect(resolveTimezone('Not/AZone')).toBe(DEFAULT_TIMEZONE);
     expect(resolveTimezone('America/New_York')).toBe('America/New_York');
   });
+
+  it('THE REGRESSION: a percent-encoded cookie value resolves to the real zone (Vercel does not decode; local servers do)', () => {
+    expect(resolveTimezone('America%2FVancouver')).toBe('America/Vancouver');
+    expect(resolveTimezone('America%2FNew_York')).toBe('America/New_York');
+    expect(resolveTimezone('Bad%2')).toBe(DEFAULT_TIMEZONE); // malformed escape stays graceful
+  });
 });
 
 describe('startOfDayInTz — day boundaries as UTC instants', () => {

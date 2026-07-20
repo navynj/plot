@@ -45,7 +45,9 @@ describe('number constraints — service validation (UI-bypass-proof)', () => {
 
 describe('schema-sheet constraint validation (service layer)', () => {
   beforeEach(() => {
-    vi.mocked(nodeRepo.update).mockReset().mockResolvedValue({ id: 'N' } as Node);
+    vi.mocked(nodeRepo.update)
+      .mockReset()
+      .mockResolvedValue({ id: 'N' } as Node);
   });
 
   it('min > max rejected', async () => {
