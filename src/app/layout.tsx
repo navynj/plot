@@ -1,8 +1,9 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import Link from 'next/link';
 
 import { auth, signOut } from '@/auth';
+import { PwaRegister } from '@/components/PwaRegister';
 import { Button } from '@/components/ui/button';
 
 import './globals.css';
@@ -20,6 +21,22 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'PLOT',
   description: 'Rapid capture, later organization.',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'PLOT',
+  },
+  icons: {
+    apple: '/apple-touch-icon.png',
+  },
+};
+
+export const viewport: Viewport = {
+  // standalone title bar follows the user's theme
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#252525' },
+  ],
 };
 
 export default async function RootLayout({
@@ -31,6 +48,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex h-dvh flex-col">
+        <PwaRegister />
         <header className="border-border border-b">
           <nav className="mx-auto flex w-full max-w-2xl items-center gap-4 px-4 py-2">
             <span className="text-sm font-semibold tracking-wide">PLOT</span>

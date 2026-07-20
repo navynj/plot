@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { requireUserId } from '@/app/_auth/requireUser';
+import { isValidDay } from '@/lib/day';
 import type { NodeCandidate } from '@/service/candidates';
 import {
   addToCollection,
@@ -52,6 +53,22 @@ export async function setTimelineVisibility(
 ): Promise<void> {
   const userId = await requireUserId();
   await updateNode(userId, nodeId, { timelineVisibility: visibility });
+  revalidatePath(`/node/${nodeId}`);
+}
+
+export async function setPinned(nodeId: string, pinned: boolean): Promise<void> {
+  const userId = await requireUserId();
+  await updateNode(userId, nodeId, { pinned });
+  revalidatePath(`/node/${nodeId}`);
+}
+
+/** eventDate is optional for every node, exactly as the schema always said —
+ *  set from a YYYY-MM-DD day, or null to clear. */
+export async function setEventDate(nodeId: string, day: string | null): Promise<void> {
+  const userId = await requireUserId();
+  await updateNode(userId, nodeId, {
+    eventDate: day !== null && isValidDay(day) ? new Date(`${day}T00:00:00`) : null,
+  });
   revalidatePath(`/node/${nodeId}`);
 }
 

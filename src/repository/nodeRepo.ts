@@ -24,6 +24,7 @@ export type UpdateNodePatch = Partial<
     | 'schemaMode'
     | 'viewSpec'
     | 'timelineVisibility'
+    | 'pinned'
   >
 >;
 
@@ -124,7 +125,10 @@ export const nodeRepo = {
    *  picker-created / grouped — never captured as text; the timeline is the
    *  river of captured text). 'shown'/'hidden' override. Only the timeline
    *  uses this; inbox/grid/detail see everything. */
-  async findTimelineVisible(userId: string): Promise<Node[]> {
+  async findTimelineVisible(userId: string, day?: string): Promise<Node[]> {
+    // the EVENT AXIS: when it happened wins over when it was captured —
+    // exactly the aggregation engine's date axis
+    const axis = sql`coalesce(${node.eventDate}, ${node.capturedAt})`;
     return db
       .select()
       .from(node)
@@ -132,6 +136,7 @@ export const nodeRepo = {
         and(
           eq(node.userId, userId),
           notDeleted,
+          day !== undefined ? sql`date_trunc('day', ${axis}) = ${day}::timestamptz` : undefined,
           sql`(
             ${node.timelineVisibility} = 'shown'
             or (
@@ -145,7 +150,16 @@ export const nodeRepo = {
           )`
         )
       )
-      .orderBy(asc(node.capturedAt));
+      .orderBy(sql`${axis} asc`);
+  },
+
+  /** Pinned nodes (a stored preference) in rank order — the chip row lead. */
+  async findPinned(userId: string): Promise<Node[]> {
+    return db
+      .select()
+      .from(node)
+      .where(and(eq(node.userId, userId), eq(node.pinned, true), notDeleted))
+      .orderBy(asc(node.rank), asc(node.capturedAt));
   },
 
   /** The node and every descendant (recursive CTE). Deleted nodes are

@@ -196,6 +196,10 @@ export const node = pgTable(
       .notNull()
       .default('auto'),
 
+    // pure user preference (legitimately stored, not derivable): pinned
+    // nodes lead the capture chip row
+    pinned: boolean('pinned').notNull().default(false),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     // soft delete (ROADMAP Phase 1); reads filter on IS NULL

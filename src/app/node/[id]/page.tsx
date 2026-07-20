@@ -8,6 +8,7 @@ import { requireUserId } from '@/app/_auth/requireUser';
 import { ContextCaptureForm } from '@/components/capture/ContextCaptureForm';
 import { ChildSchemaDevEditor } from '@/components/node/ChildSchemaDevEditor';
 import { CollectionsSection } from '@/components/node/CollectionsSection';
+import { EventDateControl } from '@/components/node/EventDateControl';
 import { NodeHeaderEdit } from '@/components/node/NodeHeaderEdit';
 import { TimelineVisibilityControl } from '@/components/node/TimelineVisibilityControl';
 import { FieldEditors } from '@/components/field/FieldEditors';
@@ -20,6 +21,7 @@ import { getOwnValues } from '@/service/field';
 import { resolveSchema } from '@/service/inheritance';
 import { getChildren, getNode } from '@/service/node';
 import { resolveView } from '@/service/view';
+import { toDayString } from '@/lib/day';
 import { formatTimestamp } from '@/lib/formatTimestamp';
 
 import { saveChildSchemaDev, saveFields, saveViewSpecDev } from './actions';
@@ -63,6 +65,7 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
             body={node.body}
             childCount={children.length}
             parentLabel={parent ? (parent.title ?? parent.body) : null}
+            pinned={node.pinned}
           />
         </div>
         <p className="text-muted-foreground text-xs">captured {formatTimestamp(node.capturedAt)}</p>
@@ -78,7 +81,13 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
                   : 'No parent — set one'}
             </Button>
           </ParentPicker>
-          <TimelineVisibilityControl nodeId={node.id} value={node.timelineVisibility} />
+          <span className="flex items-center gap-3">
+            <EventDateControl
+              nodeId={node.id}
+              value={node.eventDate ? toDayString(node.eventDate) : null}
+            />
+            <TimelineVisibilityControl nodeId={node.id} value={node.timelineVisibility} />
+          </span>
         </div>
       </header>
 

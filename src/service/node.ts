@@ -28,6 +28,10 @@ export interface CaptureInput {
    *  user still only typed text; values are never forced. Absent = raw
    *  capture into the inbox. */
   contextParentId?: string;
+  /** The temporal twin of contextual capture: viewing a day stamps it as the
+   *  entry's eventDate. Absent (the common case, "today") leaves eventDate
+   *  null — capturedAt speaks for it. */
+  eventDate?: Date;
 }
 
 /**
@@ -42,7 +46,11 @@ export async function captureNode(userId: string, input: CaptureInput): Promise<
   if (!title && !body) {
     throw new EmptyCaptureError();
   }
-  const created = await nodeRepo.create({ userId, title, body, capturedAt: new Date() });
+  let created = await nodeRepo.create({ userId, title, body, capturedAt: new Date() });
+  if (input.eventDate) {
+    created =
+      (await nodeRepo.update(userId, created.id, { eventDate: input.eventDate })) ?? created;
+  }
   if (input.contextParentId) {
     return reparent(userId, created.id, input.contextParentId);
   }
@@ -80,10 +88,11 @@ export function getTimeline(userId: string): Promise<Node[]> {
   return nodeRepo.findTimeline(userId);
 }
 
-/** The timeline PAGE's slice: structural nodes derived out (SQL), overrides
- *  respected. Everything else (inbox/grid/detail/triage) sees all nodes. */
-export function getTimelineVisible(userId: string): Promise<Node[]> {
-  return nodeRepo.findTimelineVisible(userId);
+/** The timeline PAGE's slice on the event axis: structural/constructed nodes
+ *  derived out (SQL), overrides respected, optionally filtered to one day.
+ *  Everything else (inbox/grid/detail/triage) sees all nodes. */
+export function getTimelineVisible(userId: string, day?: string): Promise<Node[]> {
+  return nodeRepo.findTimelineVisible(userId, day);
 }
 
 export function getInbox(userId: string): Promise<Node[]> {
@@ -96,20 +105,54 @@ export interface GridTile {
   count: number;
 }
 
-/** The grid home (DESIGN §6): confirmed roots as rooms. The inbox is not a
- *  tile here — it stays a derived filter the page renders separately (muted:
- *  un-triaged is not debt). */
-export async function getGridTiles(userId: string): Promise<GridTile[]> {
+export interface GridSection {
+  root: Node;
+  tiles: GridTile[];
+}
+
+/** The grid home, one level down: real use lives at level 2. Roots render as
+ *  section headers; their children are the tiles (rank order). The inbox is
+ *  not a tile — it stays a derived filter the page renders separately. */
+export async function getGridSections(userId: string): Promise<GridSection[]> {
   const roots = await nodeRepo.findRoots(userId);
   return Promise.all(
-    roots.map(async (node) => {
-      const [children, members] = await Promise.all([
-        nodeRepo.findChildren(userId, node.id),
-        linkRepo.findTargets(userId, node.id),
-      ]);
-      return { node, count: new Set([...children, ...members].map((n) => n.id)).size };
+    roots.map(async (root) => {
+      const children = await nodeRepo.findChildren(userId, root.id);
+      const tiles = await Promise.all(
+        children.map(async (child) => {
+          const [grand, members] = await Promise.all([
+            nodeRepo.findChildren(userId, child.id),
+            linkRepo.findTargets(userId, child.id),
+          ]);
+          return { node: child, count: new Set([...grand, ...members].map((n) => n.id)).size };
+        })
+      );
+      return { root, tiles };
     })
   );
+}
+
+/** The capture chip row: pinned nodes first (stored preference), then the
+ *  level-2 nodes (children of confirmed roots), deduped, rank order. */
+export async function getCaptureChips(userId: string): Promise<Node[]> {
+  const [pinned, roots] = await Promise.all([
+    nodeRepo.findPinned(userId),
+    nodeRepo.findRoots(userId),
+  ]);
+  const levelTwo = (
+    await Promise.all(roots.map((root) => nodeRepo.findChildren(userId, root.id)))
+  ).flat();
+  return [...new Map([...pinned, ...levelTwo].map((n) => [n.id, n])).values()];
+}
+
+/** Grid inline add: a NEW ROOM under a section's root. Title, not body — a
+ *  room is constructed structure, not a captured record (so the timeline's
+ *  constructed rule keeps it out of the river, correctly). */
+export async function addRoom(userId: string, rootId: string, title: string): Promise<Node> {
+  const trimmed = title.trim();
+  if (!trimmed) throw new EmptyCaptureError();
+  const created = await nodeRepo.create({ userId, title: trimmed, capturedAt: new Date() });
+  return reparent(userId, created.id, rootId);
 }
 
 /** Declare the schema this node imposes on its children. Input is untrusted

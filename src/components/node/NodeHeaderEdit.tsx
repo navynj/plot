@@ -1,9 +1,9 @@
 'use client';
 
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Pin, PinOff, Trash2 } from 'lucide-react';
 import * as React from 'react';
 
-import { deleteNodeAction, saveNodeMeta } from '@/app/node/[id]/actions';
+import { deleteNodeAction, saveNodeMeta, setPinned } from '@/app/node/[id]/actions';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -24,6 +24,7 @@ interface NodeHeaderEditProps {
   body: string | null;
   childCount: number;
   parentLabel: string | null; // null = children would fall to top level / inbox
+  pinned: boolean;
 }
 
 /** Inline edit of title/icon/body + delete-with-confirm. Delete closes the
@@ -36,6 +37,14 @@ export function NodeHeaderEdit(props: NodeHeaderEditProps) {
   return (
     <>
       <span className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={props.pinned ? 'unpin node' : 'pin node'}
+          onClick={() => setPinned(props.nodeId, !props.pinned)}
+        >
+          {props.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
+        </Button>
         <Button
           variant="ghost"
           size="icon-sm"

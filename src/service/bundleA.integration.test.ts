@@ -116,6 +116,32 @@ describe.skipIf(!hasDb)('bundle A integration (real DB)', () => {
     expect(visible).not.toContain('hidden-leaf'); // manual override out
   });
 
+  it('timeline event axis: event_date wins, capturedAt falls back, day filter respects boundaries', async () => {
+    const nodeService2 = nodeService;
+    const captured = async (body: string, eventDay?: string) => {
+      const n = await nodeService2.captureNode(uid, {
+        body,
+        eventDate: eventDay ? new Date(`${eventDay}T00:00:00`) : undefined,
+      });
+      return n.id;
+    };
+    await captured('axis-today'); // capturedAt only → today
+    await captured('axis-early', '2026-06-01');
+    await captured('axis-late', '2026-06-03');
+    await captured('axis-mid', '2026-06-02');
+
+    const all = await nodeRepo.findTimelineVisible(uid);
+    const bodies = all.map((n) => n.body).filter((b) => b?.startsWith('axis-'));
+    // event axis order: dated entries first (June), then the captured-today one
+    expect(bodies).toEqual(['axis-early', 'axis-mid', 'axis-late', 'axis-today']);
+
+    // day filter: exactly the boundary day, nothing bleeding across
+    const june2 = await nodeRepo.findTimelineVisible(uid, '2026-06-02');
+    expect(june2.map((n) => n.body)).toEqual(['axis-mid']);
+    const june1 = await nodeRepo.findTimelineVisible(uid, '2026-06-01');
+    expect(june1.map((n) => n.body)).toEqual(['axis-early']);
+  });
+
   it('date meta-axis: eventDate groups on coalesce(event_date, captured_at) day', async () => {
     const mood = await mk('MoodAxis');
     await nodeService.setChildSchema(uid, mood, [{ key: 'score', label: 'Score', type: 'number' }]);
