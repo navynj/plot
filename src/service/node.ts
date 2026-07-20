@@ -91,8 +91,12 @@ export function getTimeline(userId: string): Promise<Node[]> {
 /** The timeline PAGE's slice on the event axis: structural/constructed nodes
  *  derived out (SQL), overrides respected, optionally filtered to one day.
  *  Everything else (inbox/grid/detail/triage) sees all nodes. */
-export function getTimelineVisible(userId: string, day?: string): Promise<Node[]> {
-  return nodeRepo.findTimelineVisible(userId, day);
+export function getTimelineVisible(
+  userId: string,
+  day: string | undefined,
+  tz: string
+): Promise<Node[]> {
+  return nodeRepo.findTimelineVisible(userId, day, tz);
 }
 
 export function getInbox(userId: string): Promise<Node[]> {

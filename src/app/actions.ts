@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 
 import { requireUserId } from '@/app/_auth/requireUser';
-import { resolveCaptureEventDate } from '@/lib/day';
+import { getRequestTimezone } from '@/app/_ctx/timezone';
+import { explicitEventDate } from '@/lib/day';
 import { addRoom, captureNode } from '@/service/node';
 
 export async function capture(formData: FormData): Promise<void> {
@@ -14,14 +15,17 @@ export async function capture(formData: FormData): Promise<void> {
     return; // empty submit is a no-op, not an error
   }
   const parentRaw = formData.get('parentId');
-  const dayRaw = formData.get('day');
+  const dayRaw = formData.get('captureDate');
+  const tz = await getRequestTimezone();
   await captureNode(userId, {
     body: text,
     // one-tap chip parent — same contextual-capture rule, from the home
     contextParentId: typeof parentRaw === 'string' && parentRaw !== '' ? parentRaw : undefined,
-    // viewed day stamps eventDate; today resolves to undefined (zero-cost)
-    eventDate: resolveCaptureEventDate(
-      typeof dayRaw === 'string' && dayRaw !== '' ? dayRaw : undefined
+    // the date control's shown day IS the eventDate (today included);
+    // '' = explicitly cleared → dateless entry (null)
+    eventDate: explicitEventDate(
+      typeof dayRaw === 'string' && dayRaw !== '' ? dayRaw : undefined,
+      tz
     ),
   });
   revalidatePath('/');

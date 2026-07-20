@@ -48,11 +48,15 @@ export type ResolvedView =
 
 const CHART_LAYOUTS = new Set(['bar', 'line', 'calendar', 'heatmap']);
 
-export async function resolveView(userId: string, node: Node): Promise<ResolvedView | null> {
+export async function resolveView(
+  userId: string,
+  node: Node,
+  tz?: string
+): Promise<ResolvedView | null> {
   const spec = node.viewSpec;
   if (!spec) return null;
   return CHART_LAYOUTS.has(spec.layout)
-    ? resolveAggregateView(userId, node, spec)
+    ? resolveAggregateView(userId, node, spec, tz)
     : resolveItemsView(userId, node, spec);
 }
 
@@ -61,12 +65,13 @@ export async function resolveView(userId: string, node: Node): Promise<ResolvedV
 async function resolveAggregateView(
   userId: string,
   node: Node,
-  spec: ViewSpec
+  spec: ViewSpec,
+  tz?: string
 ): Promise<ResolvedView> {
   const op: AggregationOp = spec.aggregate && spec.aggregate !== 'none' ? spec.aggregate : 'sum';
   const main = await aggregate(userId, node.id, {
     source: 'both',
-    spec: { lens: spec.lens, groupBy: spec.groupBy, op, filters: spec.filter },
+    spec: { lens: spec.lens, groupBy: spec.groupBy, op, filters: spec.filter, tz },
   });
   const overlay = spec.overlayOwnField ? await resolveOverlay(userId, node, spec) : null;
 
@@ -86,6 +91,7 @@ async function resolveAggregateView(
             groupBy: spec.groupBy,
             op,
             filters: [{ ...splitFilter, value: !(splitFilter.value as boolean) }],
+            tz,
           },
         })
       : null;

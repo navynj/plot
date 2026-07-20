@@ -1,33 +1,91 @@
-/** Pure day-string helpers for the timeline's day navigator. All in the
- *  server's local calendar; a day is 'YYYY-MM-DD'. */
+/**
+ * THE day module: every "what day is this instant" and "day boundaries for
+ * day D" question in the app comes here, always in an explicit IANA timezone.
+ * Storage stays pure UTC timestamps; timezone is a display/boundary LENS
+ * resolved per request (cookie at the entry point, like the session) and
+ * passed down as a parameter — services never read cookies.
+ */
 
-export function toDayString(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+/** Cookie-absent / cookie-invalid fallback (the pre-(b) behavior as safety net). */
+export const DEFAULT_TIMEZONE = 'Asia/Seoul';
+
+export function isValidTimeZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-export function todayString(): string {
-  return toDayString(new Date());
+/** Raw cookie value → usable IANA timezone. */
+export function resolveTimezone(raw: string | undefined): string {
+  return raw && isValidTimeZone(raw) ? raw : DEFAULT_TIMEZONE;
+}
+
+/** 'YYYY-MM-DD' of an instant, as read on the wall clock of `tz`. */
+export function dayInTz(instant: Date, tz: string): string {
+  // en-CA formats as YYYY-MM-DD
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(instant);
+}
+
+export function todayInTz(tz: string): string {
+  return dayInTz(new Date(), tz);
 }
 
 export function isValidDay(day: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(day) && !Number.isNaN(new Date(`${day}T00:00:00`).getTime());
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) && !Number.isNaN(Date.parse(`${day}T00:00:00Z`));
 }
 
+/** Pure calendar step — timezone-free string math. */
 export function shiftDay(day: string, delta: number): string {
-  const date = new Date(`${day}T00:00:00`);
-  date.setDate(date.getDate() + delta);
-  return toDayString(date);
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + delta);
+  return date.toISOString().slice(0, 10);
 }
 
-/**
- * The capture-day rule: a viewed day becomes the new node's eventDate ONLY
- * when it isn't today — capturing on "today" stays zero-cost (eventDate null,
- * capturedAt speaks for it). Returns undefined for absent/invalid/today.
- */
-export function resolveCaptureEventDate(day: string | undefined): Date | undefined {
-  if (!day || !isValidDay(day) || day === todayString()) return undefined;
-  return new Date(`${day}T00:00:00`);
+function tzOffsetMs(tz: string, at: Date): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(at);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const asUtc = Date.UTC(
+    get('year'),
+    get('month') - 1,
+    get('day'),
+    get('hour') % 24,
+    get('minute'),
+    get('second')
+  );
+  return asUtc - at.getTime();
+}
+
+/** The UTC instant at which day D begins on tz's wall clock (DST-safe via
+ *  the standard two-pass offset correction). */
+export function startOfDayInTz(day: string, tz: string): Date {
+  const guess = Date.parse(`${day}T00:00:00Z`);
+  const offset = tzOffsetMs(tz, new Date(guess));
+  let instant = guess - offset;
+  const check = tzOffsetMs(tz, new Date(instant));
+  if (check !== offset) instant = guess - check;
+  return new Date(instant);
+}
+
+/** The EXPLICIT-day capture rule: a date the user deliberately picked always
+ *  stamps, today included — explicit beats implicit. */
+export function explicitEventDate(day: string | undefined, tz: string): Date | undefined {
+  if (!day || !isValidDay(day)) return undefined;
+  return startOfDayInTz(day, tz);
 }

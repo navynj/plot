@@ -24,9 +24,11 @@ export type AggregationOp = 'sum' | 'avg' | 'count';
 export interface AggregationSpec {
   /** field key whose values are aggregated (the lens) */
   lens: string;
-  /** field key to group by (link/option/date identity) */
+  /** field key to group by (link/option/date identity), or a date meta-axis */
   groupBy?: string;
   op: AggregationOp;
+  /** user timezone for date meta-axes (day boundaries follow their calendar) */
+  tz?: string;
   /** filters on sibling field values of the same node, resolved in SQL.
    *  A node without the filtered field does not match (no row to compare). */
   filters?: ViewFilter[];
@@ -75,6 +77,7 @@ export async function aggregate(
     groupByKey: opts.spec.groupBy,
     op: opts.spec.op,
     filters: opts.spec.filters?.map(toStorageFilter),
+    tz: opts.spec.tz,
   };
   const rows = await fieldValueRepo.aggregate(userId, ids, repoSpec);
   return rows.map((r) => ({ group: r.groupId, value: r.value, count: r.count }));

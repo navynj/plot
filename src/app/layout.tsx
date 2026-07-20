@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 import { auth, signOut } from '@/auth';
 import { PwaRegister } from '@/components/PwaRegister';
+import { TimezoneSync } from '@/components/TimezoneSync';
 import { Button } from '@/components/ui/button';
 
 import './globals.css';
@@ -49,6 +50,7 @@ export default async function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="flex h-dvh flex-col">
         <PwaRegister />
+        <TimezoneSync />
         <header className="border-border border-b">
           <nav className="mx-auto flex w-full max-w-2xl items-center gap-4 px-4 py-2">
             <span className="text-sm font-semibold tracking-wide">PLOT</span>

@@ -125,9 +125,10 @@ export const nodeRepo = {
    *  picker-created / grouped — never captured as text; the timeline is the
    *  river of captured text). 'shown'/'hidden' override. Only the timeline
    *  uses this; inbox/grid/detail see everything. */
-  async findTimelineVisible(userId: string, day?: string): Promise<Node[]> {
+  async findTimelineVisible(userId: string, day: string | undefined, tz: string): Promise<Node[]> {
     // the EVENT AXIS: when it happened wins over when it was captured —
-    // exactly the aggregation engine's date axis
+    // exactly the aggregation engine's date axis. Day boundaries follow the
+    // USER's calendar: AT TIME ZONE converts to their wall clock first.
     const axis = sql`coalesce(${node.eventDate}, ${node.capturedAt})`;
     return db
       .select()
@@ -136,7 +137,9 @@ export const nodeRepo = {
         and(
           eq(node.userId, userId),
           notDeleted,
-          day !== undefined ? sql`date_trunc('day', ${axis}) = ${day}::timestamptz` : undefined,
+          day !== undefined
+            ? sql`date_trunc('day', ${axis} at time zone ${tz})::date = ${day}::date`
+            : undefined,
           sql`(
             ${node.timelineVisibility} = 'shown'
             or (

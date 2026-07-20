@@ -26,9 +26,13 @@ export interface RepoAggregateSpec {
   groupByKey?: string;
   op: 'sum' | 'avg' | 'count';
   filters?: StorageFilter[];
+  /** IANA timezone for the date meta-axes — day boundaries follow the user's
+   *  calendar. Ignored for field-key group axes. */
+  tz?: string;
 }
 
 const META_GROUP_AXES = new Set(['eventDate', 'capturedAt']);
+const DEFAULT_TZ = 'Asia/Seoul';
 
 export interface AggregateRow {
   /** group identity: link target id, option text, or timestamp text; null when ungrouped */
@@ -61,10 +65,11 @@ export function buildAggregateSql(userId: string, nodeIds: string[], spec: RepoA
         ? sql`sum(v.number_value)::float8`
         : sql`avg(v.number_value)::float8`;
   const metaAxis = spec.groupByKey !== undefined && META_GROUP_AXES.has(spec.groupByKey);
+  const tz = spec.tz ?? DEFAULT_TZ;
   const groupExpr = metaAxis
     ? spec.groupByKey === 'eventDate'
-      ? sql`date_trunc('day', coalesce(n.event_date, n.captured_at))::text`
-      : sql`date_trunc('day', n.captured_at)::text`
+      ? sql`date_trunc('day', coalesce(n.event_date, n.captured_at) at time zone ${tz})::text`
+      : sql`date_trunc('day', n.captured_at at time zone ${tz})::text`
     : spec.groupByKey
       ? sql`coalesce(g.link_value, g.text_value, g.date_value::text, g.bool_value::text, g.number_value::text)`
       : sql`null::text`;

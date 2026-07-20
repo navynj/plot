@@ -194,6 +194,11 @@ composition; the user owns relationships and perspective.
 
 ### Date is storage, not identity
 
+Storage is pure UTC timestamps; the user's (auto-detected) timezone is a
+display/boundary lens only — traveling re-lenses past entries (a Seoul 11 PM
+capture reads as that morning in New York), which is correct and needs no
+migration.
+
 Every node has `capturedAt` (creation stamp — the free universal ordering key)
 and an optional `eventDate` (when it actually happened). Whether a view is
 "date-bound" is decided by the _view_, not the entry:

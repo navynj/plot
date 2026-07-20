@@ -2,16 +2,16 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
-import { shiftDay, todayString } from '@/lib/day';
+import { shiftDay } from '@/lib/day';
 
 /** Lightweight day navigation over the event axis. No day = the full river
  *  (capturing to today); a selected day filters the river to it and becomes
  *  the capture's eventDate — the temporal twin of contextual capture. */
-export function DayNavigator({ day }: { day?: string }) {
-  const viewing = day ?? todayString();
+export function DayNavigator({ day, today }: { day: string | undefined; today: string }) {
+  const viewing = day ?? today;
   const back = shiftDay(viewing, -1);
   const forward = shiftDay(viewing, 1);
-  const forwardIsToday = forward === todayString();
+  const forwardIsToday = forward === today;
 
   return (
     <div className="flex items-center justify-between gap-2">

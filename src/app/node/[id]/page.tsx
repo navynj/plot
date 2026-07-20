@@ -6,7 +6,7 @@ import type { FieldPrimitive } from '@/db/schema';
 
 import { requireUserId } from '@/app/_auth/requireUser';
 import { ContextCaptureForm } from '@/components/capture/ContextCaptureForm';
-import { ChildSchemaDevEditor } from '@/components/node/ChildSchemaDevEditor';
+import { ChildSchemaEditor } from '@/components/node/ChildSchemaEditor';
 import { CollectionsSection } from '@/components/node/CollectionsSection';
 import { EventDateControl } from '@/components/node/EventDateControl';
 import { NodeHeaderEdit } from '@/components/node/NodeHeaderEdit';
@@ -21,10 +21,11 @@ import { getOwnValues } from '@/service/field';
 import { resolveSchema } from '@/service/inheritance';
 import { getChildren, getNode } from '@/service/node';
 import { resolveView } from '@/service/view';
-import { toDayString } from '@/lib/day';
+import { getRequestTimezone } from '@/app/_ctx/timezone';
+import { dayInTz, todayInTz } from '@/lib/day';
 import { formatTimestamp } from '@/lib/formatTimestamp';
 
-import { saveChildSchemaDev, saveFields, saveViewSpecDev } from './actions';
+import { saveFields, saveViewSpecDev } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,7 @@ export const dynamic = 'force-dynamic';
 export default async function NodeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const userId = await requireUserId();
+  const tz = await getRequestTimezone();
   const node = await getNode(userId, id);
   if (!node) notFound();
 
@@ -47,7 +49,7 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
     getMemberships(userId, id),
     getMembers(userId, id),
     getChildren(userId, id),
-    resolveView(userId, node),
+    resolveView(userId, node, tz),
   ]);
 
   return (
@@ -84,7 +86,7 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
           <span className="flex items-center gap-3">
             <EventDateControl
               nodeId={node.id}
-              value={node.eventDate ? toDayString(node.eventDate) : null}
+              value={node.eventDate ? dayInTz(node.eventDate, tz) : null}
             />
             <TimelineVisibilityControl nodeId={node.id} value={node.timelineVisibility} />
           </span>
@@ -92,7 +94,11 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
       </header>
 
       {/* contextual capture: position inherited from standing here (DESIGN §6) */}
-      <ContextCaptureForm nodeId={node.id} contextLabel={node.title ?? 'this node'} />
+      <ContextCaptureForm
+        nodeId={node.id}
+        contextLabel={node.title ?? 'this node'}
+        defaultDay={todayInTz(tz)}
+      />
 
       {/* own values */}
       {defs.length > 0 && (
@@ -154,10 +160,7 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
         viewSpec={node.viewSpec ?? null}
         action={saveViewSpecDev.bind(null, node.id)}
       />
-      <ChildSchemaDevEditor
-        childSchema={node.childSchema ?? []}
-        action={saveChildSchemaDev.bind(null, node.id)}
-      />
+      <ChildSchemaEditor nodeId={node.id} childSchema={node.childSchema ?? []} />
     </div>
   );
 }

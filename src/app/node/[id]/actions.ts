@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 import { requireUserId } from '@/app/_auth/requireUser';
-import { isValidDay } from '@/lib/day';
+import { getRequestTimezone } from '@/app/_ctx/timezone';
+import { explicitEventDate, isValidDay, startOfDayInTz } from '@/lib/day';
 import type { NodeCandidate } from '@/service/candidates';
 import {
   addToCollection,
@@ -66,8 +67,9 @@ export async function setPinned(nodeId: string, pinned: boolean): Promise<void> 
  *  set from a YYYY-MM-DD day, or null to clear. */
 export async function setEventDate(nodeId: string, day: string | null): Promise<void> {
   const userId = await requireUserId();
+  const tz = await getRequestTimezone();
   await updateNode(userId, nodeId, {
-    eventDate: day !== null && isValidDay(day) ? new Date(`${day}T00:00:00`) : null,
+    eventDate: day !== null && isValidDay(day) ? startOfDayInTz(day, tz) : null,
   });
   revalidatePath(`/node/${nodeId}`);
 }
@@ -80,7 +82,16 @@ export async function captureHere(nodeId: string, formData: FormData): Promise<v
   const text = typeof raw === 'string' ? raw.trim() : '';
   if (!text) return;
   const toInbox = formData.get('dest') === 'inbox';
-  await captureNode(userId, { body: text, contextParentId: toInbox ? undefined : nodeId });
+  const dayRaw = formData.get('captureDate');
+  const tz = await getRequestTimezone();
+  await captureNode(userId, {
+    body: text,
+    contextParentId: toInbox ? undefined : nodeId,
+    eventDate: explicitEventDate(
+      typeof dayRaw === 'string' && dayRaw !== '' ? dayRaw : undefined,
+      tz
+    ),
+  });
   revalidatePath(`/node/${nodeId}`);
 }
 
@@ -163,16 +174,21 @@ export async function saveViewSpecDev(nodeId: string, formData: FormData): Promi
   revalidatePath(`/node/${nodeId}`);
 }
 
-/** dev-only, see ChildSchemaDevEditor */
-export async function saveChildSchemaDev(nodeId: string, formData: FormData): Promise<void> {
+export type SchemaSaveResult = { ok: true } | { ok: false; error: string };
+
+/** The field-schema editor's save path — through the validated service;
+ *  typed InvalidSchemaError surfaces as an inline form error, not a crash. */
+export async function saveChildSchemaAction(
+  nodeId: string,
+  defs: unknown
+): Promise<SchemaSaveResult> {
   const userId = await requireUserId();
-  const text = formData.get('childSchema');
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(typeof text === 'string' ? text : '');
-  } catch {
-    throw new InvalidSchemaError('not valid JSON');
+    await setChildSchema(userId, nodeId, defs);
+  } catch (err) {
+    if (err instanceof InvalidSchemaError) return { ok: false, error: err.message };
+    throw err;
   }
-  await setChildSchema(userId, nodeId, parsed);
   revalidatePath(`/node/${nodeId}`);
+  return { ok: true };
 }

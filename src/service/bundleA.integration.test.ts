@@ -104,7 +104,7 @@ describe.skipIf(!hasDb)('bundle A integration (real DB)', () => {
     const hiddenLeaf = await captured('hidden-leaf');
     await nodeService.updateNode(uid, hiddenLeaf, { timelineVisibility: 'hidden' });
 
-    const rows = await nodeRepo.findTimelineVisible(uid);
+    const rows = await nodeRepo.findTimelineVisible(uid, undefined, 'UTC');
     const visible = rows.map((n) => n.title ?? n.body);
 
     expect(visible).not.toContain('has-children'); // structural via children
@@ -116,29 +116,33 @@ describe.skipIf(!hasDb)('bundle A integration (real DB)', () => {
     expect(visible).not.toContain('hidden-leaf'); // manual override out
   });
 
-  it('timeline event axis: event_date wins, capturedAt falls back, day filter respects boundaries', async () => {
-    const nodeService2 = nodeService;
-    const captured = async (body: string, eventDay?: string) => {
-      const n = await nodeService2.captureNode(uid, {
-        body,
-        eventDate: eventDay ? new Date(`${eventDay}T00:00:00`) : undefined,
-      });
+  it('timeline event axis: event_date wins, capturedAt falls back, day boundaries follow the USER timezone', async () => {
+    const { startOfDayInTz } = await import('@/lib/day');
+    const captured = async (body: string, eventDate?: Date) => {
+      const n = await nodeService.captureNode(uid, { body, eventDate });
       return n.id;
     };
-    await captured('axis-today'); // capturedAt only → today
-    await captured('axis-early', '2026-06-01');
-    await captured('axis-late', '2026-06-03');
-    await captured('axis-mid', '2026-06-02');
+    await captured('axis-today'); // capturedAt only → today (fallback)
+    await captured('axis-early', startOfDayInTz('2026-06-01', 'UTC'));
+    await captured('axis-late', startOfDayInTz('2026-06-03', 'UTC'));
+    // THE ROLLOVER, at the SQL layer: 23:30 UTC on 06-02 = 08:30 KST on 06-03
+    await captured('axis-mid', new Date('2026-06-02T23:30:00Z'));
 
-    const all = await nodeRepo.findTimelineVisible(uid);
+    const all = await nodeRepo.findTimelineVisible(uid, undefined, 'UTC');
     const bodies = all.map((n) => n.body).filter((b) => b?.startsWith('axis-'));
-    // event axis order: dated entries first (June), then the captured-today one
+    // event axis order (pure UTC instants): dated entries first, then today
     expect(bodies).toEqual(['axis-early', 'axis-mid', 'axis-late', 'axis-today']);
 
-    // day filter: exactly the boundary day, nothing bleeding across
-    const june2 = await nodeRepo.findTimelineVisible(uid, '2026-06-02');
-    expect(june2.map((n) => n.body)).toEqual(['axis-mid']);
-    const june1 = await nodeRepo.findTimelineVisible(uid, '2026-06-01');
+    // a UTC user finds the 23:30Z entry on 06-02…
+    const utcDay = await nodeRepo.findTimelineVisible(uid, '2026-06-02', 'UTC');
+    expect(utcDay.map((n) => n.body)).toEqual(['axis-mid']);
+    // …a KST user finds the SAME entry on 06-03 (their morning), sharing the
+    // day with axis-late (06-03T00:00Z = 09:00 KST same day)
+    const kstDay = await nodeRepo.findTimelineVisible(uid, '2026-06-03', 'Asia/Seoul');
+    expect(kstDay.map((n) => n.body).sort()).toEqual(['axis-late', 'axis-mid']);
+    expect((await nodeRepo.findTimelineVisible(uid, '2026-06-02', 'Asia/Seoul')).length).toBe(0);
+    // boundary day, nothing bleeding
+    const june1 = await nodeRepo.findTimelineVisible(uid, '2026-06-01', 'UTC');
     expect(june1.map((n) => n.body)).toEqual(['axis-early']);
   });
 
@@ -157,9 +161,9 @@ describe.skipIf(!hasDb)('bundle A integration (real DB)', () => {
 
     const buckets = await aggregation.aggregate(uid, mood, {
       source: 'tree',
-      spec: { lens: 'score', groupBy: 'eventDate', op: 'avg' },
+      spec: { lens: 'score', groupBy: 'eventDate', op: 'avg', tz: 'UTC' },
     });
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date().toISOString().slice(0, 10); // UTC day, matching tz: 'UTC'
     const byDay = (d: string) => buckets.find((b) => b.group?.startsWith(d));
 
     expect(byDay(today)?.value).toBe(3); // avg(4,2) — captured-at fallback
