@@ -208,6 +208,28 @@ function parseFieldDefs(input: unknown): FieldDef[] {
     ) {
       throw new InvalidSchemaError(`def "${key}" defaultValue must be a scalar`);
     }
+    const { min, max, step } = rec;
+    for (const [name, v] of [
+      ['min', min],
+      ['max', max],
+      ['step', step],
+    ] as const) {
+      if (v !== undefined && (typeof v !== 'number' || Number.isNaN(v))) {
+        throw new InvalidSchemaError(`def "${key}" ${name} must be a number`);
+      }
+    }
+    if (typeof min === 'number' && typeof max === 'number' && min > max) {
+      throw new InvalidSchemaError(`def "${key}": min must be ≤ max`);
+    }
+    if (typeof step === 'number' && step <= 0) {
+      throw new InvalidSchemaError(`def "${key}": step must be > 0`);
+    }
+    if (typeof min === 'number' && typeof max === 'number' && typeof step === 'number') {
+      const points = (max - min) / step;
+      if (Math.abs(points - Math.round(points)) > 1e-9) {
+        throw new InvalidSchemaError(`def "${key}": the min–max range must be step-divisible`);
+      }
+    }
     const def: FieldDef = {
       key,
       label: typeof label === 'string' && label.trim() !== '' ? label : key,
@@ -217,6 +239,9 @@ function parseFieldDefs(input: unknown): FieldDef[] {
     if (options !== undefined) def.options = options as string[];
     if (linkTargetParentId !== undefined) def.linkTargetParentId = linkTargetParentId;
     if (defaultValue !== undefined) def.defaultValue = defaultValue as string | number | boolean;
+    if (typeof min === 'number') def.min = min;
+    if (typeof max === 'number') def.max = max;
+    if (typeof step === 'number') def.step = step;
     return def;
   });
 }

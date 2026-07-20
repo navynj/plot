@@ -91,7 +91,7 @@ export async function ensureSeed(userId: string): Promise<boolean> {
       ],
     ],
     [categories, [{ key: 'name', label: 'Name', type: 'text' }]],
-    [mood, [{ key: 'score', label: 'Score', type: 'number' }]],
+    [mood, [{ key: 'score', label: 'Score', type: 'number', min: -5, max: 5, step: 1 }]],
   ];
   for (const [id, defs] of schemas) {
     await setChildSchema(userId, id, defs);

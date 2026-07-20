@@ -127,6 +127,25 @@ export function SchemaFieldRow(props: SchemaFieldRowProps) {
             scope: {props.scopeLabel ?? 'any node'}
           </Button>
         )}
+        {def.type === 'number' &&
+          (['min', 'max', 'step'] as const).map((bound) => (
+            <label key={bound} className="flex items-center gap-1">
+              {bound}
+              <Input
+                type="number"
+                step="any"
+                value={def[bound] ?? ''}
+                onChange={(e) =>
+                  props.onChange({
+                    ...def,
+                    [bound]: e.target.value === '' ? undefined : Number(e.target.value),
+                  })
+                }
+                aria-label={`${def.label} ${bound}`}
+                className="h-7 w-16 text-xs"
+              />
+            </label>
+          ))}
       </div>
       {props.defaultControl && (
         <div className="text-muted-foreground flex items-center gap-2 pl-6 text-xs">

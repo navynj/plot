@@ -69,6 +69,12 @@ export interface FieldDef {
   linkTargetParentId?: string; // for type 'link': restrict to children of this node
   /** pre-fill for new-child forms — a real value once saved, not a phantom */
   defaultValue?: string | number | boolean;
+  /** number-type constraints (any subset). Same type, same numberValue
+   *  storage — a constrained mood score and a free amount differ only in
+   *  the editor they wear, exactly like duration shares number's storage. */
+  min?: number;
+  max?: number;
+  step?: number;
 }
 
 /** The fixed layout preset vocabulary (DESIGN §5) — runtime const so the

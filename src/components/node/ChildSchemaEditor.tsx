@@ -95,6 +95,22 @@ export function ChildSchemaEditor({
   };
 
   const save = async (formData: FormData) => {
+    // constraint sanity, inline (the service re-validates with typed errors)
+    for (const r of rows) {
+      const { min, max, step, label } = r.def;
+      if (min !== undefined && max !== undefined && min > max) {
+        return setError(`${label}: min must be ≤ max`);
+      }
+      if (step !== undefined && step <= 0) {
+        return setError(`${label}: step must be > 0`);
+      }
+      if (min !== undefined && max !== undefined && step !== undefined) {
+        const points = (max - min) / step;
+        if (Math.abs(points - Math.round(points)) > 1e-9) {
+          return setError(`${label}: the min–max range must be step-divisible`);
+        }
+      }
+    }
     let defs: FieldDef[];
     try {
       defs = rows.map((r) => {
