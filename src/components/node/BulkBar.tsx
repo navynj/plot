@@ -1,11 +1,14 @@
 'use client';
 
-import { CornerLeftUp, Trash2, X } from 'lucide-react';
+import { CornerLeftUp, ListChecks, Loader2, Trash2, X } from 'lucide-react';
+import Link from 'next/link';
 import * as React from 'react';
 import { toast } from 'sonner';
 
-import { deleteNodes, undoAction } from '@/app/triage/actions';
+import { deleteNodes } from '@/app/triage/actions';
+import { usePendingLock } from '@/components/hooks/usePendingLock';
 import { ParentPicker } from '@/components/node/ParentPicker';
+import { runUndo } from '@/components/undoRunner';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -16,13 +19,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-/** One-tap undo toast — the touch equivalent of Ctrl+Z. */
+/** One-tap undo toast — the touch equivalent of Ctrl+Z. Runs through the
+ *  shared undo gate: a tap that overlaps an in-flight undo (from any entry
+ *  point) is dropped, never a second pop. */
 export function toastWithUndo(message: string) {
   toast(message, {
     action: {
       label: 'Undo',
       onClick: async () => {
-        const result = await undoAction();
+        const result = await runUndo();
+        if (!result) return; // gate dropped an overlapping tap — one is applying
         toast(result.ok ? (result.description ?? 'undone') : 'nothing to undo');
       },
     },
@@ -44,7 +50,7 @@ interface BulkBarProps {
  *  existing triage service operations and record ONE undoable op. */
 export function BulkBar({ selectedIds, parentedCount, withChildrenCount, onClear }: BulkBarProps) {
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
-  const [deleting, setDeleting] = React.useState(false);
+  const { pending: deleting, run: runDelete } = usePendingLock();
   const count = selectedIds.length;
   if (count === 0) return null;
 
@@ -59,15 +65,21 @@ export function BulkBar({ selectedIds, parentedCount, withChildrenCount, onClear
       <ParentPicker
         nodeIds={selectedIds}
         warning={warning}
-        onMoved={() => {
-          toastWithUndo(`Moved ${count} item${count === 1 ? '' : 's'}`);
-          onClear();
-        }}
+        // selection SURVIVES a move (rows that left the surface prune
+        // automatically) so parenting chains straight into "Fill fields"
+        onMoved={() => toastWithUndo(`Moved ${count} item${count === 1 ? '' : 's'}`)}
       >
         <Button size="sm" variant="outline">
           <CornerLeftUp className="size-3.5" /> Set parent…
         </Button>
       </ParentPicker>
+      {/* second queue source for the field walk: these ids, in displayed
+          order, carried entirely in the URL (nothing persists) */}
+      <Button size="sm" variant="outline" asChild>
+        <Link href={`/triage/fields?ids=${selectedIds.join(',')}`}>
+          <ListChecks className="size-3.5" /> Fill fields
+        </Link>
+      </Button>
       <Button size="sm" variant="outline" onClick={() => setConfirmingDelete(true)}>
         <Trash2 className="size-3.5" /> Delete
       </Button>
@@ -81,7 +93,14 @@ export function BulkBar({ selectedIds, parentedCount, withChildrenCount, onClear
         <X className="size-3.5" />
       </Button>
 
-      <Dialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
+      <Dialog
+        open={confirmingDelete}
+        // dismissal (overlay, Escape) is a no-op while the delete settles
+        onOpenChange={(next) => {
+          if (deleting && !next) return;
+          setConfirmingDelete(next);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -94,15 +113,14 @@ export function BulkBar({ selectedIds, parentedCount, withChildrenCount, onClear
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setConfirmingDelete(false)}>
+            <Button variant="ghost" disabled={deleting} onClick={() => setConfirmingDelete(false)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
               disabled={deleting}
-              onClick={async () => {
-                setDeleting(true);
-                try {
+              onClick={() =>
+                runDelete('delete', async () => {
                   const result = await deleteNodes(selectedIds);
                   if (result.ok) {
                     toastWithUndo(`Deleted ${count} item${count === 1 ? '' : 's'}`);
@@ -111,11 +129,10 @@ export function BulkBar({ selectedIds, parentedCount, withChildrenCount, onClear
                   } else {
                     toast(`delete failed: ${result.error}`);
                   }
-                } finally {
-                  setDeleting(false);
-                }
-              }}
+                })
+              }
             >
+              {deleting && <Loader2 className="size-3.5 animate-spin" />}
               {deleting ? 'Deleting…' : 'Delete'}
             </Button>
           </DialogFooter>

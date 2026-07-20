@@ -1,8 +1,9 @@
 'use client';
 
-import { ChevronsUpDown, X } from 'lucide-react';
+import { ChevronsUpDown, Loader2, X } from 'lucide-react';
 import * as React from 'react';
 
+import { usePendingLock } from '@/components/hooks/usePendingLock';
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -33,8 +34,10 @@ export function LinkFieldPicker({ name, scopeParentId, value, display }: LinkFie
   >(null);
   const [selected, setSelected] = React.useState<{ id: string; title: string } | null>(null);
   const [query, setQuery] = React.useState('');
-  const [creating, setCreating] = React.useState(false);
   const [cleared, setCleared] = React.useState(false);
+  // picking a candidate is LOCAL state (the fields form saves it later) — only
+  // create-in-place hits the server, so only it needs the tap-commit lock
+  const { pending, pendingKey, run } = usePendingLock();
 
   const currentId = cleared ? '' : (selected?.id ?? value ?? '');
   const label =
@@ -44,6 +47,7 @@ export function LinkFieldPicker({ name, scopeParentId, value, display }: LinkFie
       : (display ?? candidates?.find((c) => c.id === value)?.title ?? value));
 
   const onOpen = async (next: boolean) => {
+    if (pending) return; // dismissal is a no-op while a create settles
     setOpen(next);
     if (next && candidates === null) {
       // lazy import: keeps the field-type registry importable outside Next
@@ -81,7 +85,12 @@ export function LinkFieldPicker({ name, scopeParentId, value, display }: LinkFie
       )}
       <CommandDialog open={open} onOpenChange={onOpen} title="Pick a node" description="Search">
         <Command>
-          <CommandInput placeholder="Search…" value={query} onValueChange={setQuery} />
+          <CommandInput
+            placeholder="Search…"
+            value={query}
+            onValueChange={setQuery}
+            disabled={pending}
+          />
           <CommandList>
             <CommandEmpty>{candidates === null ? 'Loading…' : 'No candidates.'}</CommandEmpty>
             <CommandGroup>
@@ -89,6 +98,7 @@ export function LinkFieldPicker({ name, scopeParentId, value, display }: LinkFie
                 <CommandItem
                   key={c.id}
                   value={`${c.title} ${c.path}`}
+                  disabled={pending}
                   onSelect={() => {
                     setSelected({ id: c.id, title: c.title });
                     setCleared(false);
@@ -106,23 +116,22 @@ export function LinkFieldPicker({ name, scopeParentId, value, display }: LinkFie
               <CommandGroup heading="New">
                 <CommandItem
                   value={`${query} create-new`}
-                  disabled={creating}
-                  onSelect={async () => {
-                    if (creating) return;
-                    setCreating(true);
-                    try {
+                  disabled={pending}
+                  onSelect={() =>
+                    run('create', async () => {
                       const { createLinkTargetNode } = await import('@/app/node/[id]/actions');
                       const created = await createLinkTargetNode(query.trim(), scopeParentId);
                       setSelected(created); // created inside the scope → a valid candidate
                       setCandidates(null); // refresh on next open
                       setCleared(false);
                       setOpen(false);
-                    } finally {
-                      setCreating(false);
-                    }
-                  }}
+                    })
+                  }
                 >
-                  {creating
+                  {pendingKey === 'create' && (
+                    <Loader2 className="size-3.5 shrink-0 animate-spin" />
+                  )}
+                  {pendingKey === 'create'
                     ? 'Creating…'
                     : `+ Create “${query.trim()}”${scopeParentId ? ' in scope' : ''}`}
                 </CommandItem>

@@ -1,8 +1,10 @@
 'use client';
 
+import { Loader2 } from 'lucide-react';
 import * as React from 'react';
 
 import { createParentNode, moveNodes, detachNodes, parentCandidates } from '@/app/triage/actions';
+import { usePendingLock } from '@/components/hooks/usePendingLock';
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -36,7 +38,13 @@ const FRIENDLY: Record<string, string> = {
 /** Third input surface for triage (DESIGN §6): search a node by name (with
  *  its tree path) and pick it as the new parent. Same triage.reparent() as
  *  drag and keyboard; the node's own subtree is excluded server-side,
- *  mirroring drag's physical exclusion. */
+ *  mirroring drag's physical exclusion.
+ *
+ *  The commit point is a TAP, not a form submit — so from tap to settle the
+ *  whole picker locks (items inert, search inert, dismissal a no-op, the
+ *  tapped item spinning): a 20-node move is slower than any single submit,
+ *  and a second tap in that dead zone must not become a second move. Failure
+ *  re-enables everything with the error inline. */
 export function ParentPicker({ nodeIds, warning, onMoved, children }: ParentPickerProps) {
   const [open, setOpen] = React.useState(false);
   const [warningConfirmed, setWarningConfirmed] = React.useState(false);
@@ -45,9 +53,10 @@ export function ParentPicker({ nodeIds, warning, onMoved, children }: ParentPick
   >(null);
   const [error, setError] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState('');
-  const [creating, setCreating] = React.useState(false);
+  const { pending, pendingKey, run } = usePendingLock();
 
   const onOpen = async (next: boolean) => {
+    if (pending) return; // dismissal is a no-op while a move settles
     setOpen(next);
     if (next) {
       setWarningConfirmed(false);
@@ -55,9 +64,7 @@ export function ParentPicker({ nodeIds, warning, onMoved, children }: ParentPick
     }
   };
 
-  const commit = async (parentId: string | null) => {
-    const result =
-      parentId === null ? await detachNodes(nodeIds) : await moveNodes(nodeIds, parentId);
+  const finish = (result: { ok: true } | { ok: false; error: string }) => {
     setError(result.ok ? null : (FRIENDLY[result.error] ?? result.error));
     if (result.ok) {
       setOpen(false);
@@ -65,14 +72,26 @@ export function ParentPicker({ nodeIds, warning, onMoved, children }: ParentPick
     }
   };
 
-  const confirmRoot = async () => {
-    const result = await moveNodes(nodeIds, null);
-    setError(result.ok ? null : (FRIENDLY[result.error] ?? result.error));
-    if (result.ok) {
-      setOpen(false);
-      onMoved?.();
-    }
-  };
+  const commit = (key: string, parentId: string | null) =>
+    run(key, async () => {
+      finish(parentId === null ? await detachNodes(nodeIds) : await moveNodes(nodeIds, parentId));
+    });
+
+  const confirmRoot = () =>
+    run('root', async () => {
+      finish(await moveNodes(nodeIds, null));
+    });
+
+  // create + move inside ONE gated run — nesting a second run would be
+  // dropped by the very gate that protects us
+  const createAndMove = () =>
+    run('create', async () => {
+      const created = await createParentNode(query.trim());
+      finish(await moveNodes(nodeIds, created.id)); // new node is a confirmed root
+    });
+
+  const spinner = (key: string) =>
+    pendingKey === key ? <Loader2 className="size-3.5 shrink-0 animate-spin" /> : null;
 
   return (
     <>
@@ -98,12 +117,23 @@ export function ParentPicker({ nodeIds, warning, onMoved, children }: ParentPick
           </div>
         ) : (
           <Command>
-            <CommandInput placeholder="Search a node…" value={query} onValueChange={setQuery} />
+            <CommandInput
+              placeholder="Search a node…"
+              value={query}
+              onValueChange={setQuery}
+              disabled={pending}
+            />
             <CommandList>
               <CommandEmpty>{candidates === null ? 'Loading…' : 'No match.'}</CommandEmpty>
               <CommandGroup heading="Place">
-                <CommandItem onSelect={confirmRoot}>Root — confirmed top-level</CommandItem>
-                <CommandItem onSelect={() => commit(null)}>No parent — back to inbox</CommandItem>
+                <CommandItem disabled={pending} onSelect={confirmRoot}>
+                  {spinner('root')}
+                  Root — confirmed top-level
+                </CommandItem>
+                <CommandItem disabled={pending} onSelect={() => commit('inbox', null)}>
+                  {spinner('inbox')}
+                  No parent — back to inbox
+                </CommandItem>
               </CommandGroup>
               <CommandSeparator />
               <CommandGroup heading="Under">
@@ -111,8 +141,10 @@ export function ParentPicker({ nodeIds, warning, onMoved, children }: ParentPick
                   <CommandItem
                     key={c.id}
                     value={`${c.title} ${c.path}`}
-                    onSelect={() => commit(c.id)}
+                    disabled={pending}
+                    onSelect={() => commit(c.id, c.id)}
                   >
+                    {spinner(c.id)}
                     <span className="truncate">{c.title}</span>
                     {c.path && (
                       <span className="text-muted-foreground ml-auto truncate text-xs">
@@ -126,19 +158,13 @@ export function ParentPicker({ nodeIds, warning, onMoved, children }: ParentPick
                 <CommandGroup heading="New">
                   <CommandItem
                     value={`${query} create-new`}
-                    disabled={creating}
-                    onSelect={async () => {
-                      if (creating) return;
-                      setCreating(true);
-                      try {
-                        const created = await createParentNode(query.trim());
-                        await commit(created.id); // new node is a confirmed root
-                      } finally {
-                        setCreating(false);
-                      }
-                    }}
+                    disabled={pending}
+                    onSelect={createAndMove}
                   >
-                    {creating ? 'Creating…' : `+ Create “${query.trim()}” and move here`}
+                    {spinner('create')}
+                    {pendingKey === 'create'
+                      ? 'Creating…'
+                      : `+ Create “${query.trim()}” and move here`}
                   </CommandItem>
                 </CommandGroup>
               )}
