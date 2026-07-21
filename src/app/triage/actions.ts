@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { requireUserId } from '@/app/_auth/requireUser';
+import { getLinkTargetCandidates, linkMembers } from '@/service/collection';
 import { DomainError } from '@/service/errors';
 import { redo, undo } from '@/service/history';
 import { captureNode } from '@/service/node';
@@ -122,4 +123,30 @@ export async function createParentNode(title: string): Promise<{ id: string; tit
   const created = await captureNode(userId, { title, origin: 'constructed' });
   await reparent(userId, created.id, null);
   return { id: created.id, title };
+}
+
+/** Bulk graph-link (A4): link every selected node as a member of one target
+ *  collection (e.g. same-receipt expenses under a Tax line). Reference only —
+ *  no inheritance, no position change; the links render both ways. */
+export async function linkNodesTo(
+  memberIds: string[],
+  collectionId: string
+): Promise<TriageResult & { linked?: number }> {
+  const userId = await requireUserId();
+  try {
+    const linked = await linkMembers(userId, collectionId, memberIds);
+    revalidatePath('/', 'layout');
+    return { ok: true, linked };
+  } catch (err) {
+    if (err instanceof DomainError) return { ok: false, error: err.code };
+    throw err;
+  }
+}
+
+/** Candidates for the bulk "Link to…" target: any node but the selected. */
+export async function linkTargetCandidates(
+  memberIds: string[]
+): Promise<import('@/service/candidates').NodeCandidate[]> {
+  const userId = await requireUserId();
+  return getLinkTargetCandidates(userId, memberIds);
 }

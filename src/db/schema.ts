@@ -163,7 +163,7 @@ export const undoOp = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
     stack: text('stack').$type<'undo' | 'redo'>().notNull(),
-    kind: text('kind').$type<'reparent' | 'delete'>().notNull(),
+    kind: text('kind').$type<'reparent' | 'delete' | 'create'>().notNull(),
     payload: jsonb('payload').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -234,6 +234,16 @@ export const node = pgTable(
     // pure user preference (legitimately stored, not derivable): pinned
     // nodes lead the capture chip row
     pinned: boolean('pinned').notNull().default(false),
+
+    // ATTACHED (a stored flavor of the tree link, not a node type): an
+    // attached child sits under its parent in the tree but is its APPENDAGE,
+    // not an instance of the parent's schema. It does NOT inherit the
+    // parent's childSchema (the one documented depth-1 exception —
+    // resolveSchema returns [] for it), and it is excluded from the parent's
+    // records: child list, aggregates, walks, bulk selection, grid tiles. It
+    // still declares and gives its OWN childSchema to its OWN children like
+    // any node. Default false — a normal (inheriting) tree child.
+    attached: boolean('attached').notNull().default(false),
 
     // how the node was BORN (a stored fact, like pinned — it replaced the
     // body-null derivation, which stopped being derivable once captures

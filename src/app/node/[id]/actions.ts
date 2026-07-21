@@ -12,8 +12,10 @@ import {
   getCollectionCandidates,
   removeFromCollection,
 } from '@/service/collection';
+import { copyMonth } from '@/service/budget';
+import { getMemberCandidates, linkMembers } from '@/service/collection';
 import { getLinkCandidates, saveOwnValues } from '@/service/field';
-import { captureNode, setChildSchema, setViewSpec, updateNode } from '@/service/node';
+import { captureNode, getNode, setChildSchema, setViewSpec, updateNode } from '@/service/node';
 import { removeNode, reparent } from '@/service/triage';
 
 import { DomainError, InvalidSchemaError } from '@/service/errors';
@@ -158,6 +160,27 @@ export async function linkCandidates(scopeParentId: string | null): Promise<Node
   return getLinkCandidates(userId, { linkTargetParentId: scopeParentId ?? undefined });
 }
 
+/** A4 "Link receipt items": candidates to add as members of this node (any
+ *  node but itself and its current members). */
+export async function memberCandidates(collectionId: string): Promise<NodeCandidate[]> {
+  const userId = await requireUserId();
+  return getMemberCandidates(userId, collectionId);
+}
+
+/** Link one node in as a member (the detail-side add; the picker stays open
+ *  to add several — each is idempotent). Reference graph link only. */
+export async function linkItem(collectionId: string, memberId: string): Promise<CollectionResult> {
+  const userId = await requireUserId();
+  try {
+    await linkMembers(userId, collectionId, [memberId]);
+  } catch (err) {
+    if (err instanceof DomainError) return { ok: false, error: err.code };
+    throw err;
+  }
+  revalidatePath(`/node/${collectionId}`);
+  return { ok: true };
+}
+
 /** dev-only, see ViewSpecDevEditor; empty or "null" clears the spec */
 export async function saveViewSpecDev(nodeId: string, formData: FormData): Promise<void> {
   const userId = await requireUserId();
@@ -173,6 +196,26 @@ export async function saveViewSpecDev(nodeId: string, formData: FormData): Promi
   }
   await setViewSpec(userId, nodeId, parsed);
   revalidatePath(`/node/${nodeId}`);
+}
+
+export type CopyMonthResultOut =
+  | { ok: true; copied: number }
+  | { ok: false; error: string };
+
+/** A3 copy-previous-month: duplicate one month's budget lines into another,
+ *  amounts intact, month-stamp advanced. One undoable create op. */
+export async function copyBudgetMonthAction(
+  ledgerId: string,
+  fromMonth: string,
+  toMonth: string
+): Promise<CopyMonthResultOut> {
+  const userId = await requireUserId();
+  const tz = await getRequestTimezone();
+  const ledger = await getNode(userId, ledgerId);
+  if (!ledger) return { ok: false, error: 'ledger not found' };
+  const { copied } = await copyMonth(userId, ledger, fromMonth, toMonth, tz);
+  revalidatePath('/', 'layout');
+  return { ok: true, copied };
 }
 
 export type SchemaSaveResult = { ok: true } | { ok: false; error: string };

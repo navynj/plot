@@ -88,6 +88,36 @@ describe.skipIf(!hasDb)('collection integration (real DB)', () => {
     expect(worn.some((d) => d.key === 'rating')).toBe(false); // not the collection's
   });
 
+  it('A4 receipt links: linkMembers links several at once, both ways, without inheriting or moving', async () => {
+    // a Tax line collecting two same-receipt expenses
+    const newNode = async (title: string) =>
+      (await nodeRepo.create({ userId: uidA, title, capturedAt: new Date() })).id;
+    const tax = await newNode('Tax line');
+    const item1 = await newNode('receipt item 1');
+    const item2 = await newNode('receipt item 2');
+    const before1 = await nodeRepo.byId(uidA, item1);
+
+    const linked = await collection.linkMembers(uidA, tax, [item1, item2]);
+    expect(linked).toBe(2);
+
+    // both ways: Tax lists its items; each item lists the Tax
+    expect((await collection.getMembers(uidA, tax)).map((n) => n.id).sort()).toEqual(
+      [item1, item2].sort()
+    );
+    expect((await collection.getMemberships(uidA, item1)).map((n) => n.id)).toContain(tax);
+
+    // reference only: parent, rank, and worn schema of the item are untouched
+    const after1 = await nodeRepo.byId(uidA, item1);
+    expect(after1?.parentId).toBe(before1?.parentId);
+    expect(after1?.rank).toBe(before1?.rank);
+
+    // candidates to link in EXCLUDE what's already linked (no dup edges offered)
+    const remaining = (await collection.getMemberCandidates(uidA, tax)).map((c) => c.id);
+    expect(remaining).not.toContain(item1);
+    expect(remaining).not.toContain(item2);
+    expect(remaining).not.toContain(tax);
+  });
+
   it('one node sits in multiple collections at once (DESIGN §2)', async () => {
     await collection.addToCollection(uidA, augustLog, coffee);
     await collection.addToCollection(uidA, favorites, coffee);

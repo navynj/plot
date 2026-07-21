@@ -29,6 +29,10 @@ export interface RepoAggregateSpec {
   /** IANA timezone for the date meta-axes — day boundaries follow the user's
    *  calendar. Ignored for field-key group axes. */
   tz?: string;
+  /** A2 period window on the EVENT AXIS: [start, end) UTC instants (already
+   *  computed from the user's month in their tz), bounding
+   *  coalesce(event_date, captured_at). Absent = all time. */
+  period?: { start: Date; end: Date };
 }
 
 const META_GROUP_AXES = new Set(['eventDate', 'capturedAt']);
@@ -97,6 +101,12 @@ export function buildAggregateSql(userId: string, nodeIds: string[], spec: RepoA
     return sql`and exists (select 1 from field_value f where f.node_id = v.node_id and f.key = ${f.key} and ${column} ${sql.raw(FILTER_OPS[f.op])} ${value})`;
   });
 
+  // A2 period window on the event axis (half-open [start, end)); the join to
+  // node n is already present, so this is a WHERE clause on the same row.
+  const periodClause = spec.period
+    ? sql`and coalesce(n.event_date, n.captured_at) >= ${spec.period.start} and coalesce(n.event_date, n.captured_at) < ${spec.period.end}`
+    : sql.raw('');
+
   return sql`
     select ${groupExpr} as group_id, ${valueExpr} as value, count(*)::int as count
     from field_value v
@@ -105,6 +115,7 @@ export function buildAggregateSql(userId: string, nodeIds: string[], spec: RepoA
     where v.key = ${spec.valueKey}
       and v.node_id in (${idList})
       ${numericGuard}
+      ${periodClause}
       ${sql.join(filterClauses, sql` `)}
     group by 1
   `;

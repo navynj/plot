@@ -15,15 +15,32 @@ import { TimelineVisibilityControl } from '@/components/node/TimelineVisibilityC
 import { FieldEditors } from '@/components/field/FieldEditors';
 import { ParentPicker } from '@/components/node/ParentPicker';
 import { ViewSpecDevEditor } from '@/components/node/ViewSpecDevEditor';
+import { CopyMonthButton } from '@/components/node/CopyMonthButton';
 import { NodeView } from '@/components/view/NodeView';
+import { PeriodNavigator } from '@/components/view/PeriodNavigator';
 import { Button } from '@/components/ui/button';
 import { getMembers, getMemberships } from '@/service/collection';
 import { getOwnValues, getValueDisplays } from '@/service/field';
 import { resolveSchema } from '@/service/inheritance';
-import { getChildren, getNode, getSchemaScopeTargets, nodeChildCounts } from '@/service/node';
+import {
+  getAttachedChildren,
+  getChildren,
+  getNode,
+  getSchemaScopeTargets,
+  nodeChildCounts,
+} from '@/service/node';
 import { resolveView } from '@/service/view';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
-import { dayInTz, todayInTz } from '@/lib/day';
+import {
+  dayInTz,
+  isValidMonth,
+  monthBoundsInTz,
+  monthLabel,
+  shiftMonth,
+  thisMonthInTz,
+  todayInTz,
+} from '@/lib/day';
+import { getLedgerLines, isMonthStampedLedger } from '@/service/budget';
 import { formatTimestamp } from '@/lib/formatTimestamp';
 import { displayName } from '@/lib/identity';
 
@@ -34,30 +51,53 @@ export const dynamic = 'force-dynamic';
 /** ONE adaptive frame (DESIGN §6): header, then own values → view → children.
  *  Sections appear only when the node has that aspect — never branching on a
  *  node "type". */
-export default async function NodeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function NodeDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ period?: string }>;
+}) {
   const { id } = await params;
+  const { period: periodParam } = await searchParams;
   const userId = await requireUserId();
   const tz = await getRequestTimezone();
   const node = await getNode(userId, id);
   if (!node) notFound();
 
+  // A2 period lens: no param = the current month; 'all' = zoomed out (no
+  // bounds); a valid 'YYYY-MM' = that month. Bounds are the user's months
+  // (tz-correct), computed at this entry point — services take instants.
+  const thisMonth = thisMonthInTz(tz);
+  const activeMonth =
+    periodParam === 'all' ? null : isValidMonth(periodParam ?? '') ? periodParam! : thisMonth;
+  const period = activeMonth ? monthBoundsInTz(activeMonth, tz) : undefined;
+
   // worn schema = direct parent's childSchema (depth-1); no parent → no fields
   const defs = await resolveSchema(userId, node);
-  const [values, parent, memberships, members, children, view] = await Promise.all([
-    defs.length > 0
-      ? getOwnValues(userId, id)
-      : Promise.resolve<Record<string, FieldPrimitive>>({}),
-    node.parentId ? getNode(userId, node.parentId) : Promise.resolve(null),
-    getMemberships(userId, id),
-    getMembers(userId, id),
-    getChildren(userId, id),
-    resolveView(userId, node, tz),
-  ]);
+  const [values, parent, memberships, members, children, attachedChildren, view] =
+    await Promise.all([
+      defs.length > 0
+        ? getOwnValues(userId, id)
+        : Promise.resolve<Record<string, FieldPrimitive>>({}),
+      node.parentId ? getNode(userId, node.parentId) : Promise.resolve(null),
+      getMemberships(userId, id),
+      getMembers(userId, id),
+      getChildren(userId, id),
+      getAttachedChildren(userId, id),
+      resolveView(userId, node, tz, period),
+    ]);
 
   const displays = await getValueDisplays(userId, defs, values);
+  // A3: a month-stamped ledger (attached Budget) scopes its lines to the
+  // navigated month; every other node shows all its record children.
+  const isLedger = isMonthStampedLedger(node);
+  const displayChildren = isLedger
+    ? await getLedgerLines(userId, node, activeMonth, tz)
+    : children;
   const grandchildCounts = await nodeChildCounts(
     userId,
-    children.map((c) => c.id)
+    displayChildren.map((c) => c.id)
   );
   // the schema relationships, made navigable (nothing stored): the worn
   // schema's link scopes (for the fields-section editor) and this node's own
@@ -181,44 +221,105 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ id:
         </section>
       )}
 
-      {/* view — iff the node holds a viewSpec */}
+      {/* view — iff the node holds a viewSpec. Date-capable = an aggregate
+          (chart) view; its entries carry the event axis, so a month lens is
+          meaningful. Items/collection views sort by a field and get no
+          control (DESIGN §5's time-axis vs collection split). */}
       {view && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-            View
-          </h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+              View
+            </h2>
+            {view.kind === 'aggregate' && (
+              <PeriodNavigator
+                month={activeMonth}
+                thisMonth={thisMonth}
+                basePath={`/node/${node.id}`}
+              />
+            )}
+          </div>
           <NodeView view={view} />
         </section>
       )}
 
-      {/* children — tree */}
-      {children.length > 0 && (
+      {/* children — tree. For a month-stamped ledger (Budget), the list is the
+          navigated month's lines, with a period lens and copy-forward. */}
+      {(displayChildren.length > 0 || isLedger) && (
+        <section className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+              {isLedger ? 'Lines' : 'Children'}
+            </h2>
+            {isLedger && (
+              <div className="flex flex-wrap items-center gap-2">
+                <PeriodNavigator
+                  month={activeMonth}
+                  thisMonth={thisMonth}
+                  basePath={`/node/${node.id}`}
+                />
+                {activeMonth && (
+                  <CopyMonthButton
+                    ledgerId={node.id}
+                    fromMonth={shiftMonth(activeMonth, -1)}
+                    toMonth={activeMonth}
+                    fromLabel={monthLabel(shiftMonth(activeMonth, -1))}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+          {displayChildren.length === 0 ? (
+            <p className="text-muted-foreground py-4 text-sm">
+              No lines for {activeMonth ? monthLabel(activeMonth) : 'any month'} yet.
+            </p>
+          ) : (
+            /* the FOURTH selection surface: same bulk bar, same ?ids= walk,
+               rank order — a room's children share a schema, so "select the
+               unfilled, walk them" is the flow at its best. Set parent skips
+               the already-belongs warning here: everything selected belongs
+               to this room by definition. */
+            <SelectableList
+              warnOnMove={false}
+              groups={[
+                {
+                  key: 'children',
+                  header: null,
+                  rows: displayChildren.map((c) => ({
+                    id: c.id,
+                    label: displayName(c),
+                    icon: c.displayIcon ?? null,
+                    time: formatTimestamp(c.capturedAt),
+                    parented: true,
+                    childCount: grandchildCounts.get(c.id) ?? 0,
+                  })),
+                },
+              ]}
+            />
+          )}
+        </section>
+      )}
+
+      {/* attached — appendages (A1): structures that belong under this node
+          but are not its records (Expense categories, Budget). Quiet, apart
+          from the record list, never in aggregates or the grid. */}
+      {attachedChildren.length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-            Children
+            Attached
           </h2>
-          {/* the FOURTH selection surface: same bulk bar, same ?ids= walk,
-              rank order — a room's children share a schema, so "select the
-              unfilled, walk them" is the flow at its best. Set parent skips
-              the already-belongs warning here: everything selected belongs
-              to this room by definition. */}
-          <SelectableList
-            warnOnMove={false}
-            groups={[
-              {
-                key: 'children',
-                header: null,
-                rows: children.map((c) => ({
-                  id: c.id,
-                  label: displayName(c),
-                  icon: c.displayIcon ?? null,
-                  time: formatTimestamp(c.capturedAt),
-                  parented: true,
-                  childCount: grandchildCounts.get(c.id) ?? 0,
-                })),
-              },
-            ]}
-          />
+          <div className="flex flex-wrap gap-2">
+            {attachedChildren.map((a) => (
+              <Link
+                key={a.id}
+                href={`/node/${a.id}`}
+                className="border-border text-muted-foreground hover:bg-muted/50 flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm"
+              >
+                {a.displayIcon && <span>{a.displayIcon}</span>}
+                {displayName(a)}
+              </Link>
+            ))}
+          </div>
         </section>
       )}
 

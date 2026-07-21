@@ -38,13 +38,28 @@ const EXPENSE_CATEGORIES: { title: string; icon: string }[] = [
   { title: 'Interest', icon: '🏦' },
   { title: 'Rewards', icon: '👍' },
   { title: 'Resale', icon: '🥕' },
+  // A4: receipts are transcribed as-is — a Canadian (pre-tax) receipt gets a
+  // Tax line; a Korean (tax-inclusive) one doesn't. No tax math, no rate, no
+  // region; the Tax category sum surfaces total tax paid for free.
+  { title: 'Tax', icon: '🧾' },
 ];
 
 export async function ensureSeed(userId: string): Promise<boolean> {
   if (await nodeRepo.hasAny(userId)) return false;
 
-  const create = async (title: string, icon: string, parentId: string | null) => {
-    const node = await nodeRepo.create({ userId, title, icon, capturedAt: new Date() });
+  const create = async (
+    title: string,
+    icon: string,
+    parentId: string | null,
+    opts: { attached?: boolean } = {}
+  ) => {
+    const node = await nodeRepo.create({
+      userId,
+      title,
+      icon,
+      attached: opts.attached ?? false,
+      capturedAt: new Date(),
+    });
     await reparent(userId, node.id, parentId); // null = confirmed root, ranked
     return node.id;
   };
@@ -60,8 +75,13 @@ export async function ensureSeed(userId: string): Promise<boolean> {
   const schedule = await create('Schedule', '📆', lifestyle);
   const sleep = await create('Sleep', '🌙', lifestyle);
   const expense = await create('Expense', '💸', lifestyle);
-  const categories = await create('Expense categories', '🗂️', lifestyle);
   const mood = await create('Mood', '🙂', lifestyle);
+  // A1/A3: categories and Budget are ATTACHED appendages of Expense — under
+  // it in the tree, but not its records (no schema inheritance, no aggregate
+  // membership, no grid tile). Budget holds month-stamped budget lines
+  // permanently; there is no monthly node creation.
+  const categories = await create('Expense categories', '🗂️', expense, { attached: true });
+  const budget = await create('Budget', '📊', expense, { attached: true });
   for (const category of EXPENSE_CATEGORIES) {
     await create(category.title, category.icon, categories);
   }
@@ -91,6 +111,17 @@ export async function ensureSeed(userId: string): Promise<boolean> {
       ],
     ],
     [categories, [{ key: 'name', label: 'Name', type: 'text' }]],
+    [
+      // A3: budget lines share the category axis with expenses (same link
+      // scope), carry a number amount, and are stamped with the month they
+      // budget — the period lens reads that stamp.
+      budget,
+      [
+        { key: 'category', label: 'Category', type: 'link', linkTargetParentId: categories },
+        { key: 'amount', label: 'Amount', type: 'number' },
+        { key: 'month', label: 'Month', type: 'date' },
+      ],
+    ],
     [mood, [{ key: 'score', label: 'Score', type: 'number', min: -5, max: 5, step: 1 }]],
   ];
   for (const [id, defs] of schemas) {

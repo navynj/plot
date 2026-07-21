@@ -25,7 +25,10 @@ export async function getFieldTriageQueue(userId: string): Promise<FieldTriageIt
   const candidates = all
     .map((node) => {
       const parent = node.parentId ? (byId.get(node.parentId) ?? null) : null;
-      const required = resolveSchemaFrom(parent).filter((d) => d.required);
+      // attached children wear no schema (the depth-1 exception) → never queue
+      const required = resolveSchemaFrom(parent, { attached: node.attached }).filter(
+        (d) => d.required
+      );
       return { node, required };
     })
     .filter((c) => c.required.length > 0);

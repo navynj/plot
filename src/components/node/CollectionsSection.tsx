@@ -5,6 +5,7 @@ import type { NodeRow } from '@/repository/nodeRepo';
 import { displayName } from '@/lib/identity';
 import { removeMembership } from '@/app/node/[id]/actions';
 import { CollectionPicker } from '@/components/node/CollectionPicker';
+import { LinkItemsButton } from '@/components/node/LinkItemsButton';
 import { Button } from '@/components/ui/button';
 import { SubmitButton } from '@/components/ui/submit-button';
 
@@ -51,6 +52,9 @@ export function CollectionsSection({ nodeId, memberships, members }: Collections
               <Plus className="size-3.5" /> Add to collection
             </Button>
           </CollectionPicker>
+          {/* A4: link OTHER nodes in as members (a Tax line's receipt items).
+              Reference graph link — never inherits, never moves anything. */}
+          <LinkItemsButton nodeId={nodeId} />
         </div>
       </section>
 

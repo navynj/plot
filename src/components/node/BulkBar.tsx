@@ -1,12 +1,13 @@
 'use client';
 
-import { CornerLeftUp, ListChecks, Loader2, Trash2, X } from 'lucide-react';
+import { CornerLeftUp, Link2, ListChecks, Loader2, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
 import { toast } from 'sonner';
 
-import { deleteNodes } from '@/app/triage/actions';
+import { deleteNodes, linkNodesTo, linkTargetCandidates } from '@/app/triage/actions';
 import { usePendingLock } from '@/components/hooks/usePendingLock';
+import { GraphLinkPicker } from '@/components/node/GraphLinkPicker';
 import { ParentPicker } from '@/components/node/ParentPicker';
 import { runUndo } from '@/components/undoRunner';
 import { Button } from '@/components/ui/button';
@@ -90,6 +91,23 @@ export function BulkBar({
           <ListChecks className="size-3.5" /> Fill fields
         </Link>
       </Button>
+      {/* A4 reference link: link the selected as members of one target (e.g.
+          same-receipt expenses under a Tax line). Graph link — no move. */}
+      <GraphLinkPicker
+        loadCandidates={() => linkTargetCandidates(selectedIds)}
+        onPick={(targetId) => linkNodesTo(selectedIds, targetId)}
+        closeOnPick
+        title="Link to"
+        placeholder="Search a node to link into…"
+        onLinked={() => {
+          toast(`Linked ${count} item${count === 1 ? '' : 's'}`);
+          onClear();
+        }}
+      >
+        <Button size="sm" variant="outline">
+          <Link2 className="size-3.5" /> Link to…
+        </Button>
+      </GraphLinkPicker>
       <Button size="sm" variant="outline" onClick={() => setConfirmingDelete(true)}>
         <Trash2 className="size-3.5" /> Delete
       </Button>

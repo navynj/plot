@@ -112,3 +112,46 @@ export function explicitEventDate(day: string | undefined, tz: string): Date | u
   if (!day || !isValidDay(day)) return undefined;
   return startOfDayInTz(day, tz);
 }
+
+/* ---------------- month granularity (A2 period navigator) --------------- */
+
+export function isValidMonth(month: string): boolean {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(month);
+}
+
+/** 'YYYY-MM' of an instant on the wall clock of `tz`. */
+export function monthInTz(instant: Date, tz: string): string {
+  return dayInTz(instant, tz).slice(0, 7);
+}
+
+export function thisMonthInTz(tz: string): string {
+  return monthInTz(new Date(), tz);
+}
+
+/** Pure calendar-month step — timezone-free string math. */
+export function shiftMonth(month: string, delta: number): string {
+  const [y, m] = month.split('-').map(Number);
+  const date = new Date(Date.UTC(y!, m! - 1 + delta, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+/** 'August 2026' — a human month label from 'YYYY-MM' (UTC-noon anchor keeps
+ *  the label from slipping a month under any display timezone). */
+export function monthLabel(month: string): string {
+  const [y, m] = month.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', timeZone: 'UTC' }).format(
+    new Date(Date.UTC(y!, m! - 1, 1, 12))
+  );
+}
+
+/**
+ * The UTC instant bounds [start, end) of a calendar month as it falls on the
+ * USER's wall clock — a KST month and a UTC month of the same 'YYYY-MM' cover
+ * different instants, which is exactly the point (A2 tz-correctness). Built on
+ * `startOfDayInTz`, so DST month edges are handled.
+ */
+export function monthBoundsInTz(month: string, tz: string): { start: Date; end: Date } {
+  const start = startOfDayInTz(`${month}-01`, tz);
+  const end = startOfDayInTz(`${shiftMonth(month, 1)}-01`, tz);
+  return { start, end };
+}

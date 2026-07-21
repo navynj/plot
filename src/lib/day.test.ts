@@ -4,8 +4,12 @@ import {
   DEFAULT_TIMEZONE,
   dayInTz,
   explicitEventDate,
+  isValidMonth,
+  monthBoundsInTz,
+  monthLabel,
   resolveTimezone,
   shiftDay,
+  shiftMonth,
   startOfDayInTz,
   todayInTz,
 } from './day';
@@ -75,5 +79,43 @@ describe('shiftDay crosses month boundaries (pure string math)', () => {
     expect(shiftDay('2026-08-01', -1)).toBe('2026-07-31');
     expect(shiftDay('2026-07-31', 1)).toBe('2026-08-01');
     expect(shiftDay('2026-03-01', -1)).toBe('2026-02-28');
+  });
+});
+
+describe('A2 month granularity — labels, stepping, validation', () => {
+  it('validates and formats', () => {
+    expect(isValidMonth('2026-08')).toBe(true);
+    expect(isValidMonth('2026-13')).toBe(false);
+    expect(isValidMonth('2026-08-01')).toBe(false);
+    expect(monthLabel('2026-08')).toBe('August 2026');
+    expect(monthLabel('2026-12')).toBe('December 2026');
+  });
+  it('steps across the year boundary', () => {
+    expect(shiftMonth('2026-01', -1)).toBe('2025-12');
+    expect(shiftMonth('2026-12', 1)).toBe('2027-01');
+    expect(shiftMonth('2026-08', -3)).toBe('2026-05');
+  });
+});
+
+describe('A2 month bounds respect the USER timezone — a month-edge instant lands in different months', () => {
+  it('a KST month and a UTC month of the same label cover different UTC instants', () => {
+    // August in KST begins at 2026-07-31T15:00Z; in UTC at 2026-08-01T00:00Z
+    const kst = monthBoundsInTz('2026-08', 'Asia/Seoul');
+    const utc = monthBoundsInTz('2026-08', 'UTC');
+    expect(kst.start.toISOString()).toBe('2026-07-31T15:00:00.000Z');
+    expect(utc.start.toISOString()).toBe('2026-08-01T00:00:00.000Z');
+    expect(kst.end.toISOString()).toBe('2026-08-31T15:00:00.000Z');
+    expect(utc.end.toISOString()).toBe('2026-09-01T00:00:00.000Z');
+
+    // THE EDGE INSTANT: 2026-07-31T18:00Z is Aug 1 03:00 in KST but still
+    // Jul 31 in UTC — so it is INSIDE the KST August window, OUTSIDE the UTC one
+    const edge = new Date('2026-07-31T18:00:00Z');
+    expect(edge >= kst.start && edge < kst.end).toBe(true); // KST user: August
+    expect(edge >= utc.start && edge < utc.end).toBe(false); // UTC user: July
+  });
+  it('half-open [start, end): the last instant of the month is in, the next month start is out', () => {
+    const { start, end } = monthBoundsInTz('2026-02', 'UTC');
+    expect(start.toISOString()).toBe('2026-02-01T00:00:00.000Z');
+    expect(end.toISOString()).toBe('2026-03-01T00:00:00.000Z'); // 2026 is not a leap year
   });
 });

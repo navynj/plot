@@ -1,4 +1,4 @@
-import type { FieldPrimitive, Node, ViewFilter, ViewSpec } from '@/db/schema';
+import type { FieldDef, FieldPrimitive, Node, ViewFilter, ViewSpec } from '@/db/schema';
 import { fieldValueRepo } from '@/repository/fieldValueRepo';
 import { linkRepo } from '@/repository/linkRepo';
 import { nodeRepo } from '@/repository/nodeRepo';
@@ -48,15 +48,20 @@ export type ResolvedView =
 
 const CHART_LAYOUTS = new Set(['bar', 'line', 'calendar', 'heatmap']);
 
+/** A2 period window: [start, end) UTC instants (computed in the user's tz at
+ *  the entry point). Absent = all time. */
+export type Period = { start: Date; end: Date };
+
 export async function resolveView(
   userId: string,
   node: Node,
-  tz?: string
+  tz?: string,
+  period?: Period
 ): Promise<ResolvedView | null> {
   const spec = node.viewSpec;
   if (!spec) return null;
   return CHART_LAYOUTS.has(spec.layout)
-    ? resolveAggregateView(userId, node, spec, tz)
+    ? resolveAggregateView(userId, node, spec, tz, period)
     : resolveItemsView(userId, node, spec);
 }
 
@@ -66,14 +71,15 @@ async function resolveAggregateView(
   userId: string,
   node: Node,
   spec: ViewSpec,
-  tz?: string
+  tz?: string,
+  period?: Period
 ): Promise<ResolvedView> {
   const op: AggregationOp = spec.aggregate && spec.aggregate !== 'none' ? spec.aggregate : 'sum';
   const main = await aggregate(userId, node.id, {
     source: 'both',
-    spec: { lens: spec.lens, groupBy: spec.groupBy, op, filters: spec.filter, tz },
+    spec: { lens: spec.lens, groupBy: spec.groupBy, op, filters: spec.filter, tz, period },
   });
-  const overlay = spec.overlayOwnField ? await resolveOverlay(userId, node, spec) : null;
+  const overlay = spec.overlayOwnField ? await resolveOverlay(userId, node, spec, period) : null;
 
   // §8a split: with an overlay AND exactly one boolean eq filter, the filter
   // partitions the set (actual vs scheduled) — also aggregate the complement
@@ -92,6 +98,7 @@ async function resolveAggregateView(
             op,
             filters: [{ ...splitFilter, value: !(splitFilter.value as boolean) }],
             tz,
+            period,
           },
         })
       : null;
@@ -118,11 +125,15 @@ async function resolveAggregateView(
   return { kind: 'aggregate', spec, buckets, hasOverlay: overlay !== null };
 }
 
-/** own scalar value when present; else the §8a budget-lines pattern. */
+/** own scalar value when present; else the §8a budget-lines pattern. When a
+ *  period is active, budget lines are filtered to the navigated month by
+ *  their OWN date field (the `month` stamp), NOT the event-axis meta window —
+ *  a budget line's identity is the month it budgets, not when it was typed. */
 async function resolveOverlay(
   userId: string,
   node: Node,
-  spec: ViewSpec
+  spec: ViewSpec,
+  period?: Period
 ): Promise<AggregateBucket[] | null> {
   const key = spec.overlayOwnField!;
   const ownRows = await fieldValueRepo.readByNode(userId, node.id);
@@ -132,15 +143,34 @@ async function resolveOverlay(
     return typeof own === 'number' ? [{ group: null, value: own, count: 1 }] : null;
   }
   if (!spec.groupBy) return null;
-  const children = await nodeRepo.findChildren(userId, node.id);
-  const holder = children.find((child) => {
+  // the budget-lines holder is an ATTACHED child (A3's Budget): an appendage,
+  // excluded from the records aggregate, reached explicitly here. Fall back to
+  // normal children too, so a pre-A1 holder still resolves.
+  const [attached, children] = await Promise.all([
+    nodeRepo.findAttachedChildren(userId, node.id),
+    nodeRepo.findChildren(userId, node.id),
+  ]);
+  const declaresBoth = (child: { childSchema: FieldDef[] | null }) => {
     const keys = new Set((child.childSchema ?? []).map((d) => d.key));
     return keys.has(spec.lens) && keys.has(spec.groupBy!);
-  });
+  };
+  const holder = attached.find(declaresBoth) ?? children.find(declaresBoth);
   if (!holder) return null;
+  // period → filter budget lines by their date field (the month stamp) within
+  // [start, end). The holder's date-typed field is that stamp.
+  const dateKey = period
+    ? (holder.childSchema ?? []).find((d) => d.type === 'date')?.key
+    : undefined;
+  const monthFilters: ViewFilter[] | undefined =
+    period && dateKey
+      ? [
+          { key: dateKey, op: 'gte', value: period.start },
+          { key: dateKey, op: 'lt', value: period.end },
+        ]
+      : undefined;
   return aggregate(userId, holder.id, {
     source: 'tree',
-    spec: { lens: spec.lens, groupBy: spec.groupBy, op: 'sum' },
+    spec: { lens: spec.lens, groupBy: spec.groupBy, op: 'sum', filters: monthFilters },
   });
 }
 

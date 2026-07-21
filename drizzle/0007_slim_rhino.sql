@@ -1,0 +1,1 @@
+ALTER TABLE "node" ADD COLUMN "attached" boolean DEFAULT false NOT NULL;

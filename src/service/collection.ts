@@ -61,3 +61,44 @@ export async function getCollectionCandidates(
   const excluded = new Set<string>([nodeId, ...memberships.map((m) => m.id)]);
   return describeCandidates(all, excluded);
 }
+
+/** Link several members into one collection at once (A4 receipt-reference:
+ *  a Tax line collecting the same-receipt expenses). Same graph link — never
+ *  inherits, never moves anything. Idempotent per pair; self-links skip. */
+export async function linkMembers(
+  userId: string,
+  collectionId: string,
+  memberIds: string[]
+): Promise<number> {
+  let linked = 0;
+  for (const memberId of memberIds) {
+    if (memberId === collectionId) continue;
+    await addToCollection(userId, collectionId, memberId);
+    linked++;
+  }
+  return linked;
+}
+
+/** Candidates to link AS members of `collectionId`: every node except itself
+ *  and the members it already holds (no duplicate edges to offer). */
+export async function getMemberCandidates(
+  userId: string,
+  collectionId: string
+): Promise<NodeCandidate[]> {
+  const [all, members] = await Promise.all([
+    nodeRepo.findTimeline(userId),
+    linkRepo.findTargets(userId, collectionId),
+  ]);
+  const excluded = new Set<string>([collectionId, ...members.map((m) => m.id)]);
+  return describeCandidates(all, excluded);
+}
+
+/** Candidates to link the given members INTO (the bulk "Link to…" target):
+ *  every node except the members themselves. */
+export async function getLinkTargetCandidates(
+  userId: string,
+  memberIds: string[]
+): Promise<NodeCandidate[]> {
+  const all = await nodeRepo.findTimeline(userId);
+  return describeCandidates(all, new Set(memberIds));
+}

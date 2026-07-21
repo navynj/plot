@@ -76,4 +76,13 @@ describe('inheritance.resolveSchema — depth-1, snapshot semantics (CLAUDE.md �
     stubTree([]);
     expect(await resolveSchema('u1', child)).toEqual([]);
   });
+
+  it('(A1) an ATTACHED child wears nothing — the one depth-1 exception — without touching the parent', async () => {
+    stubTree([grandparent, parent, child]);
+    const attachedChild = { id: 'C', parentId: 'B', attached: true } as unknown as Node;
+
+    expect(await resolveSchema('u1', attachedChild)).toEqual([]);
+    // never reads the parent: the exception short-circuits before the fetch
+    expect(nodeRepo.byId).not.toHaveBeenCalled();
+  });
 });

@@ -50,6 +50,15 @@ There are exactly two ways one node attaches to another.
 - This is the **only** channel through which schema is inherited.
 - Gives the node its field schema (from the parent's `childSchema`) and its
   place in the hierarchy.
+- **Two flavors, decided by the link (`node.attached`):** _inheriting_ (default)
+  — a record that wears the parent's `childSchema` and joins its aggregates; or
+  _attached_ — an **appendage** (e.g. `Expense categories`, `Budget` under
+  `Expense`) that sits under the parent but wears no schema and is no aggregate
+  member. An attached child is excluded from the parent's record list, walks,
+  bulk, and grid tiles; it still declares and gives its own `childSchema` to its
+  own children. This splits "belongs under" from "is an instance of" without a
+  node type. `resolveSchema` returns `[]` for it — the one documented depth-1
+  exception (§3).
 
 ### Curation (graph)
 
@@ -57,6 +66,10 @@ There are exactly two ways one node attaches to another.
 - **Never** inherits anything. Pure curation.
 - A node can be linked into many collections at once: one movie entry can sit in
   "movies", in "August timeline", and in "all-time favorites" simultaneously.
+- **Graph links cover reference relations too, not only curation** — the same
+  mechanism, read more broadly. A `Tax` line linked to the receipt items it
+  covers ("which receipt was this tax for?") is a reference, not a collection;
+  it is the identical `link` row, never inherits, never affects aggregation.
 
 ### The governing rule
 

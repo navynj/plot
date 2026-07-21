@@ -105,6 +105,12 @@ export function getChildren(userId: string, id: string): Promise<NodeRow[]> {
   return nodeRepo.findChildren(userId, id);
 }
 
+/** A node's attached children (appendages — see A1): the quiet "Attached"
+ *  area on its detail, never mixed with records. */
+export function getAttachedChildren(userId: string, id: string): Promise<NodeRow[]> {
+  return nodeRepo.findAttachedChildren(userId, id);
+}
+
 export function getTimeline(userId: string): Promise<NodeRow[]> {
   return nodeRepo.findTimeline(userId);
 }

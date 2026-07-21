@@ -32,6 +32,9 @@ export interface AggregationSpec {
   /** filters on sibling field values of the same node, resolved in SQL.
    *  A node without the filtered field does not match (no row to compare). */
   filters?: ViewFilter[];
+  /** A2 period window on the event axis (coalesce(eventDate, capturedAt));
+   *  [start, end) UTC instants. Absent = all time. */
+  period?: { start: Date; end: Date };
 }
 
 export interface AggregateBucket {
@@ -78,6 +81,7 @@ export async function aggregate(
     op: opts.spec.op,
     filters: opts.spec.filters?.map(toStorageFilter),
     tz: opts.spec.tz,
+    period: opts.spec.period,
   };
   const rows = await fieldValueRepo.aggregate(userId, ids, repoSpec);
   return rows.map((r) => ({ group: r.groupId, value: r.value, count: r.count }));

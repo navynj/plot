@@ -238,4 +238,44 @@ describe.skipIf(!hasDb)('aggregation integration — DESIGN §8 worked examples'
     );
     expect(captured.sql).toContain("date_trunc('day', n.captured_at at time zone ");
   });
+
+  it('A2 period window bounds the aggregate on the event axis, tz-correctly', async () => {
+    const { monthBoundsInTz } = await import('@/lib/day');
+    const p = await mk('PeriodExpense');
+    await nodeRepo.update(uid, p, {
+      childSchema: [{ key: 'amount', label: 'Amount', type: 'number' }],
+    });
+    const entry = async (amount: number, eventDate: string) => {
+      const id = await mk(`p${amount}`, p);
+      await field.saveOwnValues(uid, id, { amount: String(amount) });
+      await nodeRepo.update(uid, id, { eventDate: new Date(eventDate) });
+      return id;
+    };
+    await entry(100, '2026-07-15T12:00:00Z'); // July
+    await entry(200, '2026-08-15T12:00:00Z'); // August (clearly)
+    await entry(400, '2026-09-15T12:00:00Z'); // September
+    // THE EDGE: 2026-07-31T18:00Z is Aug 1 03:00 KST but still Jul 31 UTC
+    await entry(800, '2026-07-31T18:00:00Z');
+
+    const sumIn = async (month: string, tz: string) => {
+      const rows = await aggregation.aggregate(uid, p, {
+        source: 'tree',
+        spec: { lens: 'amount', op: 'sum', period: monthBoundsInTz(month, tz) },
+      });
+      return rows[0]?.value ?? 0;
+    };
+
+    // UTC user: August has only the 8/15 entry (edge instant is July for them)
+    expect(await sumIn('2026-08', 'UTC')).toBe(200);
+    expect(await sumIn('2026-07', 'UTC')).toBe(900); // 100 + 800 (edge)
+    // KST user: the edge instant falls into THEIR August
+    expect(await sumIn('2026-08', 'Asia/Seoul')).toBe(1000); // 200 + 800 (edge)
+    expect(await sumIn('2026-07', 'Asia/Seoul')).toBe(100); // edge left July for them
+    // all-time (no period) sees everything
+    const all = await aggregation.aggregate(uid, p, {
+      source: 'tree',
+      spec: { lens: 'amount', op: 'sum' },
+    });
+    expect(all[0]?.value).toBe(1500);
+  });
 });

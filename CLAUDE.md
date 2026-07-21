@@ -139,6 +139,15 @@ never inline it.
     ladder (own → first-link-field target → nearest ancestor) resolves at
     render time in the repository's list SQL, so re-parenting or
     re-categorizing re-resolves with zero writes and nothing goes stale.
+  - **Tree links have two flavors — inheriting (default) and attached.** An
+    `attached` child (`node.attached`) sits under its parent but wears no
+    schema and is no aggregation member: it is an appendage (Expense
+    categories, Budget), not a record. "Inheritance is decided by the link"
+    extends to this flag — `resolveSchema` returns `[]` for it (the one
+    documented depth-1 exception), and `nodeRepo.findChildren` excludes it
+    (so aggregates, walks, bulk, and grid tiles all skip it for free);
+    `nodeRepo.findAttachedChildren` reaches it for the "Attached" area and the
+    overlay-holder lookup. Its own children inherit its own schema normally.
 - **Inbox is a derived filter,** `parentId IS NULL`. Never store an "in inbox"
   flag. → `nodeRepo.findInbox(userId)`.
 - **No cycles.** A node cannot become a descendant of itself. Every re-parent /

@@ -10,7 +10,7 @@ export const undoRepo = {
   async push(
     userId: string,
     stack: 'undo' | 'redo',
-    kind: 'reparent' | 'delete',
+    kind: 'reparent' | 'delete' | 'create',
     payload: unknown
   ): Promise<void> {
     await db.insert(undoOp).values({ userId, stack, kind, payload });

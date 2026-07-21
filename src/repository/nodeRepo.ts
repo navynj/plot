@@ -15,6 +15,8 @@ export interface CreateNodeInput {
   /** birth record; omitted = 'constructed' (column default) — captureNode
    *  is the only caller that writes 'captured' */
   origin?: 'captured' | 'constructed';
+  /** appendage flavor of the tree link (A1); omitted = false (a record) */
+  attached?: boolean;
   capturedAt: Date;
 }
 
@@ -32,6 +34,7 @@ export type UpdateNodePatch = Partial<
     | 'viewSpec'
     | 'timelineVisibility'
     | 'pinned'
+    | 'attached'
   >
 >;
 
@@ -132,11 +135,39 @@ export const nodeRepo = {
       .orderBy(asc(node.rank), asc(node.capturedAt));
   },
 
+  /** The parent's RECORDS: normal (inheriting) tree children, rank order.
+   *  Attached children (appendages — no schema, not records) are excluded
+   *  here, which is what keeps them out of aggregates, walks, bulk, and grid
+   *  tiles for free (every one routes through this). */
   async findChildren(userId: string, parentId: string): Promise<NodeRow[]> {
     return db
       .select(nodeWithIcon)
       .from(node)
-      .where(and(eq(node.parentId, parentId), eq(node.userId, userId), notDeleted))
+      .where(
+        and(
+          eq(node.parentId, parentId),
+          eq(node.userId, userId),
+          eq(node.attached, false),
+          notDeleted
+        )
+      )
+      .orderBy(asc(node.rank), asc(node.capturedAt));
+  },
+
+  /** The parent's APPENDAGES: attached children only (rendered in the quiet
+   *  "Attached" area, never among records). */
+  async findAttachedChildren(userId: string, parentId: string): Promise<NodeRow[]> {
+    return db
+      .select(nodeWithIcon)
+      .from(node)
+      .where(
+        and(
+          eq(node.parentId, parentId),
+          eq(node.userId, userId),
+          eq(node.attached, true),
+          notDeleted
+        )
+      )
       .orderBy(asc(node.rank), asc(node.capturedAt));
   },
 
