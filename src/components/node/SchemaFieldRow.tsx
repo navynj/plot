@@ -107,20 +107,9 @@ export function SchemaFieldRow(props: SchemaFieldRowProps) {
       <div className="text-muted-foreground flex items-center gap-2 pl-6 text-xs">
         <span className="font-mono">{def.key}</span>
         {def.type === 'option' && (
-          <Input
-            value={(def.options ?? []).join(', ')}
-            onChange={(e) =>
-              props.onChange({
-                ...def,
-                options: e.target.value
-                  .split(',')
-                  .map((o) => o.trim())
-                  .filter(Boolean),
-              })
-            }
-            placeholder="choices, comma, separated"
-            aria-label="option choices"
-            className="h-7 flex-1 text-xs"
+          <OptionChoicesInput
+            options={def.options ?? []}
+            onCommit={(options) => props.onChange({ ...def, options })}
           />
         )}
         {def.type === 'link' && (
@@ -166,4 +155,44 @@ export function SchemaFieldRow(props: SchemaFieldRowProps) {
       )}
     </div>
   );
+}
+
+/** Comma-separated option choices, IME-safe (B1 comma-bug fix): the raw text
+ *  is held locally so a comma survives keystrokes — it is parsed to the
+ *  options array only on blur (and it never re-normalizes mid-composition).
+ *  Before, the parse-on-every-keystroke stripped the trailing empty segment
+ *  and the comma vanished as you typed it. */
+function OptionChoicesInput({
+  options,
+  onCommit,
+}: {
+  options: string[];
+  onCommit: (options: string[]) => void;
+}) {
+  const joined = options.join(', ');
+  const [raw, setRaw] = React.useState(joined);
+  // re-sync when the options change from OUTSIDE (not our own normalization) —
+  // the React "adjust state when a prop changes" pattern, no refs/effects
+  const [prevJoined, setPrevJoined] = React.useState(joined);
+  if (joined !== prevJoined) {
+    setPrevJoined(joined);
+    if (joined !== normalize(raw).join(', ')) setRaw(joined);
+  }
+  return (
+    <Input
+      value={raw}
+      onChange={(e) => setRaw(e.target.value)}
+      onBlur={() => onCommit(normalize(raw))}
+      placeholder="choices, comma, separated"
+      aria-label="option choices"
+      className="h-7 flex-1 text-xs"
+    />
+  );
+}
+
+function normalize(raw: string): string[] {
+  return raw
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
 }

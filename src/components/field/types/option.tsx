@@ -1,27 +1,17 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-
+import { OptionFieldPicker } from '../OptionFieldPicker';
 import { registerFieldUI } from '../registry';
 
 registerFieldUI('option', {
   render: ({ value }) => (typeof value === 'string' ? value : null),
-  edit: ({ def, value }) => (
-    <Select name={def.key} defaultValue={typeof value === 'string' ? value : undefined}>
-      <SelectTrigger className="w-full">
-        <SelectValue placeholder="—" />
-      </SelectTrigger>
-      <SelectContent>
-        {(def.options ?? []).map((option) => (
-          <SelectItem key={option} value={option}>
-            {option}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+  // B1: the search + create-in-place picker (was a plain Select). A typed
+  // value not in the list can be added to the parent's childSchema inline.
+  edit: ({ def, value, schemaOwnerId }) => (
+    <OptionFieldPicker
+      name={def.key}
+      value={typeof value === 'string' ? value : undefined}
+      options={def.options ?? []}
+      fieldKey={def.key}
+      schemaOwnerId={schemaOwnerId}
+    />
   ),
 });

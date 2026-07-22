@@ -16,7 +16,13 @@ import {
   removeFromCollection,
 } from '@/service/collection';
 import { getLinkCandidates, saveOwnValues } from '@/service/field';
-import { captureNode, setChildSchema, setViewSpec, updateNode } from '@/service/node';
+import {
+  addSchemaOption,
+  captureNode,
+  setChildSchema,
+  setViewSpec,
+  updateNode,
+} from '@/service/node';
 import { removeNode, reparent } from '@/service/triage';
 import type { ViewSpec } from '@/db/schema';
 
@@ -79,23 +85,36 @@ export async function setEventDate(nodeId: string, day: string | null): Promise<
 }
 
 /** Contextual capture (DESIGN §6): child of the context node by default; the
- *  one-tap opt-out (dest=inbox) throws it raw instead. */
+ *  one-tap opt-out (dest=inbox) throws it raw instead. B1: title + body + icon
+ *  + inline parent-schema fields (the latter only when kept here, not inbox). */
 export async function captureHere(nodeId: string, formData: FormData): Promise<void> {
   const userId = await requireUserId();
-  const raw = formData.get('text');
-  const text = typeof raw === 'string' ? raw.trim() : '';
-  if (!text) return;
+  const s = (key: string): string => {
+    const v = formData.get(key);
+    return typeof v === 'string' ? v.trim() : '';
+  };
+  const title = s('title') || s('text');
+  const body = s('body');
+  if (!title && !body) return;
   const toInbox = formData.get('dest') === 'inbox';
-  const dayRaw = formData.get('captureDate');
   const tz = await getRequestTimezone();
-  await captureNode(userId, {
-    body: text,
+  const node = await captureNode(userId, {
+    title: title || undefined,
+    body: body || undefined,
+    icon: s('icon') || undefined,
     contextParentId: toInbox ? undefined : nodeId,
-    eventDate: explicitEventDate(
-      typeof dayRaw === 'string' && dayRaw !== '' ? dayRaw : undefined,
-      tz
-    ),
+    eventDate: explicitEventDate(s('captureDate') || undefined, tz),
   });
+  // inline fields wear this node's childSchema — only meaningful when kept here
+  if (!toInbox) {
+    const keysRaw = formData.get('__fieldKeys');
+    const keys = typeof keysRaw === 'string' && keysRaw !== '' ? keysRaw.split(',') : [];
+    if (keys.length > 0) {
+      const raw: Record<string, unknown> = {};
+      for (const key of keys) raw[key] = formData.get(key);
+      await saveOwnValues(userId, node.id, raw, keys);
+    }
+  }
   revalidatePath(`/node/${nodeId}`);
 }
 
@@ -241,6 +260,31 @@ export async function loadBudgetMonthAction(
   const userId = await requireUserId();
   const tz = await getRequestTimezone();
   return loadBudgetMonth(userId, budgetId, month, tz);
+}
+
+export type AddOptionResult =
+  | { ok: true; options: string[] }
+  | { ok: false; error: string };
+
+/** B1 option create-in-place: append a typed choice to the owner node's
+ *  option field, validated through setChildSchema. Used by the option editor
+ *  wherever it renders (capture, walk, detail). */
+export async function addOptionAction(
+  ownerId: string,
+  fieldKey: string,
+  option: string
+): Promise<AddOptionResult> {
+  const userId = await requireUserId();
+  const trimmed = option.trim();
+  if (trimmed === '') return { ok: false, error: 'empty option' };
+  try {
+    const options = await addSchemaOption(userId, ownerId, fieldKey, trimmed);
+    revalidatePath('/', 'layout');
+    return { ok: true, options };
+  } catch (err) {
+    if (err instanceof InvalidSchemaError) return { ok: false, error: err.message };
+    throw err;
+  }
 }
 
 export type SchemaSaveResult = { ok: true } | { ok: false; error: string };

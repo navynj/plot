@@ -38,6 +38,8 @@ export interface CaptureInput {
    *  create-in-place actions that borrow it for naming+placement pass
    *  'constructed'. */
   origin?: 'captured' | 'constructed';
+  /** own icon (B1 leading-emoji slot); absent → the icon ladder resolves it */
+  icon?: string;
 }
 
 /**
@@ -65,6 +67,7 @@ export async function captureNode(userId: string, input: CaptureInput): Promise<
     userId,
     title,
     body,
+    icon: input.icon?.trim() || null,
     origin: input.origin ?? 'captured',
     capturedAt: new Date(),
   });
@@ -236,6 +239,28 @@ export async function setChildSchema(userId: string, id: string, input: unknown)
     throw new NodeNotFoundError(id);
   }
   return updated;
+}
+
+/** Append a new choice to an option field in a node's childSchema (B1 option
+ *  create-in-place). Goes through the validated setChildSchema path; a choice
+ *  that already exists is a no-op. Returns the field's options after. */
+export async function addSchemaOption(
+  userId: string,
+  ownerId: string,
+  fieldKey: string,
+  option: string
+): Promise<string[]> {
+  const trimmed = option.trim();
+  const owner = await nodeRepo.byId(userId, ownerId);
+  if (!owner) throw new NodeNotFoundError(ownerId);
+  const schema = owner.childSchema ?? [];
+  const next = schema.map((d) => {
+    if (d.key !== fieldKey || d.type !== 'option') return d;
+    const opts = d.options ?? [];
+    return opts.includes(trimmed) ? d : { ...d, options: [...opts, trimmed] };
+  });
+  if (trimmed !== '') await setChildSchema(userId, ownerId, next);
+  return next.find((d) => d.key === fieldKey)?.options ?? [];
 }
 
 function parseFieldDefs(input: unknown): FieldDef[] {

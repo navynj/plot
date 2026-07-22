@@ -11,12 +11,15 @@ interface FieldEditorsProps {
   values: Record<string, FieldPrimitive>;
   /** server-resolved labels for reference values, keyed by field key */
   displays?: Record<string, string>;
+  /** the node these defs' childSchema belongs to (the parent) — enables option
+   *  create-in-place (B1). */
+  schemaOwnerId?: string;
   action: (formData: FormData) => Promise<void>;
 }
 
 /** One form over the node's worn schema; each field's editor comes from the
  *  registry. Empty inputs save fine — required-ness is never a save gate. */
-export function FieldEditors({ defs, values, displays, action }: FieldEditorsProps) {
+export function FieldEditors({ defs, values, displays, schemaOwnerId, action }: FieldEditorsProps) {
   return (
     <form action={action} className="flex flex-col gap-4">
       {/* the save path only touches the keys this form rendered — a partial
@@ -34,6 +37,7 @@ export function FieldEditors({ defs, values, displays, action }: FieldEditorsPro
             // as-is on submit like any value (not a phantom)
             value: values[def.key] ?? def.defaultValue,
             display: displays?.[def.key],
+            schemaOwnerId,
           })}
         </div>
       ))}

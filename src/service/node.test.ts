@@ -4,10 +4,10 @@ import type { Node } from '@/db/schema';
 import { nodeRepo } from '@/repository/nodeRepo';
 
 import { EmptyCaptureError, InvalidViewSpecError } from './errors';
-import { captureNode, setViewSpec } from './node';
+import { addSchemaOption, captureNode, setViewSpec } from './node';
 
 vi.mock('@/repository/nodeRepo', () => ({
-  nodeRepo: { create: vi.fn(), update: vi.fn() },
+  nodeRepo: { create: vi.fn(), update: vi.fn(), byId: vi.fn() },
 }));
 vi.mock('@/repository/undoRepo', () => ({
   undoRepo: { push: vi.fn(), pop: vi.fn(), clearRedo: vi.fn(), list: vi.fn() },
@@ -32,6 +32,7 @@ describe('captureNode — raw means raw (DESIGN §6-capture)', () => {
       userId: 'u1',
       title: 'Croissant (12pc)',
       body: null,
+      icon: null,
       origin: 'captured',
       capturedAt: expect.any(Date),
     });
@@ -66,9 +67,52 @@ describe('captureNode — raw means raw (DESIGN §6-capture)', () => {
     });
   });
 
+  it('B1 two-field capture: title + body + icon map directly, no first-line split', async () => {
+    await captureNode('u1', { title: 'Rio Funk', body: 'line one\nline two', icon: '🎸' });
+    expect(vi.mocked(nodeRepo.create).mock.calls[0]![0]).toMatchObject({
+      title: 'Rio Funk',
+      body: 'line one\nline two', // multi-line body preserved verbatim
+      icon: '🎸',
+      origin: 'captured',
+    });
+  });
+
   it('rejects an empty capture with a typed domain error', async () => {
     await expect(captureNode('u1', { body: '   ' })).rejects.toBeInstanceOf(EmptyCaptureError);
     expect(nodeRepo.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('addSchemaOption — B1 option create-in-place (validated append)', () => {
+  const owner = {
+    id: 'p',
+    childSchema: [
+      { key: 'store', label: 'Store', type: 'option', options: ['Costco'] },
+      { key: 'amount', label: 'Amount', type: 'number' },
+    ],
+  } as unknown as Node;
+
+  beforeEach(() => {
+    vi.mocked(nodeRepo.byId).mockReset().mockResolvedValue(owner);
+    vi.mocked(nodeRepo.update)
+      .mockReset()
+      .mockResolvedValue({ id: 'p' } as Node);
+  });
+
+  it('appends a new choice to the option field through setChildSchema', async () => {
+    const options = await addSchemaOption('u1', 'p', 'store', 'Homeplus');
+    expect(options).toEqual(['Costco', 'Homeplus']);
+    // persisted via the validated setChildSchema (nodeRepo.update)
+    const patch = vi.mocked(nodeRepo.update).mock.calls[0]![2];
+    const storeDef = (patch.childSchema as { key: string; options?: string[] }[]).find(
+      (d) => d.key === 'store'
+    );
+    expect(storeDef?.options).toEqual(['Costco', 'Homeplus']);
+  });
+
+  it('an existing choice is a no-op (no duplicate)', async () => {
+    const options = await addSchemaOption('u1', 'p', 'store', 'Costco');
+    expect(options).toEqual(['Costco']);
   });
 });
 

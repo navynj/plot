@@ -58,7 +58,13 @@ export function FieldWalkStep({
       </div>
       {schemaEditor && <div className="-mb-2 flex justify-end">{schemaEditor}</div>}
       {defs.length > 0 && action ? (
-        <FieldEditors defs={defs} values={values} displays={displays} action={action} />
+        <FieldEditors
+          defs={defs}
+          values={values}
+          displays={displays}
+          schemaOwnerId={node?.parentId ?? undefined}
+          action={action}
+        />
       ) : (
         node && <p className="text-muted-foreground text-sm">{emptyMessage}</p>
       )}

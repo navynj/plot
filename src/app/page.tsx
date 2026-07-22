@@ -35,6 +35,7 @@ export default async function TimelinePage({
     id: n.id,
     icon: n.displayIcon ?? null,
     title: displayName(n),
+    childSchema: n.childSchema ?? [], // its fields render inline on selection (B1)
   }));
 
   // section the river by event-axis day (presentation grouping only)

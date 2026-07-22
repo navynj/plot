@@ -15,6 +15,10 @@ export interface FieldUIProps {
   /** resolved human label for reference values (a link target's icon+title) —
    *  provided by the server, since a raw id must never render as the value */
   display?: string;
+  /** the node whose childSchema this def belongs to (the parent). Lets the
+   *  option editor's create-in-place append a new choice through the validated
+   *  setChildSchema path. Absent → create-in-place is unavailable (pick-only). */
+  schemaOwnerId?: string;
 }
 
 export interface FieldUIEntry {

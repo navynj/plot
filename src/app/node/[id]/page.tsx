@@ -185,6 +185,7 @@ export default async function NodeDetailPage({
       <ContextCaptureForm
         nodeId={node.id}
         contextLabel={node.title ?? 'this node'}
+        childSchema={node.childSchema ?? []}
         defaultDay={todayInTz(tz)}
       />
 
@@ -218,6 +219,7 @@ export default async function NodeDetailPage({
             defs={defs}
             values={values}
             displays={displays}
+            schemaOwnerId={node.parentId ?? undefined}
             action={saveFields.bind(null, node.id)}
           />
         </section>
