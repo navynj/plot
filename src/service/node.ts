@@ -171,17 +171,56 @@ export async function getGridSections(userId: string): Promise<GridSection[]> {
   );
 }
 
-/** The capture chip row: pinned nodes first (stored preference), then the
- *  level-2 nodes (children of confirmed roots), deduped, rank order. */
-export async function getCaptureChips(userId: string): Promise<NodeRow[]> {
-  const [pinned, roots] = await Promise.all([
-    nodeRepo.findPinned(userId),
+/** A capture chip: enough to render, know if it drills (has record children),
+ *  and — once selected as the target — render its inline fields (B1). */
+export interface ChipItem {
+  id: string;
+  icon: string | null;
+  title: string;
+  hasChildren: boolean;
+  childSchema: FieldDef[];
+}
+
+export interface CaptureChipTiers {
+  favorites: ChipItem[];
+  ongoing: ChipItem[];
+  topLevel: ChipItem[];
+}
+
+async function toChipItems(userId: string, nodes: NodeRow[]): Promise<ChipItem[]> {
+  const counts = await nodeRepo.recordChildCounts(
+    userId,
+    nodes.map((n) => n.id)
+  );
+  return nodes.map((n) => ({
+    id: n.id,
+    icon: n.displayIcon ?? null,
+    title: displayName(n),
+    hasChildren: (counts.get(n.id) ?? 0) > 0,
+    childSchema: n.childSchema ?? [],
+  }));
+}
+
+/** The capture chip area (B2): three tiers — favorites, ongoing, and the
+ *  confirmed top-level roots. Level-2 no longer auto-appears; you pin what you
+ *  want reachable, and drill the rest (getChipChildren). */
+export async function getCaptureChips(userId: string): Promise<CaptureChipTiers> {
+  const [favorites, ongoing, roots] = await Promise.all([
+    nodeRepo.findByPin(userId, 'favorite'),
+    nodeRepo.findByPin(userId, 'ongoing'),
     nodeRepo.findRoots(userId),
   ]);
-  const levelTwo = (
-    await Promise.all(roots.map((root) => nodeRepo.findChildren(userId, root.id)))
-  ).flat();
-  return [...new Map([...pinned, ...levelTwo].map((n) => [n.id, n])).values()];
+  const [f, o, t] = await Promise.all([
+    toChipItems(userId, favorites),
+    toChipItems(userId, ongoing),
+    toChipItems(userId, roots),
+  ]);
+  return { favorites: f, ongoing: o, topLevel: t };
+}
+
+/** A chip's record children — the drill-down step (B2). */
+export async function getChipChildren(userId: string, parentId: string): Promise<ChipItem[]> {
+  return toChipItems(userId, await nodeRepo.findChildren(userId, parentId));
 }
 
 export interface ScopeTarget {

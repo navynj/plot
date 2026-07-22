@@ -1,44 +1,42 @@
 import { requireUserId } from '@/app/_auth/requireUser';
-import { CaptureForm, type CaptureChip } from '@/components/capture/CaptureForm';
+import { CaptureForm } from '@/components/capture/CaptureForm';
 import { DayNavigator } from '@/components/capture/DayNavigator';
 import { SelectableList, type SelectableGroup } from '@/components/node/SelectableList';
 import { ScrollAnchor } from '@/components/ui/scroll-anchor';
 import { formatTimestamp } from '@/lib/formatTimestamp';
 import { displayName } from '@/lib/identity';
-import { nodeChildCounts } from '@/service/node';
+import { getCaptureChips, getTimeline, getTimelineVisible, nodeChildCounts } from '@/service/node';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
 import { dayInTz, isValidDay, todayInTz } from '@/lib/day';
-import { getCaptureChips, getTimelineVisible } from '@/service/node';
 
 export const dynamic = 'force-dynamic';
 
-/** The record river on the EVENT AXIS: sorted and sectioned by
- *  coalesce(eventDate, capturedAt) — when it happened, not when it was
- *  typed. A selected day filters the river and stamps captures. */
+/** The record river on the EVENT AXIS (coalesce(eventDate, capturedAt)). B2:
+ *  Day / All are SEPARATE modes. Day mode (default) shows a single day (today
+ *  unless navigated) — "today only" is finally reachable. All mode shows the
+ *  full river with day headers, initial scroll anchored to today so future
+ *  (scheduled) entries don't greet you first. */
 export default async function TimelinePage({
   searchParams,
 }: {
-  searchParams: Promise<{ day?: string }>;
+  searchParams: Promise<{ day?: string; mode?: string }>;
 }) {
-  const { day: rawDay } = await searchParams;
+  const { day: rawDay, mode: rawMode } = await searchParams;
   const tz = await getRequestTimezone();
   const today = todayInTz(tz);
-  const day =
-    typeof rawDay === 'string' && isValidDay(rawDay) && rawDay !== today ? rawDay : undefined;
+  const mode: 'day' | 'all' = rawMode === 'all' ? 'all' : 'day';
+  const viewingDay = typeof rawDay === 'string' && isValidDay(rawDay) ? rawDay : today;
+  // day mode filters to the single day; all mode is the whole river
+  const filterDay = mode === 'day' ? viewingDay : undefined;
 
   const userId = await requireUserId();
-  const [nodes, chipNodes] = await Promise.all([
-    getTimelineVisible(userId, day, tz),
+  const [nodes, tiers, allNodes] = await Promise.all([
+    getTimelineVisible(userId, filterDay, tz),
     getCaptureChips(userId),
+    getTimeline(userId), // for parent-chip lookup (B2 item 5)
   ]);
-  const chips: CaptureChip[] = chipNodes.map((n) => ({
-    id: n.id,
-    icon: n.displayIcon ?? null,
-    title: displayName(n),
-    childSchema: n.childSchema ?? [], // its fields render inline on selection (B1)
-  }));
+  const byId = new Map(allNodes.map((n) => [n.id, n]));
 
-  // section the river by event-axis day (presentation grouping only)
   const childCounts = await nodeChildCounts(
     userId,
     nodes.map((n) => n.id)
@@ -46,6 +44,7 @@ export default async function TimelinePage({
   const groups: SelectableGroup[] = [];
   for (const n of nodes) {
     const nodeDay = dayInTz(n.eventDate ?? n.capturedAt, tz);
+    const p = n.parentId ? byId.get(n.parentId) : undefined;
     const row = {
       id: n.id,
       label: displayName(n),
@@ -53,27 +52,43 @@ export default async function TimelinePage({
       time: formatTimestamp(n.capturedAt),
       parented: n.parentId !== null,
       childCount: childCounts.get(n.id) ?? 0,
+      // the current parent as a navigable chip (B2 item 5)
+      parent: p ? { id: p.id, icon: p.displayIcon ?? null, name: displayName(p) } : null,
     };
     const last = groups[groups.length - 1];
     if (last?.key === nodeDay) last.rows.push(row);
-    else groups.push({ key: nodeDay, header: nodeDay === today ? 'Today' : nodeDay, rows: [row] });
+    else
+      groups.push({
+        key: nodeDay,
+        header: mode === 'all' ? (nodeDay === today ? 'Today' : nodeDay) : null,
+        isToday: nodeDay === today,
+        rows: [row],
+      });
   }
 
   return (
     <>
       <div className="border-border -mx-4 border-b px-4 py-2">
-        <DayNavigator day={day} today={today} />
+        <DayNavigator viewingDay={viewingDay} today={today} mode={mode} />
       </div>
-      <ScrollAnchor className="min-h-0 flex-1 py-4">
+      <ScrollAnchor
+        className="min-h-0 flex-1 py-4"
+        // all mode: anchor today near the top; day mode: chat-style bottom
+        anchorSelector={mode === 'all' ? '[data-stream-today]' : undefined}
+      >
         {groups.length === 0 && (
           <p className="text-muted-foreground py-8 text-center text-sm">
-            {day ? `Nothing on ${day}.` : 'Nothing captured yet.'}
+            {mode === 'day'
+              ? viewingDay === today
+                ? 'Nothing today yet.'
+                : `Nothing on ${viewingDay}.`
+              : 'Nothing captured yet.'}
           </p>
         )}
         <SelectableList groups={groups} />
       </ScrollAnchor>
       <div className="border-border -mx-4 border-t px-4 py-3">
-        <CaptureForm chips={chips} defaultDay={day ?? today} />
+        <CaptureForm tiers={tiers} defaultDay={mode === 'day' ? viewingDay : today} />
       </div>
     </>
   );

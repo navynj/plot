@@ -67,10 +67,14 @@ export async function setTimelineVisibility(
   revalidatePath(`/node/${nodeId}`);
 }
 
-export async function setPinned(nodeId: string, pinned: boolean): Promise<void> {
+/** B2 three-way pin: which capture-chip tier the node sits in (or none). */
+export async function setPin(
+  nodeId: string,
+  pin: 'favorite' | 'ongoing' | null
+): Promise<void> {
   const userId = await requireUserId();
-  await updateNode(userId, nodeId, { pinned });
-  revalidatePath(`/node/${nodeId}`);
+  await updateNode(userId, nodeId, { pinned: pin });
+  revalidatePath('/', 'layout');
 }
 
 /** eventDate is optional for every node, exactly as the schema always said —

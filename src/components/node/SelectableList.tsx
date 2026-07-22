@@ -17,12 +17,16 @@ export interface SelectableRow {
   time: string;
   parented: boolean;
   childCount: number;
+  /** the current parent as a navigable chip (B2 item 5); null = inbox row */
+  parent?: { id: string; icon: string | null; name: string } | null;
 }
 
 export interface SelectableGroup {
   key: string;
-  /** day label in the stream; null = headerless (the inbox) */
+  /** day label in the stream; null = headerless (the inbox / single-day) */
   header: string | null;
+  /** marks the today group so all-mode can anchor its initial scroll here */
+  isToday?: boolean;
   rows: SelectableRow[];
 }
 
@@ -85,7 +89,7 @@ export function SelectableList({
         const groupIds = group.rows.map((r) => r.id);
         const groupAll = groupIds.length > 0 && groupIds.every((id) => selected.has(id));
         return (
-          <section key={group.key}>
+          <section key={group.key} data-stream-today={group.isToday ? '' : undefined}>
             {group.header !== null && (
               <h2 className="text-muted-foreground bg-background sticky top-0 flex items-center gap-2 py-1 text-xs font-medium tracking-wider uppercase">
                 <Checkbox
@@ -106,11 +110,23 @@ export function SelectableList({
                   />
                   <Link
                     href={`/node/${row.id}`}
-                    className="flex-1 truncate text-sm hover:underline"
+                    className="min-w-0 flex-1 truncate text-sm hover:underline"
                   >
                     {row.icon && <span className="mr-1.5">{row.icon}</span>}
                     {row.label}
                   </Link>
+                  {/* the current parent as a chip: tap = navigate to the room
+                      (mirrors node-detail's "tap name = navigate"). Inbox rows
+                      have no parent — just the ↰ picker. */}
+                  {row.parent && (
+                    <Link
+                      href={`/node/${row.parent.id}`}
+                      className="border-border text-muted-foreground hover:bg-muted/50 flex max-w-32 shrink-0 items-center gap-1 truncate rounded-full border px-2 py-0.5 text-xs"
+                    >
+                      {row.parent.icon && <span>{row.parent.icon}</span>}
+                      <span className="truncate">{row.parent.name}</span>
+                    </Link>
+                  )}
                   <ParentPicker nodeIds={[row.id]} onMoved={() => toastWithUndo('Moved')}>
                     <Button
                       variant="ghost"

@@ -108,6 +108,9 @@ export function CaptureTitleBody({
           className="flex-1"
         />
       </div>
+      {/* the body is the QUIET secondary area: no border, no focus ring, no
+          background shift — it flows beneath the (bordered, primary) title so
+          title-only captures feel complete and the body never pressures */}
       <Textarea
         ref={bodyRef}
         name="body"
@@ -117,7 +120,7 @@ export function CaptureTitleBody({
         placeholder="Details"
         aria-label="body"
         rows={1}
-        className="min-h-0 resize-none overflow-hidden"
+        className="min-h-0 resize-none overflow-hidden border-0 bg-transparent px-1 shadow-none focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
       />
     </div>
   );

@@ -231,9 +231,11 @@ export const node = pgTable(
       .notNull()
       .default('auto'),
 
-    // pure user preference (legitimately stored, not derivable): pinned
-    // nodes lead the capture chip row
-    pinned: boolean('pinned').notNull().default(false),
+    // pure user preference (legitimately stored, not derivable): which capture
+    // chip tier a node sits in — 'favorite' (top) or 'ongoing' (a temporary
+    // pin for an in-progress project); null = not pinned (B2). Was a boolean;
+    // old true migrated to 'favorite'.
+    pinned: text('pinned').$type<'favorite' | 'ongoing'>(),
 
     // ATTACHED (a stored flavor of the tree link, not a node type): an
     // attached child sits under its parent in the tree but is its APPENDAGE,

@@ -18,41 +18,47 @@ export default async function GridHomePage() {
   const [sections, inbox] = await Promise.all([getGridSections(userId), getInbox(userId)]);
 
   return (
-    <div className="flex flex-col gap-6 py-6">
+    <div className="flex flex-col gap-5 py-4">
       {sections.map(({ root, tiles }) => (
-        <section key={root.id}>
+        <section key={root.id} className="flex flex-col gap-1">
+          {/* slim level-1 section header */}
           <Link
             href={`/node/${root.id}`}
-            className="text-muted-foreground hover:text-foreground mb-2 block text-xs font-medium tracking-wider uppercase"
+            className="text-muted-foreground hover:text-foreground text-xs font-medium tracking-wider uppercase"
           >
             {root.displayIcon && <span className="mr-1">{root.displayIcon}</span>}
             {displayName(root)}
           </Link>
           {tiles.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            // compact rows: icon · name · count on one line, flowing 2–3 wide
+            <div className="grid gap-x-3 gap-y-0.5 sm:grid-cols-2 lg:grid-cols-3">
               {tiles.map(({ node, count }) => (
                 <Link
                   key={node.id}
                   href={`/node/${node.id}`}
-                  className="border-border hover:bg-muted/50 flex aspect-square flex-col justify-between rounded-xl border p-4"
+                  className="hover:bg-muted/50 flex items-center gap-2 rounded-md px-2 py-1.5"
                 >
-                  <span className="text-2xl">{node.displayIcon ?? '·'}</span>
-                  <span>
-                    <span className="block truncate text-sm font-medium">
-                      {displayName(node)}
-                    </span>
-                    <span className="text-muted-foreground text-xs">{count} inside</span>
+                  <span className="w-5 shrink-0 text-center">{node.displayIcon ?? '·'}</span>
+                  <span className="flex-1 truncate text-sm">{displayName(node)}</span>
+                  <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                    {count}
                   </span>
                 </Link>
               ))}
             </div>
           ) : (
-            <form action={addRoomAction.bind(null, root.id)} className="flex max-w-xs gap-2">
-              <Input name="title" placeholder={`Add a room to ${root.title}`} autoComplete="off" />
+            <form action={addRoomAction.bind(null, root.id)} className="flex max-w-xs gap-2 px-2">
+              <Input
+                name="title"
+                placeholder={`Add a room to ${root.title}`}
+                autoComplete="off"
+                className="h-8"
+              />
               <SubmitButton
                 iconOnly
                 variant="outline"
                 size="icon"
+                className="size-8"
                 aria-label={`add room to ${root.title}`}
               >
                 <Plus className="size-4" />
@@ -64,13 +70,11 @@ export default async function GridHomePage() {
 
       <Link
         href="/inbox"
-        className="border-border/60 text-muted-foreground hover:bg-muted/30 flex max-w-48 items-center gap-3 rounded-xl border border-dashed p-4"
+        className="border-border/60 text-muted-foreground hover:bg-muted/30 flex max-w-48 items-center gap-2 rounded-md border border-dashed px-3 py-2 text-sm"
       >
-        <Inbox className="size-5" />
-        <span>
-          <span className="block text-sm">Inbox</span>
-          <span className="text-xs">{inbox.length} unplaced</span>
-        </span>
+        <Inbox className="size-4" />
+        <span className="flex-1">Inbox</span>
+        <span className="text-xs tabular-nums">{inbox.length}</span>
       </Link>
     </div>
   );

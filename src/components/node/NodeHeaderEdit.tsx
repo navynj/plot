@@ -1,9 +1,9 @@
 'use client';
 
-import { Pencil, Pin, PinOff, Trash2 } from 'lucide-react';
+import { Pencil, Pin, Star, Trash2 } from 'lucide-react';
 import * as React from 'react';
 
-import { deleteNodeAction, saveNodeMeta, setPinned } from '@/app/node/[id]/actions';
+import { deleteNodeAction, saveNodeMeta, setPin } from '@/app/node/[id]/actions';
 import { Button } from '@/components/ui/button';
 import { SubmitButton } from '@/components/ui/submit-button';
 import {
@@ -25,7 +25,7 @@ interface NodeHeaderEditProps {
   body: string | null;
   childCount: number;
   parentLabel: string | null; // null = children would fall to top level / inbox
-  pinned: boolean;
+  pinned: 'favorite' | 'ongoing' | null;
 }
 
 /** Inline edit of title/icon/body + delete-with-confirm. Delete closes the
@@ -38,13 +38,27 @@ export function NodeHeaderEdit(props: NodeHeaderEditProps) {
   return (
     <>
       <span className="flex items-center gap-1">
+        {/* B2 three-way pin: favorite (star) / ongoing (pin) / none — the two
+            are mutually exclusive; tapping the active one clears it */}
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label={props.pinned ? 'unpin node' : 'pin node'}
-          onClick={() => setPinned(props.nodeId, !props.pinned)}
+          aria-label={props.pinned === 'favorite' ? 'remove from favorites' : 'add to favorites'}
+          className={props.pinned === 'favorite' ? 'text-foreground' : 'text-muted-foreground'}
+          onClick={() => setPin(props.nodeId, props.pinned === 'favorite' ? null : 'favorite')}
         >
-          {props.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}
+          <Star
+            className={`size-3.5 ${props.pinned === 'favorite' ? 'fill-current' : ''}`}
+          />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={props.pinned === 'ongoing' ? 'unpin ongoing' : 'pin as ongoing'}
+          className={props.pinned === 'ongoing' ? 'text-foreground' : 'text-muted-foreground'}
+          onClick={() => setPin(props.nodeId, props.pinned === 'ongoing' ? null : 'ongoing')}
+        >
+          <Pin className={`size-3.5 ${props.pinned === 'ongoing' ? 'fill-current' : ''}`} />
         </Button>
         <Button
           variant="ghost"

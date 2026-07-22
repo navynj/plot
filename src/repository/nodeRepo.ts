@@ -106,6 +106,25 @@ export const nodeRepo = {
     return new Map(rows.filter((r) => r.parentId !== null).map((r) => [r.parentId!, r.count]));
   },
 
+  /** Like childCounts but RECORD children only (excludes attached appendages)
+   *  — the count that matters for "is this room drillable" and grid tiles. */
+  async recordChildCounts(userId: string, ids: string[]): Promise<Map<string, number>> {
+    if (ids.length === 0) return new Map();
+    const rows = await db
+      .select({ parentId: node.parentId, count: sql<number>`count(*)::int` })
+      .from(node)
+      .where(
+        and(
+          eq(node.userId, userId),
+          inArray(node.parentId, ids),
+          eq(node.attached, false),
+          notDeleted
+        )
+      )
+      .groupBy(node.parentId);
+    return new Map(rows.filter((r) => r.parentId !== null).map((r) => [r.parentId!, r.count]));
+  },
+
   async softDelete(userId: string, id: string): Promise<boolean> {
     const rows = await db
       .update(node)
@@ -229,12 +248,12 @@ export const nodeRepo = {
     );
   },
 
-  /** Pinned nodes (a stored preference) in rank order — the chip row lead. */
-  async findPinned(userId: string): Promise<NodeRow[]> {
+  /** Nodes pinned to a given chip tier ('favorite' | 'ongoing'), rank order. */
+  async findByPin(userId: string, pin: 'favorite' | 'ongoing'): Promise<NodeRow[]> {
     return db
       .select(nodeWithIcon)
       .from(node)
-      .where(and(eq(node.userId, userId), eq(node.pinned, true), notDeleted))
+      .where(and(eq(node.userId, userId), eq(node.pinned, pin), notDeleted))
       .orderBy(asc(node.rank), asc(node.capturedAt));
   },
 

@@ -3,50 +3,32 @@
 import * as React from 'react';
 
 import { capture } from '@/app/actions';
-import type { FieldDef } from '@/db/schema';
+import type { CaptureChipTiers, ChipItem } from '@/service/node';
 import { SubmitButton } from '@/components/ui/submit-button';
-import { cn } from '@/lib/utils';
 
+import { CaptureChips } from './CaptureChips';
 import { CaptureDateField } from './CaptureDateField';
 import { CaptureFields } from './CaptureFields';
 import { CaptureTitleBody } from './CaptureTitleBody';
 
-export interface CaptureChip {
-  id: string;
-  icon: string | null;
-  title: string;
-  /** the room's childSchema — its fields render inline on selection (B1) */
-  childSchema: FieldDef[];
-}
-
 interface CaptureFormProps {
-  /** pinned first, then level-2 rooms (service dedupes) */
-  chips: CaptureChip[];
+  /** three-tier chips (favorites / ongoing / top-level) with drill-down */
+  tiers: CaptureChipTiers;
   /** navigated day ?? today, in the user's timezone — seeds the date control */
   defaultDay: string;
 }
 
-const EMPTY: FieldDef[] = [];
-
-/** Raw capture with one-tap context: a chip sets the pending parent
- *  (inheriting childSchema; values never forced) and, if that room declares
- *  fields, renders them inline (optional). The date control sets eventDate
- *  (explicit > navigated > today; ✕ = dateless). All reset after submit. */
-export function CaptureForm({ chips, defaultDay }: CaptureFormProps) {
-  const [parent, setParent] = React.useState<CaptureChip | null>(null);
+/** Raw capture with one-tap context (B2): the chip tiers drill down to a
+ *  target; selecting it sets the pending parent (inheriting childSchema) and,
+ *  if that room declares fields, renders them inline (optional). The date
+ *  control sets eventDate; all reset after submit. */
+export function CaptureForm({ tiers, defaultDay }: CaptureFormProps) {
+  const [parent, setParent] = React.useState<ChipItem | null>(null);
   const [resetSignal, setResetSignal] = React.useState(0);
   const [error, setError] = React.useState<string | null>(null);
-  // controlled: opts the fields out of React's automatic post-action reset,
-  // so a failed submit keeps them and a success won't wipe a next thought
   const [icon, setIcon] = React.useState('');
   const [title, setTitle] = React.useState('');
   const [body, setBody] = React.useState('');
-
-  const clear = () => {
-    setIcon('');
-    setTitle('');
-    setBody('');
-  };
 
   return (
     <form
@@ -57,15 +39,14 @@ export function CaptureForm({ chips, defaultDay }: CaptureFormProps) {
           await capture(fd);
         } catch {
           setError('capture failed — check the inbox before retrying');
-          return; // text + chip/date state intact for the retry
+          return;
         }
         setError(null);
-        // clear only if unchanged since submit (keep a next thought)
         setTitle((c) => (c === t ? '' : c));
         setBody((c) => (c === b ? '' : c));
         setIcon('');
-        // the chip PERSISTS — repeated captures into the same room are the
-        // rhythm; deselect stays an explicit re-tap. Date resets as before.
+        // the target PERSISTS — repeated captures into the same room are the
+        // rhythm; deselect stays an explicit re-tap.
         setResetSignal((n) => n + 1);
       }}
       className="flex flex-col gap-2"
@@ -91,38 +72,21 @@ export function CaptureForm({ chips, defaultDay }: CaptureFormProps) {
 
       {/* inline fields for the selected room (optional; never blocks) */}
       {parent && parent.childSchema.length > 0 && (
-        <CaptureFields
-          key={parent.id}
-          parentId={parent.id}
-          childSchema={parent.childSchema ?? EMPTY}
-        />
+        <CaptureFields key={parent.id} parentId={parent.id} childSchema={parent.childSchema} />
       )}
 
       {error && <p className="text-destructive text-xs">{error}</p>}
-      <div className="flex items-center justify-between gap-2">
-        {chips.length > 0 ? (
-          <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
-            {chips.map((chip) => (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => {
-                  setParent((p) => (p?.id === chip.id ? null : chip));
-                  clear();
-                }}
-                className={cn(
-                  'border-border text-muted-foreground shrink-0 rounded-full border px-2.5 py-0.5 text-xs whitespace-nowrap',
-                  parent?.id === chip.id && 'border-primary text-foreground ring-primary/30 ring-1'
-                )}
-              >
-                {chip.icon && <span className="mr-1">{chip.icon}</span>}
-                {chip.title}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <span />
-        )}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <CaptureChips
+            tiers={tiers}
+            selectedId={parent?.id ?? null}
+            onSelect={(chip) => {
+              setParent(chip);
+              setIcon('');
+            }}
+          />
+        </div>
         <CaptureDateField key={`${defaultDay}:${resetSignal}`} defaultDay={defaultDay} />
       </div>
     </form>

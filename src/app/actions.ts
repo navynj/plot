@@ -6,7 +6,7 @@ import { requireUserId } from '@/app/_auth/requireUser';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
 import { explicitEventDate } from '@/lib/day';
 import { saveOwnValues } from '@/service/field';
-import { addRoom, captureNode } from '@/service/node';
+import { addRoom, captureNode, getChipChildren, type ChipItem } from '@/service/node';
 
 const str = (fd: FormData, key: string): string => {
   const v = fd.get(key);
@@ -50,6 +50,12 @@ export async function capture(formData: FormData): Promise<void> {
   if (parentId) await saveInlineFields(userId, node.id, formData);
   revalidatePath('/');
   revalidatePath('/inbox');
+}
+
+/** B2 chip drill-down: a chip's record children, fetched on expand. */
+export async function chipChildren(parentId: string): Promise<ChipItem[]> {
+  const userId = await requireUserId();
+  return getChipChildren(userId, parentId);
 }
 
 /** Grid inline add: a new room under a section's root. */

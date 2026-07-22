@@ -57,6 +57,13 @@
       "when": 1784598987330,
       "tag": "0007_slim_rhino",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784697494454,
+      "tag": "0008_illegal_william_stryker",
+      "breakpoints": true
     }
   ]
 }
