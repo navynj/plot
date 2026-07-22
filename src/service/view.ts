@@ -4,7 +4,9 @@ import { linkRepo } from '@/repository/linkRepo';
 import { nodeRepo } from '@/repository/nodeRepo';
 
 import { aggregate, type AggregateBucket, type AggregationOp } from './aggregation';
+import { getBudgetHolder, getMonthlyTotal } from './budget';
 import { displayName } from '@/lib/identity';
+import { monthInTz } from '@/lib/day';
 import { extractValue } from './field';
 
 /**
@@ -43,7 +45,17 @@ export interface ViewItem {
 }
 
 export type ResolvedView =
-  | { kind: 'aggregate'; spec: ViewSpec; buckets: ViewBucket[]; hasOverlay: boolean }
+  | {
+      kind: 'aggregate';
+      spec: ViewSpec;
+      buckets: ViewBucket[];
+      hasOverlay: boolean;
+      /** the OVERALL total for the navigated month: actual spending across all
+       *  categories vs the Budget node's own `total:YYYY-MM` target (A''),
+       *  surfaced in the read view. Null when no monthly total is set (or the
+       *  view isn't period-scoped) — the overall bar then doesn't render. */
+      grandTotal: { spent: number; budget: number } | null;
+    }
   | { kind: 'items'; spec: ViewSpec; items: ViewItem[] };
 
 const CHART_LAYOUTS = new Set(['bar', 'line', 'calendar', 'heatmap']);
@@ -122,7 +134,21 @@ async function resolveAggregateView(
       pendingValue: pending ? (pick(pending, group)?.value ?? 0) : null,
     }))
     .sort(bucketComparator(spec));
-  return { kind: 'aggregate', spec, buckets, hasOverlay: overlay !== null };
+
+  // OVERALL total for the month: Σ actual spending vs the Budget node's own
+  // `total:YYYY-MM` (A''). Only when period-scoped AND a total is set.
+  let grandTotal: { spent: number; budget: number } | null = null;
+  if (period && tz) {
+    const holder = await getBudgetHolder(userId, node.id);
+    if (holder) {
+      const budget = await getMonthlyTotal(userId, holder.id, monthInTz(period.start, tz));
+      if (budget !== null) {
+        const spent = buckets.reduce((sum, b) => sum + b.value + (b.pendingValue ?? 0), 0);
+        grandTotal = { spent, budget };
+      }
+    }
+  }
+  return { kind: 'aggregate', spec, buckets, hasOverlay: overlay !== null, grandTotal };
 }
 
 /** own scalar value when present; else the §8a budget-lines pattern. When a

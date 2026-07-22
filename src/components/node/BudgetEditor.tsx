@@ -20,6 +20,9 @@ export interface BudgetEditorRowData {
 }
 
 const fmt = new Intl.NumberFormat();
+// actual spending keeps its decimals (Canadian amounts like 6.99) — never
+// rounded, unlike the whole-won budget targets
+const fmtActual = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
 const parseNum = (s: string): number | null => {
   const t = s.replace(/,/g, '').trim();
   if (t === '') return null;
@@ -122,7 +125,7 @@ export function BudgetEditor({
               <span
                 className={`w-24 text-right text-sm tabular-nums ${rowOver ? 'text-destructive' : 'text-muted-foreground'}`}
               >
-                {fmt.format(Math.round(r.actual))}
+                {fmtActual.format(r.actual)}
               </span>
             </div>
           );

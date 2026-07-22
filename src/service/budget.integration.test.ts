@@ -196,6 +196,22 @@ describe.skipIf(!hasDb)('month-stamped budgets (real DB)', () => {
     const afterByCat = Object.fromEntries(after.rows.map((r) => [r.categoryId, r]));
     expect(afterByCat[food].allocation).toBe(400);
     expect(afterByCat[transport].allocation).toBe(null); // line removed
+
+    // A''-graph: the aggregate view surfaces the OVERALL total (Σ spent vs the
+    // month's total budget) for the read-view overall bar
+    const julGT = await view.resolveView(uid, node, TZ, day.monthBoundsInTz('2026-07', TZ));
+    if (julGT?.kind !== 'aggregate') throw new Error('expected aggregate');
+    expect(julGT.grandTotal).toEqual({ spent: 0, budget: 461760 }); // July: total set, no actuals
+
+    await budget.setMonthlyTotal(uid, budgetId, '2026-08', 2000);
+    const augGT = await view.resolveView(uid, node, TZ, day.monthBoundsInTz('2026-08', TZ));
+    if (augGT?.kind !== 'aggregate') throw new Error('expected aggregate');
+    expect(augGT.grandTotal).toEqual({ spent: 250, budget: 2000 }); // Σ August spend = Food 250
+
+    // a month with no total set → no overall bar
+    const noTotal = await view.resolveView(uid, node, TZ, day.monthBoundsInTz('2027-01', TZ));
+    if (noTotal?.kind !== 'aggregate') throw new Error('expected aggregate');
+    expect(noTotal.grandTotal).toBeNull();
   });
 
   it("A'' copy-previous prefills total + allocations with the month advanced", async () => {
