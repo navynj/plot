@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { loadBudgetMonthAction, saveBudgetAction } from '@/app/node/[id]/actions';
 import { usePendingLock } from '@/components/hooks/usePendingLock';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { summarizeBudget } from '@/lib/budgetMath';
@@ -16,6 +17,7 @@ export interface BudgetEditorRowData {
   name: string;
   icon: string | null;
   allocation: number | null;
+  auto: boolean;
   actual: number;
 }
 
@@ -33,8 +35,14 @@ const parseNum = (s: string): number | null => {
 /** The During-style budget editor: one form editing the month's total + every
  *  category allocation at once, with live sum and over/remaining. The total
  *  is a top-down target INDEPENDENT of the allocation sum — over-allocation is
- *  shown (red), never blocked. Save commits the whole form (total first, then
- *  lines, server-side). "Copy from previous month" prefills the inputs. */
+ *  shown (red), never blocked.
+ *
+ *  Per-category AUTO mode: the budget follows that category's actual spending
+ *  (over/remaining always 0). On, the amount input disables and reads
+ *  "= actual", and that row contributes its ACTUAL to the allocation sum; the
+ *  manual amount is preserved (a hidden input still submits it) so toggling
+ *  off restores it. Save commits the whole form; "Copy from previous" prefills
+ *  (auto flags included). */
 export function BudgetEditor({
   budgetId,
   month,
@@ -52,13 +60,21 @@ export function BudgetEditor({
 }) {
   const [total, setTotal] = React.useState(initialTotal === null ? '' : String(initialTotal));
   const [allocs, setAllocs] = React.useState<Record<string, string>>(() =>
-    Object.fromEntries(rows.map((r) => [r.categoryId, r.allocation === null ? '' : String(r.allocation)]))
+    Object.fromEntries(
+      rows.map((r) => [r.categoryId, r.allocation === null ? '' : String(r.allocation)])
+    )
+  );
+  const [autos, setAutos] = React.useState<Record<string, boolean>>(() =>
+    Object.fromEntries(rows.map((r) => [r.categoryId, r.auto]))
   );
   const { pending: copying, run: runCopy } = usePendingLock();
 
+  // an auto row contributes its ACTUAL to the sum; a manual row its amount
   const { allocated: allocSum, remaining, over } = summarizeBudget(
     parseNum(total),
-    rows.map((r) => parseNum(allocs[r.categoryId] ?? '') ?? 0)
+    rows.map((r) =>
+      autos[r.categoryId] ? r.actual : (parseNum(allocs[r.categoryId] ?? '') ?? 0)
+    )
   );
 
   const copyPrevious = () =>
@@ -67,11 +83,21 @@ export function BudgetEditor({
       setTotal(data.total === null ? '' : String(data.total));
       setAllocs(
         Object.fromEntries(
-          rows.map((r) => [r.categoryId, data.allocations[r.categoryId] != null ? String(data.allocations[r.categoryId]) : ''])
+          rows.map((r) => {
+            const a = data.allocations[r.categoryId];
+            return [r.categoryId, a && a.amount !== null ? String(a.amount) : ''];
+          })
         )
       );
+      setAutos(
+        Object.fromEntries(rows.map((r) => [r.categoryId, data.allocations[r.categoryId]?.auto ?? false]))
+      );
       const n = Object.keys(data.allocations).length;
-      toast(n === 0 && data.total === null ? `Nothing budgeted in ${prevMonthLabel}` : `Filled from ${prevMonthLabel}`);
+      toast(
+        n === 0 && data.total === null
+          ? `Nothing budgeted in ${prevMonthLabel}`
+          : `Filled from ${prevMonthLabel}`
+      );
     });
 
   return (
@@ -92,36 +118,54 @@ export function BudgetEditor({
         />
       </div>
 
-      {/* every category as a row: allocation editable, actual beside it */}
+      {/* every category as a row: target (or auto), actual beside it */}
       <div className="border-border divide-border divide-y rounded-lg border">
-        <div className="text-muted-foreground grid grid-cols-[1fr_auto_auto] items-center gap-3 px-4 py-2 text-xs">
+        <div className="text-muted-foreground grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 px-4 py-2 text-xs">
           <span>Category</span>
           <span className="w-28 text-right">Target</span>
+          <span className="w-10 text-center">auto</span>
           <span className="w-24 text-right">Actual</span>
         </div>
         {rows.map((r) => {
+          const auto = autos[r.categoryId] ?? false;
           const alloc = parseNum(allocs[r.categoryId] ?? '') ?? 0;
-          const rowOver = r.actual > alloc && alloc > 0;
+          const rowOver = !auto && r.actual > alloc && alloc > 0;
           return (
             <div
               key={r.categoryId}
-              className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-4 py-2"
+              className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 px-4 py-2"
             >
               <span className="truncate text-sm">
                 {r.icon && <span className="mr-1.5">{r.icon}</span>}
                 {r.name}
               </span>
-              <Input
-                name={`alloc:${r.categoryId}`}
-                inputMode="numeric"
-                value={allocs[r.categoryId] ?? ''}
-                onChange={(e) =>
-                  setAllocs((a) => ({ ...a, [r.categoryId]: e.target.value }))
-                }
-                placeholder="—"
-                aria-label={`${r.name} target`}
-                className="w-28 text-right text-sm tabular-nums"
-              />
+              {auto ? (
+                <span className="text-muted-foreground w-28 text-right text-sm italic tabular-nums">
+                  {/* the manual amount is preserved and still submitted */}
+                  <input type="hidden" name={`alloc:${r.categoryId}`} value={allocs[r.categoryId] ?? ''} />
+                  = {fmtActual.format(r.actual)}
+                </span>
+              ) : (
+                <Input
+                  name={`alloc:${r.categoryId}`}
+                  inputMode="numeric"
+                  value={allocs[r.categoryId] ?? ''}
+                  onChange={(e) => setAllocs((a) => ({ ...a, [r.categoryId]: e.target.value }))}
+                  placeholder="—"
+                  aria-label={`${r.name} target`}
+                  className="w-28 text-right text-sm tabular-nums"
+                />
+              )}
+              <span className="flex w-10 justify-center">
+                <Checkbox
+                  checked={auto}
+                  onCheckedChange={(v) =>
+                    setAutos((a) => ({ ...a, [r.categoryId]: v === true }))
+                  }
+                  aria-label={`${r.name} auto`}
+                />
+                {auto && <input type="hidden" name={`auto:${r.categoryId}`} value="1" />}
+              </span>
               <span
                 className={`w-24 text-right text-sm tabular-nums ${rowOver ? 'text-destructive' : 'text-muted-foreground'}`}
               >
@@ -132,7 +176,8 @@ export function BudgetEditor({
         })}
       </div>
 
-      {/* live footer: sum of allocations, and total − sum (over/remaining) */}
+      {/* live footer: sum of allocations (auto rows count their actual), and
+          total − sum (over/remaining) */}
       <div className="flex flex-col gap-1 px-1 text-sm tabular-nums">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Allocated</span>
@@ -150,7 +195,11 @@ export function BudgetEditor({
       <div className="flex items-center gap-2">
         <SubmitButton>Save</SubmitButton>
         <Button type="button" variant="outline" disabled={copying} onClick={copyPrevious}>
-          {copying ? <Loader2 className="size-3.5 animate-spin" /> : <CopyPlus className="size-3.5" />}
+          {copying ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <CopyPlus className="size-3.5" />
+          )}
           Copy from {prevMonthLabel}
         </Button>
       </div>

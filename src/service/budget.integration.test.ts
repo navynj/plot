@@ -165,7 +165,7 @@ describe.skipIf(!hasDb)('month-stamped budgets (real DB)', () => {
     // set a July total + a Food allocation via the editor's save path
     await budget.saveBudget(uid, budgetId, '2026-07', TZ, {
       total: 461760,
-      allocations: { [food]: 400, [transport]: 250 },
+      allocations: { [food]: { amount: 400, auto: false }, [transport]: { amount: 250, auto: false } },
     });
 
     const data = (await budget.getBudgetEditorData(uid, budgetId, '2026-07', TZ))!;
@@ -193,7 +193,7 @@ describe.skipIf(!hasDb)('month-stamped budgets (real DB)', () => {
     // saving again round-trips and CLEARING an allocation deletes its line
     await budget.saveBudget(uid, budgetId, '2026-07', TZ, {
       total: 461760,
-      allocations: { [food]: 400, [transport]: null },
+      allocations: { [food]: { amount: 400, auto: false }, [transport]: { amount: null, auto: false } },
     });
     const after = (await budget.getBudgetEditorData(uid, budgetId, '2026-07', TZ))!;
     const afterByCat = Object.fromEntries(after.rows.map((r) => [r.categoryId, r]));
@@ -221,8 +221,8 @@ describe.skipIf(!hasDb)('month-stamped budgets (real DB)', () => {
     // October empty; loadBudgetMonth of September (copied earlier: Food 500,
     // Transport 100) is what the editor's "copy from previous" fills October with
     const prev = await budget.loadBudgetMonth(uid, budgetId, '2026-09', TZ);
-    expect(prev.allocations[food]).toBe(500);
-    expect(prev.allocations[transport]).toBe(100);
+    expect(prev.allocations[food]).toEqual({ amount: 500, auto: false });
+    expect(prev.allocations[transport]).toEqual({ amount: 100, auto: false });
 
     // committing that prefill into October advances the month stamp
     await budget.saveBudget(uid, budgetId, '2026-10', TZ, {
@@ -235,5 +235,48 @@ describe.skipIf(!hasDb)('month-stamped budgets (real DB)', () => {
     expect(octByCat[transport]).toBe(100);
     // September untouched
     expect((await budget.getLedgerLines(uid, (await nodeRepo.byId(uid, budgetId))!, '2026-09', TZ)).length).toBe(2);
+  });
+
+  it("A'' auto: budget follows actual (over/remaining 0); manual amount preserved across the toggle", async () => {
+    // a November Food actual of 77.5
+    const rec = await nodeRepo.create({ userId: uid, title: 'nov coffee', capturedAt: new Date() });
+    await triage.reparent(uid, rec.id, expense);
+    await field.saveOwnValues(uid, rec.id, { amount: '77.5', category: food, scheduled: false });
+    await nodeService.updateNode(uid, rec.id, { eventDate: new Date('2026-11-05T03:00:00Z') });
+
+    // Food AUTO with a preserved manual amount of 400
+    await budget.saveBudget(uid, budgetId, '2026-11', TZ, {
+      total: 1000,
+      allocations: { [food]: { amount: 400, auto: true } },
+    });
+
+    const data = (await budget.getBudgetEditorData(uid, budgetId, '2026-11', TZ))!;
+    const foodRow = data.rows.find((r) => r.categoryId === food)!;
+    expect(foodRow.auto).toBe(true);
+    expect(foodRow.allocation).toBe(400); // manual KEPT while auto (not destroyed)
+    expect(foodRow.actual).toBe(77.5);
+
+    // view: an auto category's budget = its actual → exactly filled, 0 over/remaining
+    const node = (await nodeRepo.byId(uid, expense))!;
+    const v = await view.resolveView(uid, node, TZ, day.monthBoundsInTz('2026-11', TZ));
+    if (v?.kind !== 'aggregate') throw new Error('expected aggregate');
+    const fb = v.buckets.find((b) => b.label === 'Food')!;
+    const committed = (fb.value ?? 0) + (fb.pendingValue ?? 0);
+    expect(fb.overlayValue).toBe(committed); // budget follows actual (NOT the stored 400)
+    expect(committed > (fb.overlayValue ?? 0)).toBe(false); // never over
+    expect((fb.overlayValue ?? 0) - committed).toBe(0); // remaining 0
+
+    // toggle OFF → the manual amount is restored, and the manual budget applies
+    await budget.saveBudget(uid, budgetId, '2026-11', TZ, {
+      total: 1000,
+      allocations: { [food]: { amount: 400, auto: false } },
+    });
+    const off = (await budget.getBudgetEditorData(uid, budgetId, '2026-11', TZ))!;
+    const foodOff = off.rows.find((r) => r.categoryId === food)!;
+    expect(foodOff.auto).toBe(false);
+    expect(foodOff.allocation).toBe(400); // restored, never lost
+    const v2 = await view.resolveView(uid, node, TZ, day.monthBoundsInTz('2026-11', TZ));
+    if (v2?.kind !== 'aggregate') throw new Error('expected aggregate');
+    expect(v2.buckets.find((b) => b.label === 'Food')!.overlayValue).toBe(400); // manual now
   });
 });

@@ -4,7 +4,7 @@ import { linkRepo } from '@/repository/linkRepo';
 import { nodeRepo } from '@/repository/nodeRepo';
 
 import { aggregate, type AggregateBucket, type AggregationOp } from './aggregation';
-import { getBudgetHolder, getMonthlyTotal } from './budget';
+import { getAutoCategories, getBudgetHolder, getMonthlyTotal } from './budget';
 import { displayName } from '@/lib/identity';
 import { monthInTz } from '@/lib/day';
 import { extractValue } from './field';
@@ -127,27 +127,47 @@ async function resolveAggregateView(
   const pick = (buckets: AggregateBucket[] | null, group: string | null) =>
     buckets?.find((b) => b.group === group);
 
+  // AUTO categories (budget follows actual): their budget = their own actual
+  // spending for the month, so over/remaining is always 0. Resolved from the
+  // budget holder's lines; the stored amount of an auto line is ignored.
+  const month = period && tz ? monthInTz(period.start, tz) : null;
+  let budgetHolder: Awaited<ReturnType<typeof getBudgetHolder>> = null;
+  let autoCategories = new Set<string>();
+  if (spec.overlayOwnField && month && tz) {
+    budgetHolder = await getBudgetHolder(userId, node.id);
+    if (budgetHolder) autoCategories = await getAutoCategories(userId, budgetHolder, month, tz);
+  }
+
   const buckets: ViewBucket[] = [...groups]
-    .map((group) => ({
-      group,
-      label: meta.get(group)?.label ?? '(none)',
-      icon: meta.get(group)?.icon ?? null,
-      value: pick(main, group)?.value ?? 0,
-      count: pick(main, group)?.count ?? 0,
-      // null (not 0) when this group has NO budget line — "no target" is not
-      // "target 0". The bar then shows just the actual, no grey/goal/overflow.
-      overlayValue: pick(overlay, group)?.value ?? null,
-      pendingValue: pending ? (pick(pending, group)?.value ?? 0) : null,
-    }))
+    .map((group) => {
+      const value = pick(main, group)?.value ?? 0;
+      const pendingValue = pending ? (pick(pending, group)?.value ?? 0) : null;
+      const isAuto = group !== null && autoCategories.has(group);
+      // auto: budget = this category's actual (committed) → exactly filled.
+      // else: the manual budget, or null (no target ≠ target 0).
+      const overlayValue = isAuto
+        ? value + (pendingValue ?? 0)
+        : (pick(overlay, group)?.value ?? null);
+      return {
+        group,
+        label: meta.get(group)?.label ?? '(none)',
+        icon: meta.get(group)?.icon ?? null,
+        value,
+        count: pick(main, group)?.count ?? 0,
+        overlayValue,
+        pendingValue,
+      };
+    })
     .sort(bucketComparator(spec));
 
   // OVERALL total for the month: Σ actual spending vs the Budget node's own
-  // `total:YYYY-MM` (A''). Only when period-scoped AND a total is set.
+  // `total:YYYY-MM` (A''). Only when period-scoped AND a total is set. Reuses
+  // the budget holder already resolved for the auto override.
   let grandTotal: { spent: number; budget: number } | null = null;
-  if (period && tz) {
-    const holder = await getBudgetHolder(userId, node.id);
+  if (month) {
+    const holder = budgetHolder ?? (await getBudgetHolder(userId, node.id));
     if (holder) {
-      const budget = await getMonthlyTotal(userId, holder.id, monthInTz(period.start, tz));
+      const budget = await getMonthlyTotal(userId, holder.id, month);
       if (budget !== null) {
         const spent = buckets.reduce((sum, b) => sum + b.value + (b.pendingValue ?? 0), 0);
         grandTotal = { spent, budget };

@@ -187,12 +187,22 @@ export async function getBudgetHolder(
   );
 }
 
+/** A budget line's auto flag lives alongside the month-stamped line as its own
+ *  boolean field_value (absent = manual). In AUTO mode the category's budget
+ *  = its actual spending (over/remaining always 0); the stored `amount` is
+ *  KEPT but ignored while auto (so toggling off restores it) — the line reads
+ *  actual at view time. */
+const AUTO_KEY = 'auto';
+
 export interface BudgetEditorRow {
   categoryId: string;
   name: string;
   icon: string | null;
-  /** existing allocation for this month (null = none yet) */
+  /** the stored manual allocation for this month (null = none yet). KEPT even
+   *  while auto, just ignored — toggling auto off restores it. */
   allocation: number | null;
+  /** auto mode: budget follows actual (§8a) instead of the manual amount */
+  auto: boolean;
   /** month's actual spending (current + scheduled) via the §8a engine */
   actual: number;
 }
@@ -236,11 +246,14 @@ export async function getBudgetEditorData(
     lines.map((l) => l.id)
   );
   const allocByCategory = new Map<string, number>();
+  const autoByCategory = new Set<string>();
   for (const line of lines) {
     const own = lineRows.filter((r) => r.nodeId === line.id);
     const cat = own.find((r) => r.key === categoryKey)?.linkValue ?? null;
+    if (cat === null) continue;
     const amt = own.find((r) => r.key === amountKey)?.numberValue ?? null;
-    if (cat !== null && amt !== null) allocByCategory.set(cat, Number(amt));
+    if (amt !== null) allocByCategory.set(cat, Number(amt));
+    if (own.find((r) => r.key === AUTO_KEY)?.boolValue === true) autoByCategory.add(cat);
   }
   const actualByCategory = new Map(spend.map((s) => [s.group, s.value]));
 
@@ -249,23 +262,61 @@ export async function getBudgetEditorData(
     name: displayName(c),
     icon: c.displayIcon ?? null,
     allocation: allocByCategory.get(c.id) ?? null,
+    auto: autoByCategory.has(c.id),
     actual: actualByCategory.get(c.id) ?? 0,
   }));
   return { budgetId, expenseId, total, rows };
 }
 
+/** The set of category ids that are AUTO for this month — used by the view to
+ *  override those categories' budget with their actual (budget follows
+ *  actual). Read-side; the stored amount of an auto line is ignored. */
+export async function getAutoCategories(
+  userId: string,
+  budget: Pick<Node, 'id' | 'childSchema'>,
+  month: string,
+  tz: string
+): Promise<Set<string>> {
+  const { categoryKey } = ledgerKeys(budget);
+  if (!categoryKey) return new Set();
+  const lines = await getLedgerLines(userId, budget, month, tz);
+  const rows = await fieldValueRepo.readByNodes(
+    userId,
+    lines.map((l) => l.id)
+  );
+  const auto = new Set<string>();
+  for (const line of lines) {
+    const own = rows.filter((r) => r.nodeId === line.id);
+    if (own.find((r) => r.key === AUTO_KEY)?.boolValue !== true) continue;
+    const cat = own.find((r) => r.key === categoryKey)?.linkValue ?? null;
+    if (cat) auto.add(cat);
+  }
+  return auto;
+}
+
 /** Read one month's total + allocations for prefill (the editor's "copy from
  *  previous month" fills the form client-side from this). */
+export interface AllocationInput {
+  amount: number | null;
+  auto: boolean;
+}
+
 export async function loadBudgetMonth(
   userId: string,
   budgetId: string,
   month: string,
   tz: string
-): Promise<{ total: number | null; allocations: Record<string, number> }> {
+): Promise<{ total: number | null; allocations: Record<string, AllocationInput> }> {
   const data = await getBudgetEditorData(userId, budgetId, month, tz);
   if (!data) return { total: null, allocations: {} };
-  const allocations: Record<string, number> = {};
-  for (const r of data.rows) if (r.allocation !== null) allocations[r.categoryId] = r.allocation;
+  const allocations: Record<string, AllocationInput> = {};
+  for (const r of data.rows) {
+    // carry a row that has a manual amount OR is auto (an auto category stays
+    // auto next month, with its stored amount preserved)
+    if (r.allocation !== null || r.auto) {
+      allocations[r.categoryId] = { amount: r.allocation, auto: r.auto };
+    }
+  }
   return { total: data.total, allocations };
 }
 
@@ -282,7 +333,7 @@ export async function saveBudget(
   budgetId: string,
   month: string,
   tz: string,
-  form: { total: number | null; allocations: Record<string, number | null> }
+  form: { total: number | null; allocations: Record<string, AllocationInput> }
 ): Promise<void> {
   const budget = await nodeRepo.byId(userId, budgetId);
   if (!budget) return;
@@ -305,34 +356,45 @@ export async function saveBudget(
   }
   const stamp = startOfDayInTz(`${month}-01`, tz);
 
-  for (const [categoryId, amount] of Object.entries(form.allocations)) {
+  for (const [categoryId, { amount, auto }] of Object.entries(form.allocations)) {
     const existing = lineByCategory.get(categoryId);
-    if (amount === null || Number.isNaN(amount)) {
+    // a category with neither a manual amount NOR auto has no reason to exist
+    if ((amount === null || Number.isNaN(amount)) && !auto) {
       if (existing) await nodeRepo.softDelete(userId, existing); // cleared → remove line
       continue;
     }
-    if (existing) {
-      await fieldValueRepo.upsert(userId, existing, amountKey, {
-        column: 'numberValue',
-        value: amount,
-      });
+    const lineId =
+      existing ??
+      (await (async () => {
+        const created = await nodeRepo.create({
+          userId,
+          title: 'budget line',
+          origin: 'constructed',
+          capturedAt: new Date(),
+        });
+        await reparent(userId, created.id, budgetId);
+        await fieldValueRepo.upsert(userId, created.id, categoryKey, {
+          column: 'linkValue',
+          value: categoryId,
+        });
+        await fieldValueRepo.upsert(userId, created.id, dateKey, {
+          column: 'dateValue',
+          value: stamp,
+        });
+        return created.id;
+      })());
+    // manual amount is KEPT even when auto (so toggling off restores it);
+    // clear it only when the user actually emptied the field
+    if (amount === null || Number.isNaN(amount)) {
+      await fieldValueRepo.deleteByKey(userId, lineId, amountKey);
     } else {
-      const created = await nodeRepo.create({
-        userId,
-        title: 'budget line',
-        origin: 'constructed',
-        capturedAt: new Date(),
-      });
-      await reparent(userId, created.id, budgetId);
-      await fieldValueRepo.upsert(userId, created.id, categoryKey, {
-        column: 'linkValue',
-        value: categoryId,
-      });
-      await fieldValueRepo.upsert(userId, created.id, amountKey, {
-        column: 'numberValue',
-        value: amount,
-      });
-      await fieldValueRepo.upsert(userId, created.id, dateKey, { column: 'dateValue', value: stamp });
+      await fieldValueRepo.upsert(userId, lineId, amountKey, { column: 'numberValue', value: amount });
+    }
+    // auto flag: present-and-true, or absent (= manual)
+    if (auto) {
+      await fieldValueRepo.upsert(userId, lineId, AUTO_KEY, { column: 'boolValue', value: true });
+    } else {
+      await fieldValueRepo.deleteByKey(userId, lineId, AUTO_KEY);
     }
   }
 }

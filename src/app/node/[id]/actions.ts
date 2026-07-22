@@ -7,7 +7,7 @@ import { requireUserId } from '@/app/_auth/requireUser';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
 import { explicitEventDate, isValidDay, startOfDayInTz } from '@/lib/day';
 import type { NodeCandidate } from '@/service/candidates';
-import { loadBudgetMonth, saveBudget } from '@/service/budget';
+import { loadBudgetMonth, saveBudget, type AllocationInput } from '@/service/budget';
 import {
   addToCollection,
   getCollectionCandidates,
@@ -199,9 +199,10 @@ export async function saveViewSpecDev(nodeId: string, formData: FormData): Promi
   revalidatePath(`/node/${nodeId}`);
 }
 
-/** A'' budget editor save: the whole form for one month. Inputs are `total`
- *  and `alloc:<categoryId>` (empty = cleared). Parses to numbers and hands to
- *  the service, which writes the total first, then the lines. */
+/** A'' budget editor save: the whole form for one month. Inputs are `total`,
+ *  `alloc:<categoryId>` (the manual amount — always submitted, even while auto,
+ *  so it survives), and `auto:<categoryId>` (present only when that row's auto
+ *  toggle is on). The manual amount is kept while auto, just ignored. */
 export async function saveBudgetAction(
   budgetId: string,
   month: string,
@@ -214,21 +215,24 @@ export async function saveBudgetAction(
     const n = Number(raw.replace(/,/g, '')); // tolerate thousands separators
     return Number.isFinite(n) ? n : null;
   };
-  const allocations: Record<string, number | null> = {};
+  const allocations: Record<string, AllocationInput> = {};
   for (const [key, value] of formData.entries()) {
-    if (key.startsWith('alloc:')) allocations[key.slice('alloc:'.length)] = num(value);
+    if (key.startsWith('alloc:')) {
+      const categoryId = key.slice('alloc:'.length);
+      allocations[categoryId] = { amount: num(value), auto: formData.has(`auto:${categoryId}`) };
+    }
   }
   await saveBudget(userId, budgetId, month, tz, { total: num(formData.get('total')), allocations });
   revalidatePath('/', 'layout');
 }
 
 /** Prefill source for the editor's "copy from previous month": the given
- *  month's total + allocations (the client fills the inputs, nothing writes
- *  until Save). */
+ *  month's total + allocations (with auto flags — the client fills the inputs,
+ *  nothing writes until Save). */
 export async function loadBudgetMonthAction(
   budgetId: string,
   month: string
-): Promise<{ total: number | null; allocations: Record<string, number> }> {
+): Promise<{ total: number | null; allocations: Record<string, AllocationInput> }> {
   const userId = await requireUserId();
   const tz = await getRequestTimezone();
   return loadBudgetMonth(userId, budgetId, month, tz);
