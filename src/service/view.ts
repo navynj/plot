@@ -28,6 +28,9 @@ import { extractValue } from './field';
 export interface ViewBucket {
   group: string | null;
   label: string;
+  /** the group node's resolved display icon (icon ladder) when the group is a
+   *  node (link/tree group) — e.g. a category's 🍚; null for date/text groups */
+  icon: string | null;
   value: number;
   count: number;
   overlayValue: number | null;
@@ -120,17 +123,20 @@ async function resolveAggregateView(
     ...(overlay?.map((b) => b.group) ?? []),
     ...(pending?.map((b) => b.group) ?? []),
   ]);
-  const labels = await groupLabels(userId, [...groups]);
+  const meta = await groupMeta(userId, [...groups]);
   const pick = (buckets: AggregateBucket[] | null, group: string | null) =>
     buckets?.find((b) => b.group === group);
 
   const buckets: ViewBucket[] = [...groups]
     .map((group) => ({
       group,
-      label: labels.get(group) ?? '(none)',
+      label: meta.get(group)?.label ?? '(none)',
+      icon: meta.get(group)?.icon ?? null,
       value: pick(main, group)?.value ?? 0,
       count: pick(main, group)?.count ?? 0,
-      overlayValue: overlay ? (pick(overlay, group)?.value ?? 0) : null,
+      // null (not 0) when this group has NO budget line — "no target" is not
+      // "target 0". The bar then shows just the actual, no grey/goal/overflow.
+      overlayValue: pick(overlay, group)?.value ?? null,
       pendingValue: pending ? (pick(pending, group)?.value ?? 0) : null,
     }))
     .sort(bucketComparator(spec));
@@ -202,22 +208,24 @@ async function resolveOverlay(
 
 /** group ids → display labels: node title for link groups, YYYY-MM-DD for
  *  timestamp groups, the raw text otherwise. */
-async function groupLabels(
+async function groupMeta(
   userId: string,
   groups: (string | null)[]
-): Promise<Map<string | null, string>> {
+): Promise<Map<string | null, { label: string; icon: string | null }>> {
   const all = await nodeRepo.findTimeline(userId);
   const byId = new Map(all.map((n) => [n.id, n]));
-  const map = new Map<string | null, string>();
+  const map = new Map<string | null, { label: string; icon: string | null }>();
   for (const group of groups) {
     if (group === null) {
-      map.set(group, '(total)');
+      map.set(group, { label: '(total)', icon: null });
     } else if (byId.has(group)) {
-      map.set(group, displayName(byId.get(group)!));
+      const n = byId.get(group)!;
+      // node groups (a category) carry the icon-ladder display icon
+      map.set(group, { label: displayName(n), icon: n.displayIcon ?? null });
     } else if (/^\d{4}-\d{2}-\d{2}/.test(group)) {
-      map.set(group, group.slice(0, 10));
+      map.set(group, { label: group.slice(0, 10), icon: null });
     } else {
-      map.set(group, group);
+      map.set(group, { label: group, icon: null });
     }
   }
   return map;

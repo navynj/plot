@@ -109,6 +109,7 @@ describe.skipIf(!hasDb)('month-stamped budgets (real DB)', () => {
 
   it('overlay picks ONLY the navigated month’s budget lines', async () => {
     const node = (await nodeRepo.byId(uid, expense))!;
+    await nodeService.updateNode(uid, food, { icon: '🍚' }); // for the icon-passthrough pin
 
     // August: Food budget 500, Transport budget 100; actual Food 250
     const aug = await view.resolveView(uid, node, TZ, day.monthBoundsInTz('2026-08', TZ));
@@ -116,6 +117,8 @@ describe.skipIf(!hasDb)('month-stamped budgets (real DB)', () => {
     if (aug?.kind !== 'aggregate') throw new Error('expected aggregate');
     const augFood = aug.buckets.find((b) => b.label === 'Food')!;
     const augTransport = aug.buckets.find((b) => b.label === 'Transport')!;
+    // the bucket carries the group node's icon-ladder icon (bar labels by icon)
+    expect(augFood.icon).toBe('🍚');
     expect(augFood.overlayValue).toBe(500); // the August Food budget, not July's 400
     expect(augFood.value).toBe(250); // actual August Food spend
     expect(augTransport.overlayValue).toBe(100);

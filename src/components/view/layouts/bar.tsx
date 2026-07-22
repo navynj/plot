@@ -1,32 +1,33 @@
-import { formatValue } from '../format';
 import { registerLayout } from '../registry';
 
-/** money display for the overall bar — keep decimals (Canadian amounts like
- *  6.99), never round (unlike the per-category axis labels). */
+/** money display — keeps decimals (Canadian amounts like 6.99), never rounds. */
 const money = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
-const clampPct = (v: number, max: number) => `${Math.max(0, Math.min(100, (v / max) * 100))}%`;
+const clampPct = (v: number, max: number) => Math.max(0, Math.min(100, (v / max) * 100));
 
 /** VERTICAL bars, one column per category, on ONE SHARED SCALE: 100% height =
  *  the single largest budget-or-spending across all categories, so heights are
- *  comparable across categories (not per-category normalized). The overlay
- *  (budget) is a reference tick on that same axis; the §8a pending split
- *  (scheduled) stacks above the solid actual with a 2px surface gap. Over-budget
- *  columns switch to the status color AND say "over" — never color alone.
- *  Above the columns, an OVERALL bar of total spending vs the month's total
- *  budget (A''). */
+ *  comparable across categories.
+ *
+ *  Visual grammar (same as the top total bar: grey track + black fill):
+ *  - the budget renders as a GREY placeholder column at the budget height
+ *    (grey = target / room to spend);
+ *  - the actual (current + scheduled) fills it BLACK from the bottom (remaining
+ *    grey = what's left);
+ *  - over budget: the black passes the grey and the OVERFLOW takes the status
+ *    color — no tick line.
+ *  Columns are labelled by the category's icon (icon ladder); the name stays
+ *  accessible via title. Under each: the actual, then a grey /goal. */
 registerLayout('bar', ({ view }) => {
   if (view.kind !== 'aggregate') return null;
   if (view.buckets.length === 0) {
     return <p className="text-muted-foreground py-4 text-sm">Nothing to aggregate yet.</p>;
   }
-  // the shared axis maximum: the largest value any single category reaches on
-  // either series (spending-with-pending, or its budget tick)
+  // shared axis maximum: the largest a single category reaches on EITHER its
+  // committed spending or its budget target
   const max = Math.max(
     ...view.buckets.map((b) => Math.max(b.value + (b.pendingValue ?? 0), b.overlayValue ?? 0)),
     1
   );
-  const h = (v: number) => clampPct(v, max);
-  const hasPending = view.buckets.some((b) => (b.pendingValue ?? 0) > 0);
   const gt = view.grandTotal;
   const overAll = gt !== null && gt.spent > gt.budget;
 
@@ -46,72 +47,81 @@ registerLayout('bar', ({ view }) => {
           </div>
           <div className="bg-muted relative h-3 rounded-sm">
             <div
-              className={`absolute inset-y-0 left-0 rounded-sm ${overAll ? 'bg-destructive' : 'bg-primary'}`}
-              style={{ width: gt.budget > 0 ? clampPct(gt.spent, gt.budget) : '0%' }}
+              className={`absolute inset-y-0 left-0 rounded-sm ${overAll ? 'bg-destructive' : 'bg-foreground'}`}
+              style={{ width: `${gt.budget > 0 ? clampPct(gt.spent, gt.budget) : 0}%` }}
             />
           </div>
         </div>
       )}
 
       {/* per-category VERTICAL bars on the shared scale */}
-      <div className="flex items-end gap-3 overflow-x-auto pb-1">
+      <div className="flex items-end gap-2 overflow-x-auto pb-1">
         {view.buckets.map((b) => {
-          const pending = b.pendingValue ?? 0;
-          const committed = b.value + pending;
-          const over = b.overlayValue !== null && committed > b.overlayValue;
+          const committed = b.value + (b.pendingValue ?? 0);
+          const hasBudget = b.overlayValue !== null;
+          const over = hasBudget && committed > b.overlayValue!;
+          const budgetPct = hasBudget ? clampPct(b.overlayValue!, max) : 0;
+          const actualPct = clampPct(committed, max);
+          // black fills the grey from the bottom; when over, it caps at the
+          // grey top and the overflow segment (status color) continues above
+          const blackTop = hasBudget ? Math.min(actualPct, budgetPct) : actualPct;
           return (
             <div
               key={b.group ?? '(total)'}
-              className="flex min-w-12 flex-1 flex-col items-center gap-1.5"
+              className="flex min-w-9 flex-1 flex-col items-center gap-1.5"
             >
               <div
-                className="bg-muted relative h-32 w-full max-w-14 rounded-sm"
+                className="relative h-32 w-full max-w-6"
                 title={
-                  b.overlayValue !== null
-                    ? `${b.label}: ${formatValue(b.value)}${pending > 0 ? ` + ${formatValue(pending)} pending` : ''} of ${formatValue(b.overlayValue)}`
-                    : `${b.label}: ${formatValue(b.value)} (${b.count})`
+                  hasBudget
+                    ? `${b.label}: ${money.format(committed)} of ${money.format(b.overlayValue!)}${over ? ' — over' : ''}`
+                    : `${b.label}: ${money.format(committed)} (${b.count})`
                 }
               >
-                {/* actual, from the baseline up (rounded data-end) */}
-                <div
-                  className={`absolute inset-x-0 bottom-0 rounded-t-sm ${over ? 'bg-destructive' : 'bg-primary'}`}
-                  style={{ height: h(b.value) }}
-                />
-                {/* pending, stacked above with a 2px surface gap (faded) */}
-                {pending > 0 && (
+                {/* grey budget placeholder (target room) */}
+                {hasBudget && (
                   <div
-                    className={`border-background absolute inset-x-0 rounded-t-sm border-b-2 opacity-40 ${over ? 'bg-destructive' : 'bg-primary'}`}
-                    style={{ bottom: h(b.value), height: h(pending) }}
+                    className="bg-muted absolute inset-x-0 bottom-0 rounded-t-sm"
+                    style={{ height: `${budgetPct}%` }}
                   />
                 )}
-                {/* budget tick — reference on the SAME shared axis */}
-                {b.overlayValue !== null && (
+                {/* black actual, from the baseline up */}
+                <div
+                  className={`bg-foreground absolute inset-x-0 bottom-0 ${hasBudget && !over ? '' : 'rounded-t-sm'}`}
+                  style={{ height: `${blackTop}%` }}
+                />
+                {/* overflow above the grey (over budget) in the status color */}
+                {over && (
                   <div
-                    className="bg-foreground absolute inset-x-0 h-0.5"
-                    style={{ bottom: h(b.overlayValue) }}
-                    aria-hidden
+                    className="bg-destructive absolute inset-x-0 rounded-t-sm"
+                    style={{ bottom: `${budgetPct}%`, height: `${actualPct - budgetPct}%` }}
                   />
                 )}
               </div>
-              <span
-                className="text-muted-foreground w-full truncate text-center text-xs"
-                title={b.label}
-              >
-                {b.label}
+              {/* icon by default (name stays accessible via title) */}
+              <span className="text-center text-base leading-none" title={b.label}>
+                {b.icon ?? (
+                  <span className="text-muted-foreground block max-w-12 truncate text-xs">
+                    {b.label}
+                  </span>
+                )}
               </span>
-              <span className="text-center text-xs tabular-nums">{formatValue(b.value)}</span>
-              {over && (
-                <span className="text-destructive text-center text-[10px] font-medium">over</span>
-              )}
+              {/* actual, then a grey /goal (no /goal when the category has none) */}
+              <span className="text-center text-xs tabular-nums">
+                <span className={over ? 'text-destructive font-medium' : ''}>
+                  {money.format(committed)}
+                </span>
+                {hasBudget && (
+                  <span className="text-muted-foreground"> /{money.format(b.overlayValue!)}</span>
+                )}
+              </span>
             </div>
           );
         })}
       </div>
 
       {view.hasOverlay && (
-        <p className="text-muted-foreground text-xs">
-          bar = actual{hasPending && ' · faded = pending'} · tick = {view.spec.overlayOwnField}
-        </p>
+        <p className="text-muted-foreground text-xs">grey = budget · black = actual · red = over</p>
       )}
     </div>
   );
