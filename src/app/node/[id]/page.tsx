@@ -116,21 +116,17 @@ export default async function NodeDetailPage({
   return (
     <div className="flex flex-col gap-6 py-6">
       <header className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <h1 className="flex-1 text-lg font-semibold">
-            {node.displayIcon && <span className="mr-1">{node.displayIcon}</span>}
-            {displayName(node)}
-          </h1>
-          <NodeHeaderEdit
-            nodeId={node.id}
-            title={node.title}
-            icon={node.icon}
-            body={node.body}
-            childCount={children.length}
-            parentLabel={parent ? displayName(parent) : null}
-            pinned={node.pinned}
-          />
-        </div>
+        <NodeHeaderEdit
+          nodeId={node.id}
+          title={node.title}
+          icon={node.icon}
+          body={node.body}
+          displayIcon={node.displayIcon ?? null}
+          displayName={displayName(node)}
+          childCount={children.length}
+          parentLabel={parent ? displayName(parent) : null}
+          pinned={node.pinned}
+        />
         <p className="text-muted-foreground text-xs">captured {formatTimestamp(node.capturedAt)}</p>
         {ownScopes.length > 0 && (
           <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
