@@ -93,6 +93,19 @@ export function ChildSchemaEditor({
   const update = (uid: number, def: FieldDef) =>
     setRows((rs) => rs.map((r) => (r.uid === uid ? { ...r, def } : r)));
 
+  // when a computed field's sources are set, the `to` field gains a
+  // `to > from` rule so the constraint travels with the schema by default
+  // (idempotent — added only if absent, so the user can still remove it)
+  const ensureRule = (targetKey: string, fromKey: string) =>
+    setRows((rs) =>
+      rs.map((r) => {
+        if (r.def.key !== targetKey) return r;
+        const rules = r.def.validate ?? [];
+        if (rules.some((v) => v.op === 'gt' && v.otherField === fromKey)) return r;
+        return { ...r, def: { ...r.def, validate: [...rules, { op: 'gt', otherField: fromKey }] } };
+      })
+    );
+
   const addField = () => {
     const label = newLabel.trim();
     if (!label) return;
@@ -229,6 +242,7 @@ export function ChildSchemaEditor({
                       label: r.def.label,
                       type: r.def.type,
                     }))}
+                    onEnsureRule={ensureRule}
                     onChange={(def) => update(row.uid, def)}
                     onRemove={() => setRows((rs) => rs.filter((r) => r.uid !== row.uid))}
                     onPickScope={() => void openScopePicker(row.uid)}

@@ -154,12 +154,37 @@ what the budget-vs-actual view needs.
 
 ### Field types
 
-`text, number, checkbox, boolean, option, date, timestamp, tag, link, url`
+`text, number, checkbox, boolean, option, date, timestamp, tag, link, url,
+duration, computed`
 
 - `link` references another node (e.g. a transaction's `category` points at a
   child of the "budget categories" node). This is what keeps the budget axis and
   the spending axis on the _same_ categories.
 - `number` is the aggregation type — it lands in `field_value.numberValue`.
+- `duration` stores MINUTES in `numberValue` (so sum/avg work unchanged); it is
+  `number` wearing a different editor.
+- `computed` is a derived duration: its value is the difference of two
+  `timestamp` fields in the same `childSchema` (`compute.to` − `compute.from`),
+  stored as MINUTES in `numberValue` exactly like `duration` — aggregation needs
+  no engine change. Computation is the default; manual entry is honored only
+  when the two sources are not both filled. The rule lives once in the save path
+  (`service/field.saveOwnValues` → `applyComputedWrites`); saving a source
+  recomputes. There is **no overnight wraparound** — an inverted pair is blocked
+  at input by a validation rule (`to > from`, auto-added on the `to` field), so a
+  valid computed duration is always positive.
+
+### Validation rules — a bounded declarative vocabulary
+
+A `childSchema` field may carry `validate: ValidationRule[]` — bounded,
+declarative consistency rules, never free-form code (the §5 bounded-power
+principle applied to input checking). A rule compares its field to either
+another field or a constant, with a small op set (`gt/gte/lt/lte/eq/neq`).
+Rules are checked once, in the save path (`service/validation.validateValues`,
+before persisting and before compute), and **only fire when both compared
+values are present** — empty is always legal (§6-capture), so required-ness is
+never a gate and a rule can only speak about values that are actually there. The
+motivating case: a Sleep schema declares `wakeUpAt.validate = [{ op: 'gt',
+otherField: 'sleepAt' }]`, blocking an inverted (overnight) pair at input.
 
 ---
 

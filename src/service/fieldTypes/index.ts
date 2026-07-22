@@ -11,3 +11,4 @@ import './tag';
 import './link';
 import './url';
 import './duration';
+import './computed';

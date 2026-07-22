@@ -7,6 +7,7 @@ import { nodeRepo } from '@/repository/nodeRepo';
 import { describeCandidates, type NodeCandidate } from './candidates';
 import { LinkTargetNotFoundError, LinkTargetOutOfScopeError, NodeNotFoundError } from './errors';
 import { getFieldType } from './fieldRegistry';
+import { applyComputedWrites } from './fieldTypes/computed';
 import { resolveSchema } from './inheritance';
 import { validateValues } from './validation';
 
@@ -59,16 +60,18 @@ export async function saveOwnValues(
     writes.set(def.key, { column: entry.valueColumn, value: parsed } as TypedFieldWrite);
   }
 
-  // Phase 2 — validation rules reason about the EFFECTIVE post-save state
-  // (stored values overlaid with the edits). Only pay for the extra read when
-  // the worn schema actually declares rules.
-  const needsEffective = worn.some((d) => (d.validate?.length ?? 0) > 0);
+  // Phases 2–3 — validation rules and computed fields both reason about the
+  // EFFECTIVE post-save state (stored values overlaid with the edits). Only pay
+  // for the extra read when the worn schema actually declares one of them.
+  const needsEffective = worn.some((d) => (d.validate?.length ?? 0) > 0 || d.type === 'computed');
   if (needsEffective) {
     const stored = await getOwnValues(userId, nodeId);
     const effective: Record<string, FieldPrimitive | undefined> = { ...stored };
     for (const def of defs) effective[def.key] = edited[def.key];
-    // declarative rules, before any write (order: validate → compute in Phase 3)
+    // order matters: validate first, so an inverted computed pair is rejected
+    // BEFORE the computed value is ever written (no overnight wraparound)
     validateValues(worn, effective);
+    applyComputedWrites(worn, effective, writes);
   }
 
   // Phase 4 — persist. A null write clears the row; every other write upserts.

@@ -48,6 +48,7 @@ export const FIELD_TYPES = [
   'link', // reference to another node (e.g. transaction.category -> a category node)
   'url',
   'duration', // stored in numberValue as MINUTES; aggregation works unchanged
+  'computed', // a duration derived from two timestamp fields; MINUTES in numberValue
 ] as const;
 export type FieldType = (typeof FIELD_TYPES)[number];
 
@@ -75,6 +76,13 @@ export interface FieldDef {
   min?: number;
   max?: number;
   step?: number;
+  /** Computed field (type 'computed'): its value is a duration derived from two
+   *  other timestamp fields in the SAME childSchema (`to` − `from`), stored as
+   *  MINUTES in numberValue exactly like `duration`, so aggregation is
+   *  unchanged. Manual entry is honored only when the two sources are not both
+   *  filled. A `to > from` validation rule (on the `to` field) keeps the pair
+   *  ordered, so the computed duration is always positive (no overnight wrap). */
+  compute?: { from: string; to: string; unit?: 'minutes' };
   /** Declarative, bounded validation rules checked at save (DESIGN §5's
    *  bounded power). Attached to the field they constrain; only fire when the
    *  compared values are actually present (empty is always legal, §6-capture). */

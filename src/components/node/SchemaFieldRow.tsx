@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
+import { ComputeConfigEditor } from './ComputeConfigEditor';
 import { ValidationRulesEditor } from './ValidationRulesEditor';
 
 export interface SchemaRow {
@@ -38,6 +39,10 @@ interface SchemaFieldRowProps {
   /** the OTHER fields in this schema — comparison targets for validation rules
    *  (and, for a computed field, its timestamp source candidates) */
   siblings: { key: string; label: string; type: string }[];
+  /** ensure a `toKey > fromKey` rule exists on another field — used when a
+   *  computed field's sources are set, so the ordering constraint travels with
+   *  the schema (the target field is a SIBLING, hence a sheet-level callback) */
+  onEnsureRule(targetKey: string, fromKey: string): void;
   /** the per-type default-value editor, rendered by the sheet via the field
    *  registry (typed per the field's type) */
   defaultControl?: React.ReactNode;
@@ -131,6 +136,16 @@ export function SchemaFieldRow(props: SchemaFieldRowProps) {
               </Button>
             )}
           </span>
+        )}
+        {def.type === 'computed' && (
+          <ComputeConfigEditor
+            compute={def.compute}
+            timestampFields={props.siblings
+              .filter((s) => s.type === 'timestamp')
+              .map((s) => ({ key: s.key, label: s.label }))}
+            onChange={(compute) => props.onChange({ ...def, compute })}
+            onEnsureRule={props.onEnsureRule}
+          />
         )}
         {def.type === 'number' &&
           (['min', 'max', 'step'] as const).map((bound) => (

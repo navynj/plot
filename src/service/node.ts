@@ -369,6 +369,7 @@ function parseFieldDefs(input: unknown): FieldDef[] {
       }
     }
     const validate = parseValidationRules(rec.validate, key, allKeys);
+    const compute = parseCompute(rec.compute, key, allKeys);
     const def: FieldDef = {
       key,
       label: typeof label === 'string' && label.trim() !== '' ? label : key,
@@ -382,8 +383,37 @@ function parseFieldDefs(input: unknown): FieldDef[] {
     if (typeof max === 'number') def.max = max;
     if (typeof step === 'number') def.step = step;
     if (validate !== undefined) def.validate = validate;
+    if (compute !== undefined) def.compute = compute;
     return def;
   });
+}
+
+/** Validate a computed field's `compute` config (untrusted): an object with
+ *  string `from`/`to` (each referencing an existing field key in this schema)
+ *  and an optional `unit` of 'minutes'. */
+function parseCompute(
+  input: unknown,
+  key: string,
+  allKeys: Set<string>
+): FieldDef['compute'] {
+  if (input === undefined) return undefined;
+  if (typeof input !== 'object' || input === null) {
+    throw new InvalidSchemaError(`def "${key}" compute must be an object`);
+  }
+  const c = input as Record<string, unknown>;
+  for (const end of ['from', 'to'] as const) {
+    if (typeof c[end] !== 'string' || !allKeys.has(c[end] as string)) {
+      throw new InvalidSchemaError(
+        `def "${key}" compute.${end} must reference an existing field key`
+      );
+    }
+  }
+  if (c.unit !== undefined && c.unit !== 'minutes') {
+    throw new InvalidSchemaError(`def "${key}" compute.unit must be 'minutes'`);
+  }
+  const compute: NonNullable<FieldDef['compute']> = { from: c.from as string, to: c.to as string };
+  if (c.unit !== undefined) compute.unit = 'minutes';
+  return compute;
 }
 
 /** Validate a field's `validate` array (untrusted). Each rule's op is in the
