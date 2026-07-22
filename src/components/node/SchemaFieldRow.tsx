@@ -16,11 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MAIN_FIELD_ICON_DEFAULT } from '@/components/field/mainFieldIcons';
+import { LucideIconPicker } from '@/components/field/LucideIconPicker';
+import { LUCIDE_DEFAULT_ICON } from '@/lib/lucideIcon';
 import { cn } from '@/lib/utils';
 
 import { ComputeConfigEditor } from './ComputeConfigEditor';
-import { MainFieldIconPicker } from './MainFieldIconPicker';
 import { ValidationRulesEditor } from './ValidationRulesEditor';
 
 export interface SchemaRow {
@@ -116,15 +116,15 @@ export function SchemaFieldRow(props: SchemaFieldRowProps) {
               props.onChange({
                 ...def,
                 showOnMain: c === true,
-                icon: c === true ? (def.icon ?? MAIN_FIELD_ICON_DEFAULT) : def.icon,
+                icon: c === true ? (def.icon ?? LUCIDE_DEFAULT_ICON) : def.icon,
               })
             }
           />
           main
         </label>
         {def.showOnMain && (
-          <MainFieldIconPicker
-            value={def.icon ?? MAIN_FIELD_ICON_DEFAULT}
+          <LucideIconPicker
+            value={def.icon ?? LUCIDE_DEFAULT_ICON}
             onChange={(icon) => props.onChange({ ...def, icon })}
           />
         )}
