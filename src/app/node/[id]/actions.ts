@@ -26,16 +26,31 @@ import {
 import { removeNode, reparent } from '@/service/triage';
 import type { ViewSpec } from '@/db/schema';
 
-import { DomainError, InvalidSchemaError, InvalidViewSpecError } from '@/service/errors';
+import {
+  DomainError,
+  InvalidSchemaError,
+  InvalidViewSpecError,
+  ValidationError,
+} from '@/service/errors';
 
-export async function saveFields(nodeId: string, formData: FormData): Promise<void> {
+/** Inline-error contract for the value-save forms (FieldEditors). A violated
+ *  declarative rule surfaces here, never as a raw exception to the client. */
+export type FieldSaveResult = { ok: true } | { ok: false; error: string; key?: string };
+
+export async function saveFields(nodeId: string, formData: FormData): Promise<FieldSaveResult> {
   const userId = await requireUserId();
   const raw: Record<string, unknown> = Object.fromEntries(formData.entries());
   const keysField = formData.get('__fieldKeys');
   const editedKeys =
     typeof keysField === 'string' && keysField !== '' ? keysField.split(',') : undefined;
-  await saveOwnValues(userId, nodeId, raw, editedKeys);
+  try {
+    await saveOwnValues(userId, nodeId, raw, editedKeys);
+  } catch (err) {
+    if (err instanceof ValidationError) return { ok: false, error: err.message, key: err.key };
+    throw err;
+  }
   revalidatePath(`/node/${nodeId}`);
+  return { ok: true };
 }
 
 export async function saveNodeMeta(nodeId: string, formData: FormData): Promise<void> {
@@ -116,7 +131,15 @@ export async function captureHere(nodeId: string, formData: FormData): Promise<v
     if (keys.length > 0) {
       const raw: Record<string, unknown> = {};
       for (const key of keys) raw[key] = formData.get(key);
-      await saveOwnValues(userId, node.id, raw, keys);
+      try {
+        await saveOwnValues(userId, node.id, raw, keys);
+      } catch (err) {
+        // raw-first (DESIGN §6-capture): the node is already captured. A rule
+        // violation on the inline values is not a capture gate — the entry
+        // stands and the inconsistent values are deferred to field triage,
+        // where the error surfaces inline. Only ValidationError is deferred.
+        if (!(err instanceof ValidationError)) throw err;
+      }
     }
   }
   revalidatePath(`/node/${nodeId}`);

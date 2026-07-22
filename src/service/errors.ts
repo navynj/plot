@@ -105,3 +105,18 @@ export class UnsupportedFilterError extends DomainError {
     super(`aggregation filter not supported: ${detail}`);
   }
 }
+
+/** A declarative validation rule (FieldDef.validate) was violated at save.
+ *  Carries the offending field key so the editor can point at it; the message
+ *  is the rule's custom text or a generated one ("wake up at must be after
+ *  sleep at"). Actions translate this into an inline form error. */
+export class ValidationError extends DomainError {
+  readonly code = 'VALIDATION';
+
+  constructor(
+    readonly key: string,
+    message: string
+  ) {
+    super(message);
+  }
+}

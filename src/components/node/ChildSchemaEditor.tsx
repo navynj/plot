@@ -224,6 +224,11 @@ export function ChildSchemaEditor({
                     key={row.uid}
                     row={row}
                     isDragging={draggingUid === row.uid}
+                    siblings={rows.map((r) => ({
+                      key: r.def.key,
+                      label: r.def.label,
+                      type: r.def.type,
+                    }))}
                     onChange={(def) => update(row.uid, def)}
                     onRemove={() => setRows((rs) => rs.filter((r) => r.uid !== row.uid))}
                     onPickScope={() => void openScopePicker(row.uid)}

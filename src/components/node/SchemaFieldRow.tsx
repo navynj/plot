@@ -18,6 +18,8 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
+import { ValidationRulesEditor } from './ValidationRulesEditor';
+
 export interface SchemaRow {
   uid: number;
   def: FieldDef;
@@ -33,6 +35,9 @@ interface SchemaFieldRowProps {
   onRemove(): void;
   onPickScope(): void;
   scopeLabel: string | null;
+  /** the OTHER fields in this schema — comparison targets for validation rules
+   *  (and, for a computed field, its timestamp source candidates) */
+  siblings: { key: string; label: string; type: string }[];
   /** the per-type default-value editor, rendered by the sheet via the field
    *  registry (typed per the field's type) */
   defaultControl?: React.ReactNode;
@@ -153,6 +158,17 @@ export function SchemaFieldRow(props: SchemaFieldRowProps) {
           <div className="flex-1">{props.defaultControl}</div>
         </div>
       )}
+      <div className="text-muted-foreground pl-6 text-xs">
+        <ValidationRulesEditor
+          rules={def.validate ?? []}
+          siblings={props.siblings
+            .filter((s) => s.key !== def.key)
+            .map((s) => ({ key: s.key, label: s.label }))}
+          onChange={(validate) =>
+            props.onChange({ ...def, validate: validate.length > 0 ? validate : undefined })
+          }
+        />
+      </div>
     </div>
   );
 }

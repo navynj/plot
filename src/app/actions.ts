@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { requireUserId } from '@/app/_auth/requireUser';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
 import { explicitEventDate } from '@/lib/day';
+import { ValidationError } from '@/service/errors';
 import { saveOwnValues } from '@/service/field';
 import { addRoom, captureNode, getChipChildren, type ChipItem } from '@/service/node';
 
@@ -21,7 +22,13 @@ async function saveInlineFields(userId: string, nodeId: string, formData: FormDa
   if (keys.length === 0) return;
   const raw: Record<string, unknown> = {};
   for (const key of keys) raw[key] = formData.get(key);
-  await saveOwnValues(userId, nodeId, raw, keys);
+  try {
+    await saveOwnValues(userId, nodeId, raw, keys);
+  } catch (err) {
+    // raw-first (DESIGN §6-capture): the capture stands; a rule violation on
+    // the inline values is deferred to field triage, not a capture gate.
+    if (!(err instanceof ValidationError)) throw err;
+  }
 }
 
 export async function capture(formData: FormData): Promise<void> {

@@ -8,6 +8,7 @@ import { describeCandidates, type NodeCandidate } from './candidates';
 import { LinkTargetNotFoundError, LinkTargetOutOfScopeError, NodeNotFoundError } from './errors';
 import { getFieldType } from './fieldRegistry';
 import { resolveSchema } from './inheritance';
+import { validateValues } from './validation';
 
 /**
  * Save a node's own values from raw (form) input, validated per field type via
@@ -30,11 +31,17 @@ export async function saveOwnValues(
 
   const worn = await resolveSchema(userId, node);
   const defs = editedKeys ? worn.filter((d) => editedKeys.includes(d.key)) : worn;
+
+  // Phase 1 — parse raw values: each rendered field becomes a typed write, or
+  // null (clear the row). Link targets are validated here.
+  const writes = new Map<string, TypedFieldWrite | null>();
+  const edited: Record<string, FieldPrimitive | undefined> = {};
   for (const def of defs) {
     const entry = getFieldType(def.type);
     const parsed = entry.parse(raw[def.key], def);
+    edited[def.key] = parsed ?? undefined;
     if (parsed === null) {
-      await fieldValueRepo.deleteByKey(userId, nodeId, def.key);
+      writes.set(def.key, null);
       continue;
     }
     if (entry.valueColumn === 'linkValue' && typeof parsed === 'string') {
@@ -49,8 +56,28 @@ export async function saveOwnValues(
     }
     // parse() returns the value shape its own column expects, so this cast
     // only re-states what the registry entry guarantees
-    const write = { column: entry.valueColumn, value: parsed } as TypedFieldWrite;
-    const saved = await fieldValueRepo.upsert(userId, nodeId, def.key, write);
+    writes.set(def.key, { column: entry.valueColumn, value: parsed } as TypedFieldWrite);
+  }
+
+  // Phase 2 — validation rules reason about the EFFECTIVE post-save state
+  // (stored values overlaid with the edits). Only pay for the extra read when
+  // the worn schema actually declares rules.
+  const needsEffective = worn.some((d) => (d.validate?.length ?? 0) > 0);
+  if (needsEffective) {
+    const stored = await getOwnValues(userId, nodeId);
+    const effective: Record<string, FieldPrimitive | undefined> = { ...stored };
+    for (const def of defs) effective[def.key] = edited[def.key];
+    // declarative rules, before any write (order: validate → compute in Phase 3)
+    validateValues(worn, effective);
+  }
+
+  // Phase 4 — persist. A null write clears the row; every other write upserts.
+  for (const [key, write] of writes) {
+    if (write === null) {
+      await fieldValueRepo.deleteByKey(userId, nodeId, key);
+      continue;
+    }
+    const saved = await fieldValueRepo.upsert(userId, nodeId, key, write);
     if (!saved) throw new NodeNotFoundError(nodeId);
   }
 }

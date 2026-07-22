@@ -1,9 +1,11 @@
 import {
   FIELD_TYPES,
+  VALIDATION_OPS,
   VIEW_LAYOUTS,
   type FieldDef,
   type FieldType,
   type Node,
+  type ValidationRule,
   type ViewFilter,
   type ViewLayout,
   type ViewSpec,
@@ -305,6 +307,15 @@ export async function addSchemaOption(
 function parseFieldDefs(input: unknown): FieldDef[] {
   if (!Array.isArray(input)) throw new InvalidSchemaError('must be an array of field defs');
   const seen = new Set<string>();
+  // every declared key, collected upfront so a rule's otherField (which may
+  // reference a field defined later in the array) can be validated by name
+  const allKeys = new Set(
+    input
+      .map((it) =>
+        typeof it === 'object' && it !== null ? (it as Record<string, unknown>).key : undefined
+      )
+      .filter((k): k is string => typeof k === 'string' && k.trim() !== '')
+  );
   return input.map((item, i) => {
     if (typeof item !== 'object' || item === null) {
       throw new InvalidSchemaError(`def #${i} is not an object`);
@@ -357,6 +368,7 @@ function parseFieldDefs(input: unknown): FieldDef[] {
         throw new InvalidSchemaError(`def "${key}": the min–max range must be step-divisible`);
       }
     }
+    const validate = parseValidationRules(rec.validate, key, allKeys);
     const def: FieldDef = {
       key,
       label: typeof label === 'string' && label.trim() !== '' ? label : key,
@@ -369,7 +381,56 @@ function parseFieldDefs(input: unknown): FieldDef[] {
     if (typeof min === 'number') def.min = min;
     if (typeof max === 'number') def.max = max;
     if (typeof step === 'number') def.step = step;
+    if (validate !== undefined) def.validate = validate;
     return def;
+  });
+}
+
+/** Validate a field's `validate` array (untrusted). Each rule's op is in the
+ *  allowed set, exactly one of otherField/value is present, otherField (when
+ *  present) references an existing field key, and message (when present) is a
+ *  string. Bounded vocabulary — never free-form (DESIGN §5). */
+function parseValidationRules(
+  input: unknown,
+  key: string,
+  allKeys: Set<string>
+): ValidationRule[] | undefined {
+  if (input === undefined) return undefined;
+  if (!Array.isArray(input)) throw new InvalidSchemaError(`def "${key}" validate must be an array`);
+  return input.map((raw, j): ValidationRule => {
+    if (typeof raw !== 'object' || raw === null) {
+      throw new InvalidSchemaError(`def "${key}" validate #${j} is not an object`);
+    }
+    const r = raw as Record<string, unknown>;
+    if (typeof r.op !== 'string' || !(VALIDATION_OPS as readonly string[]).includes(r.op)) {
+      throw new InvalidSchemaError(
+        `def "${key}" validate #${j} op must be one of ${VALIDATION_OPS.join(' | ')}`
+      );
+    }
+    const hasOther = r.otherField !== undefined;
+    const hasValue = r.value !== undefined;
+    if (hasOther === hasValue) {
+      throw new InvalidSchemaError(
+        `def "${key}" validate #${j} needs exactly one of otherField / value`
+      );
+    }
+    if (hasOther) {
+      if (typeof r.otherField !== 'string' || !allKeys.has(r.otherField)) {
+        throw new InvalidSchemaError(
+          `def "${key}" validate #${j} otherField must reference an existing field key`
+        );
+      }
+    } else if (!['string', 'number', 'boolean'].includes(typeof r.value)) {
+      throw new InvalidSchemaError(`def "${key}" validate #${j} value must be a scalar`);
+    }
+    if (r.message !== undefined && typeof r.message !== 'string') {
+      throw new InvalidSchemaError(`def "${key}" validate #${j} message must be a string`);
+    }
+    const rule: ValidationRule = { op: r.op as ValidationRule['op'] };
+    if (hasOther) rule.otherField = r.otherField as string;
+    else rule.value = r.value as string | number | boolean;
+    if (r.message !== undefined) rule.message = r.message as string;
+    return rule;
   });
 }
 

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import * as React from 'react';
 
 import type { FieldDef, FieldPrimitive } from '@/db/schema';
+import type { FieldSaveResult } from '@/app/node/[id]/actions';
 import type { NodeRow } from '@/repository/nodeRepo';
 import { FieldEditors } from '@/components/field/FieldEditors';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,7 @@ interface FieldWalkStepProps {
    *  honesty (parentless vs schema-less vs vanished) */
   emptyMessage: string;
   /** absent when defs is empty (nothing to save) */
-  action: ((formData: FormData) => Promise<void>) | null;
+  action: ((formData: FormData) => Promise<FieldSaveResult | void>) | null;
   /** absent in the single-node (?node=) scope, where there is no "next" */
   skipHref: string | null;
   /** the worn schema's editor (ChildSchemaEditor mounted against the PARENT

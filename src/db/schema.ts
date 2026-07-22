@@ -75,7 +75,28 @@ export interface FieldDef {
   min?: number;
   max?: number;
   step?: number;
+  /** Declarative, bounded validation rules checked at save (DESIGN §5's
+   *  bounded power). Attached to the field they constrain; only fire when the
+   *  compared values are actually present (empty is always legal, §6-capture). */
+  validate?: ValidationRule[];
 }
+
+/**
+ * A single bounded validation rule attached to a field. Compares the field it
+ * is attached to against EITHER another field's value OR a constant (exactly
+ * one of `otherField` / `value`). A small vocabulary, never free-form code —
+ * this is DESIGN §5's bounded-power principle applied to consistency checks.
+ * Example: `wakeUpAt.validate = [{ op: 'gt', otherField: 'sleepAt' }]` reads
+ * "wakeUpAt must be greater than sleepAt".
+ */
+export interface ValidationRule {
+  op: 'gt' | 'gte' | 'lt' | 'lte' | 'eq' | 'neq';
+  otherField?: string; // compare to another field's value, OR
+  value?: string | number | boolean; // compare to a constant (exactly one)
+  message?: string; // optional custom error text shown on violation
+}
+
+export const VALIDATION_OPS = ['gt', 'gte', 'lt', 'lte', 'eq', 'neq'] as const;
 
 /** The fixed layout preset vocabulary (DESIGN §5) — runtime const so the
  *  layout registry can be completeness-tested, like FIELD_TYPES. */
