@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Node } from '@/db/schema';
 import { nodeRepo } from '@/repository/nodeRepo';
 
-import { EmptyCaptureError } from './errors';
-import { captureNode } from './node';
+import { EmptyCaptureError, InvalidViewSpecError } from './errors';
+import { captureNode, setViewSpec } from './node';
 
 vi.mock('@/repository/nodeRepo', () => ({
-  nodeRepo: { create: vi.fn() },
+  nodeRepo: { create: vi.fn(), update: vi.fn() },
 }));
 vi.mock('@/repository/undoRepo', () => ({
   undoRepo: { push: vi.fn(), pop: vi.fn(), clearRedo: vi.fn(), list: vi.fn() },
@@ -69,5 +69,41 @@ describe('captureNode — raw means raw (DESIGN §6-capture)', () => {
   it('rejects an empty capture with a typed domain error', async () => {
     await expect(captureNode('u1', { body: '   ' })).rejects.toBeInstanceOf(EmptyCaptureError);
     expect(nodeRepo.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('setViewSpec — the A′ view editor save path (bounded, typed rejection)', () => {
+  beforeEach(() => {
+    vi.mocked(nodeRepo.update)
+      .mockReset()
+      .mockResolvedValue({ id: 'n1' } as Node);
+  });
+
+  it('accepts a valid bounded spec (lens + layout, optional groupBy/filter/overlay)', async () => {
+    await setViewSpec('u1', 'n1', {
+      lens: 'amount',
+      groupBy: 'category',
+      layout: 'bar',
+      filter: [{ key: 'scheduled', op: 'eq', value: false }],
+      overlayOwnField: 'amount',
+    });
+    expect(nodeRepo.update).toHaveBeenCalledTimes(1);
+    const patch = vi.mocked(nodeRepo.update).mock.calls[0]![2];
+    expect(patch.viewSpec).toMatchObject({ lens: 'amount', layout: 'bar', groupBy: 'category' });
+  });
+
+  it('null removes the view', async () => {
+    await setViewSpec('u1', 'n1', null);
+    expect(vi.mocked(nodeRepo.update).mock.calls[0]![2].viewSpec).toBeNull();
+  });
+
+  it('rejects an invalid spec with the typed error, before any write (inline-error backstop)', async () => {
+    await expect(setViewSpec('u1', 'n1', { lens: '', layout: 'bar' })).rejects.toBeInstanceOf(
+      InvalidViewSpecError
+    );
+    await expect(
+      setViewSpec('u1', 'n1', { lens: 'x', layout: 'pie' })
+    ).rejects.toBeInstanceOf(InvalidViewSpecError);
+    expect(nodeRepo.update).not.toHaveBeenCalled();
   });
 });

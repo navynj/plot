@@ -14,7 +14,7 @@ import { NodeHeaderEdit } from '@/components/node/NodeHeaderEdit';
 import { TimelineVisibilityControl } from '@/components/node/TimelineVisibilityControl';
 import { FieldEditors } from '@/components/field/FieldEditors';
 import { ParentPicker } from '@/components/node/ParentPicker';
-import { ViewSpecDevEditor } from '@/components/node/ViewSpecDevEditor';
+import { ViewSpecEditor } from '@/components/node/ViewSpecEditor';
 import { NodeView } from '@/components/view/NodeView';
 import { PeriodNavigator } from '@/components/view/PeriodNavigator';
 import { Button } from '@/components/ui/button';
@@ -42,7 +42,7 @@ import { getBudgetHolder, getLedgerLines, isMonthStampedLedger } from '@/service
 import { formatTimestamp } from '@/lib/formatTimestamp';
 import { displayName } from '@/lib/identity';
 
-import { saveFields, saveViewSpecDev } from './actions';
+import { saveFields } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -233,26 +233,45 @@ export default async function NodeDetailPage({
             <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
               View
             </h2>
-            {view.kind === 'aggregate' && (
-              <div className="flex flex-wrap items-center gap-2">
-                {budgetHolder && (
-                  <Button variant="outline" size="sm" asChild className="text-muted-foreground">
-                    <Link
-                      href={`/node/${budgetHolder.id}/budget${activeMonth ? `?period=${activeMonth}` : ''}`}
-                    >
-                      <SlidersHorizontal className="size-3.5" /> Edit budget
-                    </Link>
-                  </Button>
-                )}
+            <div className="flex flex-wrap items-center gap-2">
+              {view.kind === 'aggregate' && budgetHolder && (
+                <Button variant="outline" size="sm" asChild className="text-muted-foreground">
+                  <Link
+                    href={`/node/${budgetHolder.id}/budget${activeMonth ? `?period=${activeMonth}` : ''}`}
+                  >
+                    <SlidersHorizontal className="size-3.5" /> Edit budget
+                  </Link>
+                </Button>
+              )}
+              {view.kind === 'aggregate' && (
                 <PeriodNavigator
                   month={activeMonth}
                   thisMonth={thisMonth}
                   basePath={`/node/${node.id}`}
                 />
-              </div>
-            )}
+              )}
+              <ViewSpecEditor
+                nodeId={node.id}
+                viewSpec={node.viewSpec ?? null}
+                childSchema={node.childSchema ?? []}
+              />
+            </div>
           </div>
           <NodeView view={view} />
+        </section>
+      )}
+
+      {/* no view yet → the payoff: give this node a graph for the first time */}
+      {!view && (
+        <section className="flex items-center justify-between gap-2">
+          <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+            View
+          </h2>
+          <ViewSpecEditor
+            nodeId={node.id}
+            viewSpec={null}
+            childSchema={node.childSchema ?? []}
+          />
         </section>
       )}
 
@@ -352,10 +371,6 @@ export default async function NodeDetailPage({
         members={view ? [] : members}
       />
 
-      <ViewSpecDevEditor
-        viewSpec={node.viewSpec ?? null}
-        action={saveViewSpecDev.bind(null, node.id)}
-      />
       <ChildSchemaEditor
         nodeId={node.id}
         childSchema={node.childSchema ?? []}

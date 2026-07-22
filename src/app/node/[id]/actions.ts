@@ -18,8 +18,9 @@ import {
 import { getLinkCandidates, saveOwnValues } from '@/service/field';
 import { captureNode, setChildSchema, setViewSpec, updateNode } from '@/service/node';
 import { removeNode, reparent } from '@/service/triage';
+import type { ViewSpec } from '@/db/schema';
 
-import { DomainError, InvalidSchemaError } from '@/service/errors';
+import { DomainError, InvalidSchemaError, InvalidViewSpecError } from '@/service/errors';
 
 export async function saveFields(nodeId: string, formData: FormData): Promise<void> {
   const userId = await requireUserId();
@@ -182,21 +183,25 @@ export async function linkItem(collectionId: string, memberId: string): Promise<
   return { ok: true };
 }
 
-/** dev-only, see ViewSpecDevEditor; empty or "null" clears the spec */
-export async function saveViewSpecDev(nodeId: string, formData: FormData): Promise<void> {
+export type ViewSpecSaveResult = { ok: true } | { ok: false; error: string };
+
+/** A' view editor save (retires the dev JSON textarea): the bounded sheet
+ *  builds a ViewSpec object and hands it to the validated setViewSpec path;
+ *  `null` removes the view. Typed InvalidViewSpecError surfaces inline, never
+ *  a crash. Revalidates layout-wide so the view re-renders in place. */
+export async function saveViewSpecAction(
+  nodeId: string,
+  spec: ViewSpec | null
+): Promise<ViewSpecSaveResult> {
   const userId = await requireUserId();
-  const text = formData.get('viewSpec');
-  const raw = typeof text === 'string' ? text.trim() : '';
-  let parsed: unknown = null;
-  if (raw !== '' && raw !== 'null') {
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      throw new InvalidSchemaError('not valid JSON');
-    }
+  try {
+    await setViewSpec(userId, nodeId, spec);
+  } catch (err) {
+    if (err instanceof InvalidViewSpecError) return { ok: false, error: err.message };
+    throw err;
   }
-  await setViewSpec(userId, nodeId, parsed);
-  revalidatePath(`/node/${nodeId}`);
+  revalidatePath('/', 'layout');
+  return { ok: true };
 }
 
 /** A'' budget editor save: the whole form for one month. Inputs are `total`,
