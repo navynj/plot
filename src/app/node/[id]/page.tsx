@@ -1,4 +1,4 @@
-import { CornerLeftUp } from 'lucide-react';
+import { CornerLeftUp, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -15,7 +15,6 @@ import { TimelineVisibilityControl } from '@/components/node/TimelineVisibilityC
 import { FieldEditors } from '@/components/field/FieldEditors';
 import { ParentPicker } from '@/components/node/ParentPicker';
 import { ViewSpecDevEditor } from '@/components/node/ViewSpecDevEditor';
-import { CopyMonthButton } from '@/components/node/CopyMonthButton';
 import { NodeView } from '@/components/view/NodeView';
 import { PeriodNavigator } from '@/components/view/PeriodNavigator';
 import { Button } from '@/components/ui/button';
@@ -36,11 +35,10 @@ import {
   isValidMonth,
   monthBoundsInTz,
   monthLabel,
-  shiftMonth,
   thisMonthInTz,
   todayInTz,
 } from '@/lib/day';
-import { getLedgerLines, isMonthStampedLedger } from '@/service/budget';
+import { getBudgetHolder, getLedgerLines, isMonthStampedLedger } from '@/service/budget';
 import { formatTimestamp } from '@/lib/formatTimestamp';
 import { displayName } from '@/lib/identity';
 
@@ -89,6 +87,10 @@ export default async function NodeDetailPage({
     ]);
 
   const displays = await getValueDisplays(userId, defs, values);
+  // A'': an Expense-style aggregate view with an attached Budget can jump to
+  // its editor from the overlay area
+  const budgetHolder =
+    view?.kind === 'aggregate' ? await getBudgetHolder(userId, node.id) : null;
   // A3: a month-stamped ledger (attached Budget) scopes its lines to the
   // navigated month; every other node shows all its record children.
   const isLedger = isMonthStampedLedger(node);
@@ -227,16 +229,27 @@ export default async function NodeDetailPage({
           control (DESIGN §5's time-axis vs collection split). */}
       {view && (
         <section className="flex flex-col gap-3">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
               View
             </h2>
             {view.kind === 'aggregate' && (
-              <PeriodNavigator
-                month={activeMonth}
-                thisMonth={thisMonth}
-                basePath={`/node/${node.id}`}
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                {budgetHolder && (
+                  <Button variant="outline" size="sm" asChild className="text-muted-foreground">
+                    <Link
+                      href={`/node/${budgetHolder.id}/budget${activeMonth ? `?period=${activeMonth}` : ''}`}
+                    >
+                      <SlidersHorizontal className="size-3.5" /> Edit budget
+                    </Link>
+                  </Button>
+                )}
+                <PeriodNavigator
+                  month={activeMonth}
+                  thisMonth={thisMonth}
+                  basePath={`/node/${node.id}`}
+                />
+              </div>
             )}
           </div>
           <NodeView view={view} />
@@ -258,20 +271,28 @@ export default async function NodeDetailPage({
                   thisMonth={thisMonth}
                   basePath={`/node/${node.id}`}
                 />
-                {activeMonth && (
-                  <CopyMonthButton
-                    ledgerId={node.id}
-                    fromMonth={shiftMonth(activeMonth, -1)}
-                    toMonth={activeMonth}
-                    fromLabel={monthLabel(shiftMonth(activeMonth, -1))}
-                  />
-                )}
+                {/* A'': the single-form editor is the PRIMARY way to set
+                    budgets; the per-line list below is a read reference (tap
+                    a line for a one-off tweak). Copy-forward lives in the
+                    editor now, not here. */}
+                <Button variant="default" size="sm" asChild>
+                  <Link href={`/node/${node.id}/budget${activeMonth ? `?period=${activeMonth}` : ''}`}>
+                    <SlidersHorizontal className="size-3.5" /> Edit budget
+                  </Link>
+                </Button>
               </div>
             )}
           </div>
           {displayChildren.length === 0 ? (
             <p className="text-muted-foreground py-4 text-sm">
-              No lines for {activeMonth ? monthLabel(activeMonth) : 'any month'} yet.
+              No lines for {activeMonth ? monthLabel(activeMonth) : 'any month'} yet — use{' '}
+              <Link
+                href={`/node/${node.id}/budget${activeMonth ? `?period=${activeMonth}` : ''}`}
+                className="underline"
+              >
+                Edit budget
+              </Link>{' '}
+              to set targets.
             </p>
           ) : (
             /* the FOURTH selection surface: same bulk bar, same ?ids= walk,

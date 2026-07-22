@@ -7,15 +7,16 @@ import { requireUserId } from '@/app/_auth/requireUser';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
 import { explicitEventDate, isValidDay, startOfDayInTz } from '@/lib/day';
 import type { NodeCandidate } from '@/service/candidates';
+import { loadBudgetMonth, saveBudget } from '@/service/budget';
 import {
   addToCollection,
   getCollectionCandidates,
+  getMemberCandidates,
+  linkMembers,
   removeFromCollection,
 } from '@/service/collection';
-import { copyMonth } from '@/service/budget';
-import { getMemberCandidates, linkMembers } from '@/service/collection';
 import { getLinkCandidates, saveOwnValues } from '@/service/field';
-import { captureNode, getNode, setChildSchema, setViewSpec, updateNode } from '@/service/node';
+import { captureNode, setChildSchema, setViewSpec, updateNode } from '@/service/node';
 import { removeNode, reparent } from '@/service/triage';
 
 import { DomainError, InvalidSchemaError } from '@/service/errors';
@@ -198,24 +199,39 @@ export async function saveViewSpecDev(nodeId: string, formData: FormData): Promi
   revalidatePath(`/node/${nodeId}`);
 }
 
-export type CopyMonthResultOut =
-  | { ok: true; copied: number }
-  | { ok: false; error: string };
-
-/** A3 copy-previous-month: duplicate one month's budget lines into another,
- *  amounts intact, month-stamp advanced. One undoable create op. */
-export async function copyBudgetMonthAction(
-  ledgerId: string,
-  fromMonth: string,
-  toMonth: string
-): Promise<CopyMonthResultOut> {
+/** A'' budget editor save: the whole form for one month. Inputs are `total`
+ *  and `alloc:<categoryId>` (empty = cleared). Parses to numbers and hands to
+ *  the service, which writes the total first, then the lines. */
+export async function saveBudgetAction(
+  budgetId: string,
+  month: string,
+  formData: FormData
+): Promise<void> {
   const userId = await requireUserId();
   const tz = await getRequestTimezone();
-  const ledger = await getNode(userId, ledgerId);
-  if (!ledger) return { ok: false, error: 'ledger not found' };
-  const { copied } = await copyMonth(userId, ledger, fromMonth, toMonth, tz);
+  const num = (raw: FormDataEntryValue | null): number | null => {
+    if (typeof raw !== 'string' || raw.trim() === '') return null;
+    const n = Number(raw.replace(/,/g, '')); // tolerate thousands separators
+    return Number.isFinite(n) ? n : null;
+  };
+  const allocations: Record<string, number | null> = {};
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith('alloc:')) allocations[key.slice('alloc:'.length)] = num(value);
+  }
+  await saveBudget(userId, budgetId, month, tz, { total: num(formData.get('total')), allocations });
   revalidatePath('/', 'layout');
-  return { ok: true, copied };
+}
+
+/** Prefill source for the editor's "copy from previous month": the given
+ *  month's total + allocations (the client fills the inputs, nothing writes
+ *  until Save). */
+export async function loadBudgetMonthAction(
+  budgetId: string,
+  month: string
+): Promise<{ total: number | null; allocations: Record<string, number> }> {
+  const userId = await requireUserId();
+  const tz = await getRequestTimezone();
+  return loadBudgetMonth(userId, budgetId, month, tz);
 }
 
 export type SchemaSaveResult = { ok: true } | { ok: false; error: string };

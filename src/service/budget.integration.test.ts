@@ -157,4 +157,64 @@ describe.skipIf(!hasDb)('month-stamped budgets (real DB)', () => {
     expect((await history.redo(uid)).ok).toBe(true);
     expect(await budget.getLedgerLines(uid, ledger, '2026-09', TZ)).toHaveLength(2);
   });
+
+  it("A'' editor data: total round-trips; actual per row matches the §8a aggregate; month-scoped in tz", async () => {
+    // set a July total + a Food allocation via the editor's save path
+    await budget.saveBudget(uid, budgetId, '2026-07', TZ, {
+      total: 461760,
+      allocations: { [food]: 400, [transport]: 250 },
+    });
+
+    const data = (await budget.getBudgetEditorData(uid, budgetId, '2026-07', TZ))!;
+    // total round-trips as the Budget node's OWN value
+    expect(data.total).toBe(461760);
+    // EVERY category is a row (not only allocated ones) — Food, Transport, and
+    // any others declared under the categories node
+    const byCat = Object.fromEntries(data.rows.map((r) => [r.categoryId, r]));
+    expect(byCat[food].allocation).toBe(400);
+    expect(byCat[transport].allocation).toBe(250);
+
+    // actual per row === the standalone §8a aggregate (current + scheduled),
+    // month-scoped. July has no actuals here; August's Food 250 must NOT leak.
+    expect(byCat[food].actual).toBe(0);
+    const augData = (await budget.getBudgetEditorData(uid, budgetId, '2026-08', TZ))!;
+    const augFood = augData.rows.find((r) => r.categoryId === food)!;
+    // §8a: unfiltered by-category sum for August = view.value + pendingValue
+    const node = (await nodeRepo.byId(uid, expense))!;
+    const augView = await view.resolveView(uid, node, TZ, day.monthBoundsInTz('2026-08', TZ));
+    if (augView?.kind !== 'aggregate') throw new Error('expected aggregate');
+    const vFood = augView.buckets.find((b) => b.label === 'Food')!;
+    expect(augFood.actual).toBe((vFood.value ?? 0) + (vFood.pendingValue ?? 0));
+    expect(augFood.actual).toBe(250);
+
+    // saving again round-trips and CLEARING an allocation deletes its line
+    await budget.saveBudget(uid, budgetId, '2026-07', TZ, {
+      total: 461760,
+      allocations: { [food]: 400, [transport]: null },
+    });
+    const after = (await budget.getBudgetEditorData(uid, budgetId, '2026-07', TZ))!;
+    const afterByCat = Object.fromEntries(after.rows.map((r) => [r.categoryId, r]));
+    expect(afterByCat[food].allocation).toBe(400);
+    expect(afterByCat[transport].allocation).toBe(null); // line removed
+  });
+
+  it("A'' copy-previous prefills total + allocations with the month advanced", async () => {
+    // October empty; loadBudgetMonth of September (copied earlier: Food 500,
+    // Transport 100) is what the editor's "copy from previous" fills October with
+    const prev = await budget.loadBudgetMonth(uid, budgetId, '2026-09', TZ);
+    expect(prev.allocations[food]).toBe(500);
+    expect(prev.allocations[transport]).toBe(100);
+
+    // committing that prefill into October advances the month stamp
+    await budget.saveBudget(uid, budgetId, '2026-10', TZ, {
+      total: prev.total,
+      allocations: prev.allocations,
+    });
+    const oct = (await budget.getBudgetEditorData(uid, budgetId, '2026-10', TZ))!;
+    const octByCat = Object.fromEntries(oct.rows.map((r) => [r.categoryId, r.allocation]));
+    expect(octByCat[food]).toBe(500);
+    expect(octByCat[transport]).toBe(100);
+    // September untouched
+    expect((await budget.getLedgerLines(uid, (await nodeRepo.byId(uid, budgetId))!, '2026-09', TZ)).length).toBe(2);
+  });
 });
