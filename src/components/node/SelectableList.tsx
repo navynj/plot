@@ -6,6 +6,7 @@ import * as React from 'react';
 
 import { ParentPicker } from '@/components/node/ParentPicker';
 import { BulkBar, toastWithUndo } from '@/components/node/BulkBar';
+import { MainFieldChips, type MainFieldChip } from '@/components/node/MainFieldChips';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -19,6 +20,8 @@ export interface SelectableRow {
   childCount: number;
   /** the current parent as a navigable chip (B2 item 5); null = inbox row */
   parent?: { id: string; icon: string | null; name: string } | null;
+  /** show-on-main field values, shown small under the title (Task 2) */
+  fields?: MainFieldChip[];
 }
 
 export interface SelectableGroup {
@@ -108,13 +111,16 @@ export function SelectableList({
                     checked={selected.has(row.id)}
                     onCheckedChange={() => toggle(row.id)}
                   />
-                  <Link
-                    href={`/node/${row.id}`}
-                    className="min-w-0 flex-1 truncate text-sm hover:underline"
-                  >
-                    {row.icon && <span className="mr-1.5">{row.icon}</span>}
-                    {row.label}
-                  </Link>
+                  <span className="min-w-0 flex-1">
+                    <Link
+                      href={`/node/${row.id}`}
+                      className="block truncate text-sm hover:underline"
+                    >
+                      {row.icon && <span className="mr-1.5">{row.icon}</span>}
+                      {row.label}
+                    </Link>
+                    {row.fields && row.fields.length > 0 && <MainFieldChips fields={row.fields} />}
+                  </span>
                   {/* the current parent as a chip: tap = navigate to the room
                       (mirrors node-detail's "tap name = navigate"). Inbox rows
                       have no parent — just the ↰ picker. */}

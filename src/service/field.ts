@@ -1,14 +1,16 @@
 import './fieldTypes';
 
-import type { FieldDef, FieldPrimitive, FieldValue, TypedFieldWrite } from '@/db/schema';
+import type { FieldDef, FieldPrimitive, FieldValue, Node, TypedFieldWrite } from '@/db/schema';
 import { fieldValueRepo } from '@/repository/fieldValueRepo';
 import { nodeRepo } from '@/repository/nodeRepo';
+
+import { displayName } from '@/lib/identity';
 
 import { describeCandidates, type NodeCandidate } from './candidates';
 import { LinkTargetNotFoundError, LinkTargetOutOfScopeError, NodeNotFoundError } from './errors';
 import { getFieldType } from './fieldRegistry';
 import { applyComputedWrites } from './fieldTypes/computed';
-import { resolveSchema } from './inheritance';
+import { resolveSchema, resolveSchemaFrom } from './inheritance';
 import { validateValues } from './validation';
 
 /**
@@ -98,6 +100,95 @@ export async function getOwnValues(
     if (value !== null) values[row.key] = value;
   }
   return values;
+}
+
+/** One show-on-main field of a node: its icon (lucide name), the def, and the
+ *  raw value — plus a resolved `display` for link references (icon+name). */
+export interface MainFieldValue {
+  key: string;
+  icon: string | null;
+  def: FieldDef;
+  value: FieldPrimitive;
+  display?: string;
+}
+
+/**
+ * The show-on-main field values for a set of nodes, batched (one values query,
+ * one link-resolution query). Each node's worn schema is its DIRECT parent's
+ * childSchema (depth-1, via resolveSchemaFrom — the one inheritance rule), so
+ * the flags come from the same place as everywhere else. Nodes with no
+ * show-on-main field, or none filled, are simply absent from the map.
+ */
+export async function getMainFieldsByNode(
+  userId: string,
+  nodes: Pick<Node, 'id' | 'parentId' | 'attached'>[]
+): Promise<Map<string, MainFieldValue[]>> {
+  const out = new Map<string, MainFieldValue[]>();
+  if (nodes.length === 0) return out;
+
+  // depth-1 worn schema, batched by distinct parent (fetch each parent once)
+  const parentIds = [
+    ...new Set(nodes.map((n) => n.parentId).filter((p): p is string => p !== null)),
+  ];
+  const parents = new Map<string, Pick<Node, 'childSchema'>>();
+  await Promise.all(
+    parentIds.map(async (pid) => {
+      const p = await nodeRepo.byId(userId, pid);
+      if (p) parents.set(pid, p);
+    })
+  );
+
+  const mainDefsByNode = new Map<string, FieldDef[]>();
+  for (const n of nodes) {
+    const worn = resolveSchemaFrom(n.parentId ? (parents.get(n.parentId) ?? null) : null, {
+      attached: n.attached,
+    });
+    const mainDefs = worn.filter((d) => d.showOnMain);
+    if (mainDefs.length > 0) mainDefsByNode.set(n.id, mainDefs);
+  }
+  const ids = [...mainDefsByNode.keys()];
+  if (ids.length === 0) return out;
+
+  const rows = await fieldValueRepo.readByNodes(userId, ids);
+  const valuesByNode = new Map<string, Record<string, FieldPrimitive>>();
+  for (const row of rows) {
+    const v = extractValue(row);
+    if (v === null) continue;
+    const m = valuesByNode.get(row.nodeId) ?? {};
+    m[row.key] = v;
+    valuesByNode.set(row.nodeId, m);
+  }
+
+  // resolve link values to their target's name in one batch — a reference must
+  // never render as a raw id
+  const linkIds = new Set<string>();
+  for (const [nodeId, defs] of mainDefsByNode) {
+    const values = valuesByNode.get(nodeId) ?? {};
+    for (const d of defs) {
+      const v = values[d.key];
+      if (d.type === 'link' && typeof v === 'string') linkIds.add(v);
+    }
+  }
+  const targets = new Map<string, string>();
+  if (linkIds.size > 0) {
+    for (const t of await nodeRepo.byIds(userId, [...linkIds])) {
+      targets.set(t.id, `${t.displayIcon ? `${t.displayIcon} ` : ''}${displayName(t)}`);
+    }
+  }
+
+  for (const [nodeId, defs] of mainDefsByNode) {
+    const values = valuesByNode.get(nodeId) ?? {};
+    const chips: MainFieldValue[] = [];
+    for (const def of defs) {
+      const value = values[def.key];
+      if (value === undefined) continue;
+      const display =
+        def.type === 'link' && typeof value === 'string' ? targets.get(value) : undefined;
+      chips.push({ key: def.key, icon: def.icon ?? null, def, value, display });
+    }
+    if (chips.length > 0) out.set(nodeId, chips);
+  }
+  return out;
 }
 
 /** Candidates for a link-type field's picker: children of the def's declared

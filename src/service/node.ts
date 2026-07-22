@@ -339,6 +339,13 @@ function parseFieldDefs(input: unknown): FieldDef[] {
     if (linkTargetParentId !== undefined && typeof linkTargetParentId !== 'string') {
       throw new InvalidSchemaError(`def "${key}" linkTargetParentId must be a string`);
     }
+    const { showOnMain, icon } = rec;
+    if (showOnMain !== undefined && typeof showOnMain !== 'boolean') {
+      throw new InvalidSchemaError(`def "${key}" showOnMain must be a boolean`);
+    }
+    if (icon !== undefined && typeof icon !== 'string') {
+      throw new InvalidSchemaError(`def "${key}" icon must be a string`);
+    }
     const { defaultValue } = rec;
     if (
       defaultValue !== undefined &&
@@ -384,6 +391,8 @@ function parseFieldDefs(input: unknown): FieldDef[] {
     if (typeof step === 'number') def.step = step;
     if (validate !== undefined) def.validate = validate;
     if (compute !== undefined) def.compute = compute;
+    if (showOnMain !== undefined) def.showOnMain = showOnMain;
+    if (typeof icon === 'string') def.icon = icon;
     return def;
   });
 }

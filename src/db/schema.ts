@@ -76,6 +76,12 @@ export interface FieldDef {
   min?: number;
   max?: number;
   step?: number;
+  /** Show-on-main: surface this field's value under the node's title on the
+   *  main surfaces (stream / grid / inbox), prefixed by a small `icon`. Pure
+   *  presentation — nothing stored differs; unmarked fields never appear. */
+  showOnMain?: boolean;
+  /** the lucide icon name shown beside a show-on-main value (default 'List'). */
+  icon?: string;
   /** Computed field (type 'computed'): its value is a duration derived from two
    *  other timestamp fields in the SAME childSchema (`to` − `from`), stored as
    *  MINUTES in numberValue exactly like `duration`, so aggregation is

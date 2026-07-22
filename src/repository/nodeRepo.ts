@@ -76,6 +76,16 @@ export const nodeRepo = {
     return rows[0] ?? null;
   },
 
+  /** A set of the user's nodes by id, in one pass (batch display resolution —
+   *  e.g. show-on-main link values across a list). Order is not guaranteed. */
+  async byIds(userId: string, ids: string[]): Promise<NodeRow[]> {
+    if (ids.length === 0) return [];
+    return db
+      .select(nodeWithIcon)
+      .from(node)
+      .where(and(inArray(node.id, ids), eq(node.userId, userId), notDeleted));
+  },
+
   async update(userId: string, id: string, patch: UpdateNodePatch): Promise<Node | null> {
     const rows = await db
       .update(node)

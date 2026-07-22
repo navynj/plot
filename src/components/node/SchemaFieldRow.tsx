@@ -16,9 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { MAIN_FIELD_ICON_DEFAULT } from '@/components/field/mainFieldIcons';
 import { cn } from '@/lib/utils';
 
 import { ComputeConfigEditor } from './ComputeConfigEditor';
+import { MainFieldIconPicker } from './MainFieldIconPicker';
 import { ValidationRulesEditor } from './ValidationRulesEditor';
 
 export interface SchemaRow {
@@ -105,6 +107,27 @@ export function SchemaFieldRow(props: SchemaFieldRowProps) {
           />
           req
         </label>
+        {/* show-on-main: surface this value under the node's title on the main
+            surfaces; enabling it defaults the icon to the list glyph */}
+        <label className="text-muted-foreground flex items-center gap-1 text-xs">
+          <Checkbox
+            checked={def.showOnMain ?? false}
+            onCheckedChange={(c) =>
+              props.onChange({
+                ...def,
+                showOnMain: c === true,
+                icon: c === true ? (def.icon ?? MAIN_FIELD_ICON_DEFAULT) : def.icon,
+              })
+            }
+          />
+          main
+        </label>
+        {def.showOnMain && (
+          <MainFieldIconPicker
+            value={def.icon ?? MAIN_FIELD_ICON_DEFAULT}
+            onChange={(icon) => props.onChange({ ...def, icon })}
+          />
+        )}
         <Button
           variant="ghost"
           size="icon-sm"

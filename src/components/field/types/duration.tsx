@@ -1,13 +1,10 @@
 import { Input } from '@/components/ui/input';
+import { formatDuration } from '@/lib/formatDuration';
 
 import { registerFieldUI } from '../registry';
 
-export function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  if (h === 0) return `${m}m`;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-}
+// re-exported for existing importers (the duration/computed UI + tests)
+export { formatDuration };
 
 registerFieldUI('duration', {
   render: ({ value }) => (typeof value === 'number' ? formatDuration(value) : null),

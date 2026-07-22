@@ -3,8 +3,10 @@ import { CaptureForm } from '@/components/capture/CaptureForm';
 import { DayNavigator } from '@/components/capture/DayNavigator';
 import { SelectableList, type SelectableGroup } from '@/components/node/SelectableList';
 import { ScrollAnchor } from '@/components/ui/scroll-anchor';
+import { formatFieldValue } from '@/components/view/format';
 import { formatTimestamp } from '@/lib/formatTimestamp';
 import { displayName } from '@/lib/identity';
+import { getMainFieldsByNode } from '@/service/field';
 import { getCaptureChips, getTimeline, getTimelineVisible, nodeChildCounts } from '@/service/node';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
 import { dayInTz, isValidDay, todayInTz } from '@/lib/day';
@@ -37,10 +39,13 @@ export default async function TimelinePage({
   ]);
   const byId = new Map(allNodes.map((n) => [n.id, n]));
 
-  const childCounts = await nodeChildCounts(
-    userId,
-    nodes.map((n) => n.id)
-  );
+  const [childCounts, mainFields] = await Promise.all([
+    nodeChildCounts(
+      userId,
+      nodes.map((n) => n.id)
+    ),
+    getMainFieldsByNode(userId, nodes),
+  ]);
   const groups: SelectableGroup[] = [];
   for (const n of nodes) {
     const nodeDay = dayInTz(n.eventDate ?? n.capturedAt, tz);
@@ -54,6 +59,11 @@ export default async function TimelinePage({
       childCount: childCounts.get(n.id) ?? 0,
       // the current parent as a navigable chip (B2 item 5)
       parent: p ? { id: p.id, icon: p.displayIcon ?? null, name: displayName(p) } : null,
+      // show-on-main field values under the title (Task 2)
+      fields: (mainFields.get(n.id) ?? []).map((f) => ({
+        icon: f.icon,
+        value: formatFieldValue(f.def, f.value, f.display),
+      })),
     };
     const last = groups[groups.length - 1];
     if (last?.key === nodeDay) last.rows.push(row);

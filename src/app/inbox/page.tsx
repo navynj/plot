@@ -3,8 +3,10 @@ import Link from 'next/link';
 import { requireUserId } from '@/app/_auth/requireUser';
 import { SelectableList } from '@/components/node/SelectableList';
 import { ScrollAnchor } from '@/components/ui/scroll-anchor';
+import { formatFieldValue } from '@/components/view/format';
 import { formatTimestamp } from '@/lib/formatTimestamp';
 import { displayName } from '@/lib/identity';
+import { getMainFieldsByNode } from '@/service/field';
 import { getInbox, nodeChildCounts } from '@/service/node';
 
 export const dynamic = 'force-dynamic';
@@ -15,10 +17,13 @@ export const dynamic = 'force-dynamic';
 export default async function InboxPage() {
   const userId = await requireUserId();
   const nodes = await getInbox(userId);
-  const childCounts = await nodeChildCounts(
-    userId,
-    nodes.map((n) => n.id)
-  );
+  const [childCounts, mainFields] = await Promise.all([
+    nodeChildCounts(
+      userId,
+      nodes.map((n) => n.id)
+    ),
+    getMainFieldsByNode(userId, nodes),
+  ]);
 
   return (
     <ScrollAnchor className="min-h-0 flex-1 py-4">
@@ -42,6 +47,10 @@ export default async function InboxPage() {
                 time: formatTimestamp(n.capturedAt),
                 parented: false,
                 childCount: childCounts.get(n.id) ?? 0,
+                fields: (mainFields.get(n.id) ?? []).map((f) => ({
+                  icon: f.icon,
+                  value: formatFieldValue(f.def, f.value, f.display),
+                })),
               })),
             },
           ]}

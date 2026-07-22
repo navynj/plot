@@ -131,3 +131,45 @@ describe('validation-rule schema validation (parseFieldDefs, untrusted input)', 
     ).rejects.toBeInstanceOf(InvalidSchemaError);
   });
 });
+
+describe('show-on-main + compute schema validation (parseFieldDefs)', () => {
+  beforeEach(() => {
+    vi.mocked(nodeRepo.update)
+      .mockReset()
+      .mockResolvedValue({ id: 'N' } as Node);
+  });
+
+  it('passes through showOnMain (boolean) and icon (string)', async () => {
+    await setChildSchema('u', 'N', [
+      { key: 'mood', label: 'Mood', type: 'number', showOnMain: true, icon: 'Heart' },
+    ]);
+    const patch = vi.mocked(nodeRepo.update).mock.calls.at(-1)![2];
+    expect(patch.childSchema).toEqual([
+      { key: 'mood', label: 'Mood', type: 'number', showOnMain: true, icon: 'Heart' },
+    ]);
+  });
+
+  it('rejects a non-boolean showOnMain', async () => {
+    await expect(
+      setChildSchema('u', 'N', [{ key: 'm', label: 'M', type: 'number', showOnMain: 'yes' }])
+    ).rejects.toBeInstanceOf(InvalidSchemaError);
+  });
+
+  it('accepts compute referencing existing timestamp keys', async () => {
+    await expect(
+      setChildSchema('u', 'N', [
+        { key: 'sleepAt', label: 'Sleep at', type: 'timestamp' },
+        { key: 'wakeUpAt', label: 'Wake up at', type: 'timestamp' },
+        { key: 'duration', label: 'Duration', type: 'computed', compute: { from: 'sleepAt', to: 'wakeUpAt' } },
+      ])
+    ).resolves.toBeDefined();
+  });
+
+  it('rejects compute.from that references no existing key', async () => {
+    await expect(
+      setChildSchema('u', 'N', [
+        { key: 'duration', label: 'Duration', type: 'computed', compute: { from: 'ghost', to: 'ghost2' } },
+      ])
+    ).rejects.toBeInstanceOf(InvalidSchemaError);
+  });
+});
