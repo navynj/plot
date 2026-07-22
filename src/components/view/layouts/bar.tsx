@@ -41,8 +41,10 @@ registerLayout('bar', ({ view }) => {
             <span
               className={`tabular-nums ${overAll ? 'text-destructive font-medium' : 'text-muted-foreground'}`}
             >
-              spent {money.format(gt.spent)} of {money.format(gt.budget)}
-              {overAll && ' — over'}
+              spent {money.format(gt.spent)} of {money.format(gt.budget)} ·{' '}
+              {overAll
+                ? `over ${money.format(gt.spent - gt.budget)}`
+                : `remaining ${money.format(gt.budget - gt.spent)}`}
             </span>
           </div>
           <div className="bg-muted relative h-3 rounded-sm">
@@ -106,13 +108,16 @@ registerLayout('bar', ({ view }) => {
                   </span>
                 )}
               </span>
-              {/* actual, then a grey /goal (no /goal when the category has none) */}
-              <span className="text-center text-xs tabular-nums">
-                <span className={over ? 'text-destructive font-medium' : ''}>
+              {/* actual, then a grey /goal STACKED BELOW it (keeps the column
+                  narrow — no side-by-side width) */}
+              <span className="text-center text-xs leading-tight tabular-nums">
+                <span className={`block ${over ? 'text-destructive font-medium' : ''}`}>
                   {money.format(committed)}
                 </span>
                 {hasBudget && (
-                  <span className="text-muted-foreground"> /{money.format(b.overlayValue!)}</span>
+                  <span className="text-muted-foreground block">
+                    /{money.format(b.overlayValue!)}
+                  </span>
                 )}
               </span>
             </div>
