@@ -146,10 +146,20 @@ export function SchemaFieldRow(props: SchemaFieldRowProps) {
       <div className="text-muted-foreground flex items-center gap-2 pl-6 text-xs">
         <span className="font-mono">{def.key}</span>
         {def.type === 'option' && (
-          <OptionChoicesInput
-            options={def.options ?? []}
-            onCommit={(options) => props.onChange({ ...def, options })}
-          />
+          <>
+            <OptionChoicesInput
+              options={def.options ?? []}
+              onCommit={(options) => props.onChange({ ...def, options })}
+            />
+            {/* multi-select: several choices, shown as chips */}
+            <label className="flex shrink-0 items-center gap-1">
+              <Checkbox
+                checked={def.multiple ?? false}
+                onCheckedChange={(c) => props.onChange({ ...def, multiple: c === true })}
+              />
+              multiple
+            </label>
+          </>
         )}
         {def.type === 'link' && (
           <span className="flex items-center gap-0.5">

@@ -383,6 +383,10 @@ function parseFieldDefs(input: unknown): FieldDef[] {
     if (required !== undefined && typeof required !== 'boolean') {
       throw new InvalidSchemaError(`def "${key}" required must be a boolean`);
     }
+    const { multiple } = rec;
+    if (multiple !== undefined && typeof multiple !== 'boolean') {
+      throw new InvalidSchemaError(`def "${key}" multiple must be a boolean`);
+    }
     if (linkTargetParentId !== undefined && typeof linkTargetParentId !== 'string') {
       throw new InvalidSchemaError(`def "${key}" linkTargetParentId must be a string`);
     }
@@ -431,6 +435,7 @@ function parseFieldDefs(input: unknown): FieldDef[] {
     };
     if (required !== undefined) def.required = required;
     if (options !== undefined) def.options = options as string[];
+    if (multiple !== undefined) def.multiple = multiple;
     if (linkTargetParentId !== undefined) def.linkTargetParentId = linkTargetParentId;
     if (defaultValue !== undefined) def.defaultValue = defaultValue as string | number | boolean;
     if (typeof min === 'number') def.min = min;

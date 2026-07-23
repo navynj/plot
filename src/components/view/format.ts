@@ -29,3 +29,22 @@ export function formatFieldValue(def: FieldDef, value: FieldPrimitive, display?:
   }
   return formatLens(value);
 }
+
+/** A show-on-main chip: an icon plus one or more value pills. A multi-select
+ *  option splits its comma-joined value into one pill per choice; every other
+ *  field is a single pill. */
+export function mainFieldChip(
+  def: FieldDef,
+  value: FieldPrimitive,
+  display: string | undefined,
+  icon: string | null
+): { icon: string | null; values: string[] } {
+  if (def.type === 'option' && def.multiple && display === undefined && typeof value === 'string') {
+    const values = value
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+    return { icon, values: values.length > 0 ? values : [''] };
+  }
+  return { icon, values: [formatFieldValue(def, value, display)] };
+}

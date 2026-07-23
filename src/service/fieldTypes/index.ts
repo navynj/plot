@@ -7,7 +7,6 @@ import './boolean';
 import './option';
 import './date';
 import './timestamp';
-import './tag';
 import './link';
 import './url';
 import './duration';

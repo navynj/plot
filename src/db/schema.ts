@@ -41,10 +41,9 @@ export const FIELD_TYPES = [
   'number',
   'checkbox',
   'boolean',
-  'option', // single choice from a fixed list
+  'option', // choice(s) from a fixed list — single, or multi-select when def.multiple
   'date',
   'timestamp',
-  'tag', // free multi-value label
   'link', // reference to another node (e.g. transaction.category -> a category node)
   'url',
   'duration', // stored in numberValue as MINUTES; aggregation works unchanged
@@ -67,6 +66,9 @@ export interface FieldDef {
   type: FieldType;
   required?: boolean;
   options?: string[]; // for type 'option'
+  /** for type 'option': allow several choices (multi-select). The chosen values
+   *  store comma-joined in textValue (option choices can't contain commas). */
+  multiple?: boolean;
   linkTargetParentId?: string; // for type 'link': restrict to children of this node
   /** pre-fill for new-child forms — a real value once saved, not a phantom */
   defaultValue?: string | number | boolean;

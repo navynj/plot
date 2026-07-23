@@ -6,7 +6,7 @@ import { requireUserId } from '@/app/_auth/requireUser';
 import { MainFieldChips } from '@/components/node/MainFieldChips';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { Input } from '@/components/ui/input';
-import { formatFieldValue } from '@/components/view/format';
+import { mainFieldChip } from '@/components/view/format';
 import { displayName } from '@/lib/identity';
 import { getMainFieldsByNode } from '@/service/field';
 import { getGridSections, getInbox } from '@/service/node';
@@ -41,10 +41,9 @@ export default async function GridHomePage() {
             // compact rows: icon · name · count on one line, flowing 2–3 wide
             <div className="grid gap-x-3 gap-y-0.5 sm:grid-cols-2 lg:grid-cols-3">
               {tiles.map(({ node, count }) => {
-                const fields = (mainFields.get(node.id) ?? []).map((f) => ({
-                  icon: f.icon,
-                  value: formatFieldValue(f.def, f.value, f.display),
-                }));
+                const fields = (mainFields.get(node.id) ?? []).map((f) =>
+                  mainFieldChip(f.def, f.value, f.display, f.icon)
+                );
                 return (
                   <Link
                     key={node.id}

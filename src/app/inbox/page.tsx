@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { requireUserId } from '@/app/_auth/requireUser';
 import { SelectableList } from '@/components/node/SelectableList';
 import { ScrollAnchor } from '@/components/ui/scroll-anchor';
-import { formatFieldValue } from '@/components/view/format';
+import { mainFieldChip } from '@/components/view/format';
 import { formatTimestamp } from '@/lib/formatTimestamp';
 import { displayName } from '@/lib/identity';
 import { getMainFieldsByNode } from '@/service/field';
@@ -47,10 +47,9 @@ export default async function InboxPage() {
                 time: formatTimestamp(n.capturedAt),
                 parented: false,
                 childCount: childCounts.get(n.id) ?? 0,
-                fields: (mainFields.get(n.id) ?? []).map((f) => ({
-                  icon: f.icon,
-                  value: formatFieldValue(f.def, f.value, f.display),
-                })),
+                fields: (mainFields.get(n.id) ?? []).map((f) =>
+                  mainFieldChip(f.def, f.value, f.display, f.icon)
+                ),
               })),
             },
           ]}
