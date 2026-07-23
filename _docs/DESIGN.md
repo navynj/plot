@@ -394,6 +394,31 @@ EAV. One row per `(nodeId, key)`, unique. Typed columns
 per row. `numberValue` is the aggregation column; `linkValue` references another
 node for group-by-category. Key index: `(key, linkValue)`.
 
+### `habit` + `habit_check`
+
+A habit tracker: on the stream, each day shows a row of toggleable icons;
+turning one ON for a day creates a fully-populated preset log, OFF deletes it.
+
+A habit is **configuration plus a check ledger, never a node** — deliberately
+NOT a `habitSpec` jsonb on `node`, because a habit definition must be hidden
+from the timeline / inbox / grid / children / pickers, which as a node would
+mean a `habit_spec IS NULL` guard on many queries. Two dedicated tables avoid
+that; the logs it generates ARE ordinary nodes, so role stays derived
+everywhere else.
+
+- `habit` — `title`, `icon` (emoji, like `node.icon`), `logParentId` (the tree
+  parent generated logs belong under, which gives them their schema), `values`
+  (jsonb `{ fieldKey: rawString }` — raw preset values validated through the
+  normal field pipeline at instantiation, so field typing and validation rules
+  §5 apply), `rank` for the icon row.
+- `habit_check` — one row per `(habitId, day)` (unique), pointing at the
+  generated log `nodeId`. Turning a day ON creates a captured record under
+  `logParentId` with `eventDate = startOfDay(day)` and the preset values;
+  turning it OFF deletes the log and the check. Deleting a habit cascades its
+  checks but **keeps** the log nodes (they are normal records now); a deleted
+  log reads as unchecked (a check whose node is gone is "not live"). The
+  create/delete/toggle rule lives once in `service/habit.toggleHabit`.
+
 ---
 
 ## 8. Worked examples

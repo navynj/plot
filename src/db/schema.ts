@@ -394,6 +394,79 @@ export type FieldValue = typeof fieldValue.$inferSelect;
 export type Link = typeof link.$inferSelect;
 
 /* ------------------------------------------------------------------ */
+/* habit — config + a per-day check-in ledger (NOT a node)             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A habit is configuration plus a check ledger, never a node — so it never has
+ * to be hidden from the timeline/inbox/grid/pickers with per-query guards. The
+ * logs it generates ARE ordinary nodes (role stays derived); only the habit
+ * definition and its check-ins live here.
+ *
+ * `values` is raw form-shaped preset data (`{ fieldKey: rawString }`) validated
+ * through the normal field pipeline (`saveOwnValues`) at instantiation, so field
+ * typing and validation rules (§5) apply uniformly. `icon` is an emoji string —
+ * the same convention as `node.icon` (renders as the device's native glyph).
+ */
+export const habit = pgTable(
+  'habit',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    icon: text('icon'), // emoji string (device-native glyph), like node.icon
+    // the tree parent generated logs belong under — this is what gives each log
+    // its schema (depth-1 inheritance). Cascade fires only on a HARD node delete;
+    // a soft-deleted parent is handled by a service guard (habit reads disabled).
+    logParentId: text('log_parent_id')
+      .notNull()
+      .references((): AnyPgColumn => node.id, { onDelete: 'cascade' }),
+    values: jsonb('values').$type<Record<string, string>>().notNull().default({}),
+    rank: text('rank'), // fractional index for the icon-row order
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    byUser: index('habit_user_idx').on(t.userId),
+  })
+);
+
+/**
+ * One check-in: a habit turned ON for a day generated this node (the log). The
+ * unique (habitId, day) keeps a habit checked at most once per day. Deleting the
+ * habit cascades its checks but leaves the log nodes (the "keep logs" decision);
+ * deleting a log node cascades its check (so the day reads unchecked again).
+ */
+export const habitCheck = pgTable(
+  'habit_check',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    habitId: text('habit_id')
+      .notNull()
+      .references(() => habit.id, { onDelete: 'cascade' }),
+    nodeId: text('node_id')
+      .notNull()
+      .references(() => node.id, { onDelete: 'cascade' }),
+    day: text('day').notNull(), // YYYY-MM-DD the icon sits on
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniqHabitDay: uniqueIndex('habit_check_habit_day_uniq').on(t.habitId, t.day),
+    byHabit: index('habit_check_habit_idx').on(t.habitId),
+    byNode: index('habit_check_node_idx').on(t.nodeId),
+  })
+);
+
+export type Habit = typeof habit.$inferSelect;
+export type NewHabit = typeof habit.$inferInsert;
+export type HabitCheck = typeof habitCheck.$inferSelect;
+
+/* ------------------------------------------------------------------ */
 /* relations                                                           */
 /* ------------------------------------------------------------------ */
 

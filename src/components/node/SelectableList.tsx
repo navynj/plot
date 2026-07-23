@@ -30,6 +30,8 @@ export interface SelectableGroup {
   header: string | null;
   /** marks the today group so all-mode can anchor its initial scroll here */
   isToday?: boolean;
+  /** rendered under the header, above the rows — the day's habit toggle row */
+  accessory?: React.ReactNode;
   rows: SelectableRow[];
 }
 
@@ -103,6 +105,7 @@ export function SelectableList({
                 {group.header}
               </h2>
             )}
+            {group.accessory}
             <ul className="divide-border divide-y">
               {group.rows.map((row) => (
                 <li key={row.id} className="group flex items-center gap-2 py-2">

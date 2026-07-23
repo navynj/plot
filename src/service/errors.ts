@@ -106,6 +106,32 @@ export class UnsupportedFilterError extends DomainError {
   }
 }
 
+export class HabitNotFoundError extends DomainError {
+  readonly code = 'HABIT_NOT_FOUND';
+
+  constructor(readonly habitId: string) {
+    super(`habit not found: ${habitId}`);
+  }
+}
+
+/** A habit's target parent node is gone (soft-deleted). Toggling is disabled
+ *  rather than crashing — the stream dims such a habit. */
+export class HabitParentMissingError extends DomainError {
+  readonly code = 'HABIT_PARENT_MISSING';
+
+  constructor(readonly habitId: string) {
+    super(`habit ${habitId} has no target parent (it was deleted)`);
+  }
+}
+
+export class HabitError extends DomainError {
+  readonly code = 'HABIT';
+
+  constructor(reason: string) {
+    super(reason);
+  }
+}
+
 /** A declarative validation rule (FieldDef.validate) was violated at save.
  *  Carries the offending field key so the editor can point at it; the message
  *  is the rule's custom text or a generated one ("wake up at must be after
