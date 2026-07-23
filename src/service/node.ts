@@ -220,9 +220,15 @@ export async function getCaptureChips(userId: string): Promise<CaptureChipTiers>
   return { favorites: f, ongoing: o, topLevel: t };
 }
 
-/** A chip's record children — the drill-down step (B2). */
+/** A chip's DRILLABLE children — the drill-down step (B2). Only non-leaf
+ *  children (rooms that have their own record children) appear; a node's
+ *  individual record-children (leaves) never spray as chips. Attached
+ *  appendages are already excluded by findChildren. Selecting is decoupled from
+ *  drilling: tapping a chip always selects it (its fields appear); this row is
+ *  the optional "you can go deeper" reveal, never a replacement for selection. */
 export async function getChipChildren(userId: string, parentId: string): Promise<ChipItem[]> {
-  return toChipItems(userId, await nodeRepo.findChildren(userId, parentId));
+  const children = await toChipItems(userId, await nodeRepo.findChildren(userId, parentId));
+  return children.filter((c) => c.hasChildren);
 }
 
 export interface ScopeTarget {
