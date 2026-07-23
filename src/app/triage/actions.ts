@@ -3,10 +3,12 @@
 import { revalidatePath } from 'next/cache';
 
 import { requireUserId } from '@/app/_auth/requireUser';
+import { getRequestTimezone } from '@/app/_ctx/timezone';
+import { isValidDay } from '@/lib/day';
 import { getLinkTargetCandidates, linkMembers } from '@/service/collection';
 import { DomainError } from '@/service/errors';
 import { redo, undo } from '@/service/history';
-import { captureNode } from '@/service/node';
+import { bulkSetEventDate, bulkShiftEventDateByDays, captureNode } from '@/service/node';
 import {
   createLayerAbove,
   detachMany,
@@ -49,6 +51,25 @@ export async function detachNodes(ids: string[]): Promise<TriageResult> {
   }
   revalidatePath('/', 'layout');
   return { ok: true };
+}
+
+/** Bulk: shift every selected node's event day by +N (the bulk bar's "next
+ *  day" is N=1). Base day = the node's effective event day in the user's tz. */
+export async function shiftNodesEventDate(ids: string[], days: number): Promise<void> {
+  const userId = await requireUserId();
+  const tz = await getRequestTimezone();
+  await bulkShiftEventDateByDays(userId, ids, days, tz);
+  revalidatePath('/', 'layout');
+}
+
+/** Bulk: set every selected node's eventDate to a specific day (start of day in
+ *  the user's tz, exactly like the single-node setEventDate). */
+export async function setNodesEventDate(ids: string[], day: string): Promise<void> {
+  if (!isValidDay(day)) return;
+  const userId = await requireUserId();
+  const tz = await getRequestTimezone();
+  await bulkSetEventDate(userId, ids, day, tz);
+  revalidatePath('/', 'layout');
 }
 
 /** Bulk delete with one recorded op — always behind a confirm in the UI. */

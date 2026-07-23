@@ -321,4 +321,26 @@ export const nodeRepo = {
         .where(and(eq(node.id, entry.id), eq(node.userId, userId), notDeleted));
     }
   },
+
+  /** Bulk set eventDate to ONE instant for a set of the user's nodes — a single
+   *  statement over id IN (…) (the specific-date bulk action). */
+  async bulkSetEventDate(userId: string, ids: string[], eventDate: Date): Promise<void> {
+    if (ids.length === 0) return;
+    await db
+      .update(node)
+      .set({ eventDate, updatedAt: new Date() })
+      .where(and(inArray(node.id, ids), eq(node.userId, userId), notDeleted));
+  },
+
+  /** Bulk set PER-NODE eventDates (each computed by the service, e.g. a day
+   *  shift). Not atomic on neon-http (no transactions) — acceptable like the
+   *  other bulk triage ops (CLAUDE.md §6). */
+  async setEventDates(userId: string, updates: { id: string; eventDate: Date }[]): Promise<void> {
+    for (const u of updates) {
+      await db
+        .update(node)
+        .set({ eventDate: u.eventDate, updatedAt: new Date() })
+        .where(and(eq(node.id, u.id), eq(node.userId, userId), notDeleted));
+    }
+  },
 };

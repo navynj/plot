@@ -1,11 +1,26 @@
 'use client';
 
-import { CornerLeftUp, Link2, ListChecks, Loader2, Trash2, X } from 'lucide-react';
+import {
+  CalendarArrowUp,
+  CalendarClock,
+  CornerLeftUp,
+  Link2,
+  ListChecks,
+  Loader2,
+  Trash2,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
 import * as React from 'react';
 import { toast } from 'sonner';
 
-import { deleteNodes, linkNodesTo, linkTargetCandidates } from '@/app/triage/actions';
+import {
+  deleteNodes,
+  linkNodesTo,
+  linkTargetCandidates,
+  setNodesEventDate,
+  shiftNodesEventDate,
+} from '@/app/triage/actions';
 import { usePendingLock } from '@/components/hooks/usePendingLock';
 import { GraphLinkPicker } from '@/components/node/GraphLinkPicker';
 import { ParentPicker } from '@/components/node/ParentPicker';
@@ -19,6 +34,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 /** One-tap undo toast — the touch equivalent of Ctrl+Z. Runs through the
  *  shared undo gate: a tap that overlaps an in-flight undo (from any entry
@@ -61,8 +77,25 @@ export function BulkBar({
   onClear,
 }: BulkBarProps) {
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
+  const [datePickerOpen, setDatePickerOpen] = React.useState(false);
   const { pending: deleting, run: runDelete } = usePendingLock();
+  const { pending: dating, run: runDate } = usePendingLock();
   const count = selectedIds.length;
+
+  const moveToNextDay = () =>
+    runDate('next-day', async () => {
+      await shiftNodesEventDate(selectedIds, 1);
+      toast(`Moved ${count} to the next day`);
+      onClear();
+    });
+  const changeToDate = (day: string) =>
+    runDate('set-date', async () => {
+      await setNodesEventDate(selectedIds, day);
+      setDatePickerOpen(false);
+      toast(`Moved ${count} item${count === 1 ? '' : 's'} to ${day}`);
+      onClear();
+    });
+
   if (count === 0) return null;
 
   const warning =
@@ -108,6 +141,29 @@ export function BulkBar({
           <Link2 className="size-3.5" /> Link to…
         </Button>
       </GraphLinkPicker>
+      {/* eventDate bulk ops: shift +1 day (fires immediately), or pick a
+          specific day (start of day in tz, like the single-node control) */}
+      <Button size="sm" variant="outline" disabled={dating} onClick={() => void moveToNextDay()}>
+        {dating ? <Loader2 className="size-3.5 animate-spin" /> : <CalendarArrowUp className="size-3.5" />}{' '}
+        Next day
+      </Button>
+      <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+        <PopoverTrigger asChild>
+          <Button size="sm" variant="outline" disabled={dating}>
+            <CalendarClock className="size-3.5" /> Set date…
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-auto">
+          <input
+            type="date"
+            aria-label="set date for selected"
+            className="border-input bg-background h-8 rounded-md border px-2 text-xs"
+            onChange={(e) => {
+              if (e.target.value) void changeToDate(e.target.value);
+            }}
+          />
+        </PopoverContent>
+      </Popover>
       <Button size="sm" variant="outline" onClick={() => setConfirmingDelete(true)}>
         <Trash2 className="size-3.5" /> Delete
       </Button>

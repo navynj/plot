@@ -13,6 +13,7 @@ import {
 import { linkRepo } from '@/repository/linkRepo';
 import { nodeRepo, type NodeRow, type UpdateNodePatch } from '@/repository/nodeRepo';
 
+import { dayInTz, isValidDay, shiftDay, startOfDayInTz } from '@/lib/day';
 import { displayName } from '@/lib/identity';
 
 import { reparent } from './triage';
@@ -104,6 +105,37 @@ export async function deleteNode(userId: string, id: string): Promise<void> {
 
 export function getNode(userId: string, id: string): Promise<NodeRow | null> {
   return nodeRepo.byId(userId, id);
+}
+
+/** Bulk set eventDate to a specific day (start of day in the user's tz) for
+ *  many nodes — the multi-node twin of the single-node setEventDate. */
+export async function bulkSetEventDate(
+  userId: string,
+  ids: string[],
+  day: string,
+  tz: string
+): Promise<void> {
+  if (ids.length === 0 || !isValidDay(day)) return;
+  await nodeRepo.bulkSetEventDate(userId, ids, startOfDayInTz(day, tz));
+}
+
+/** Bulk shift each node's event day by N days (the "move to next day" action is
+ *  N=+1). The base is the node's EFFECTIVE event day — `eventDate` if set, else
+ *  `capturedAt` — read in the user's tz; the result is the START of (that day +
+ *  N) in tz. The whole rule lives here, in one place (CLAUDE.md §3). */
+export async function bulkShiftEventDateByDays(
+  userId: string,
+  ids: string[],
+  days: number,
+  tz: string
+): Promise<void> {
+  if (ids.length === 0) return;
+  const nodes = await nodeRepo.byIds(userId, ids);
+  const updates = nodes.map((n) => ({
+    id: n.id,
+    eventDate: startOfDayInTz(shiftDay(dayInTz(n.eventDate ?? n.capturedAt, tz), days), tz),
+  }));
+  await nodeRepo.setEventDates(userId, updates);
 }
 
 export function getChildren(userId: string, id: string): Promise<NodeRow[]> {
