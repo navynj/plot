@@ -1,4 +1,5 @@
 import { registerLayout } from '../registry';
+import { bipolarDomain, scaleFrac } from '../scale';
 
 /** money display — keeps decimals (Canadian amounts like 6.99), never rounds. */
 const money = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 });
@@ -22,12 +23,18 @@ registerLayout('bar', ({ view }) => {
   if (view.buckets.length === 0) {
     return <p className="text-muted-foreground py-4 text-sm">Nothing to aggregate yet.</p>;
   }
-  // shared axis maximum: the largest a single category reaches on EITHER its
-  // committed spending or its budget target
-  const max = Math.max(
-    ...view.buckets.map((b) => Math.max(b.value + (b.pendingValue ?? 0), b.overlayValue ?? 0)),
-    1
-  );
+  // shared axis, spanning zero: `hi` = the largest a single category reaches on
+  // EITHER its committed spending or its budget target (≥1 floor); `lo` dips
+  // below zero only when a signed field has negatives. For the budget case
+  // (all non-negative) lo = 0 and the baseline sits at the bottom — unchanged.
+  const committedOf = (b: (typeof view.buckets)[number]) => b.value + (b.pendingValue ?? 0);
+  const { lo, hi } = bipolarDomain([
+    ...view.buckets.map(committedOf),
+    ...view.buckets.map((b) => b.overlayValue ?? 0),
+    1,
+  ]);
+  const pct = (v: number) => scaleFrac(v, lo, hi) * 100;
+  const zeroPct = pct(0); // baseline height from the bottom (0 unless negatives)
   const gt = view.grandTotal;
   const overAll = gt !== null && gt.spent > gt.budget;
 
@@ -59,14 +66,19 @@ registerLayout('bar', ({ view }) => {
       {/* per-category VERTICAL bars on the shared scale */}
       <div className="flex items-end gap-2 overflow-x-auto pb-1">
         {view.buckets.map((b) => {
-          const committed = b.value + (b.pendingValue ?? 0);
+          const committed = committedOf(b);
           const hasBudget = b.overlayValue !== null;
           const over = hasBudget && committed > b.overlayValue!;
-          const budgetPct = hasBudget ? clampPct(b.overlayValue!, max) : 0;
-          const actualPct = clampPct(committed, max);
-          // black fills the grey from the bottom; when over, it caps at the
-          // grey top and the overflow segment (status color) continues above
+          const budgetPct = hasBudget ? pct(b.overlayValue!) : 0;
+          const actualPct = pct(committed);
+          // black fills from the zero baseline; when under budget it caps at the
+          // grey top, when over the overflow segment continues above. A negative
+          // value draws DOWNWARD from the baseline instead.
           const blackTop = hasBudget ? Math.min(actualPct, budgetPct) : actualPct;
+          const black =
+            committed < 0
+              ? { bottom: `${actualPct}%`, height: `${zeroPct - actualPct}%` }
+              : { bottom: `${zeroPct}%`, height: `${blackTop - zeroPct}%` };
           return (
             <div
               key={b.group ?? '(total)'}
@@ -80,17 +92,24 @@ registerLayout('bar', ({ view }) => {
                     : `${b.label}: ${money.format(committed)} (${b.count})`
                 }
               >
-                {/* grey budget placeholder (target room) */}
-                {hasBudget && (
+                {/* zero baseline (only visible when a signed field has negatives) */}
+                {lo < 0 && (
                   <div
-                    className="bg-muted absolute inset-x-0 bottom-0 rounded-t-sm"
-                    style={{ height: `${budgetPct}%` }}
+                    className="bg-border absolute inset-x-0 h-px"
+                    style={{ bottom: `${zeroPct}%` }}
                   />
                 )}
-                {/* black actual, from the baseline up */}
+                {/* grey budget placeholder (target room), from the baseline up */}
+                {hasBudget && (
+                  <div
+                    className="bg-muted absolute inset-x-0 rounded-t-sm"
+                    style={{ bottom: `${zeroPct}%`, height: `${budgetPct - zeroPct}%` }}
+                  />
+                )}
+                {/* black actual — up from the baseline, or down for a negative */}
                 <div
-                  className={`bg-foreground absolute inset-x-0 bottom-0 ${hasBudget && !over ? '' : 'rounded-t-sm'}`}
-                  style={{ height: `${blackTop}%` }}
+                  className={`bg-foreground absolute inset-x-0 ${committed < 0 ? 'rounded-b-sm' : hasBudget && !over ? '' : 'rounded-t-sm'}`}
+                  style={black}
                 />
                 {/* overflow above the grey (over budget) in the status color */}
                 {over && (

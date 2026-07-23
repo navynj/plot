@@ -82,7 +82,7 @@ export function LucideIconPicker({
     >
       <PopoverTrigger asChild>
         <Button type="button" variant="outline" size="sm" className="h-7 px-2" aria-label="field icon">
-          {createElement(resolveLucideIcon(current), { className: 'size-3.5 fill-current' })}
+          {createElement(resolveLucideIcon(current), { className: 'size-3.5' })}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 p-0">
@@ -103,7 +103,7 @@ export function LucideIconPicker({
                     setQuery('');
                   }}
                 >
-                  {createElement(resolveLucideIcon(name), { className: 'size-4 fill-current' })}
+                  {createElement(resolveLucideIcon(name), { className: 'size-4' })}
                   <span className="truncate">{name}</span>
                 </CommandItem>
               ))}

@@ -19,7 +19,7 @@ export function MainFieldChips({ fields }: { fields: MainFieldChip[] }) {
     <span className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
       {fields.map((f, i) => (
         <span key={i} className="flex items-center gap-1">
-          {createElement(resolveLucideIcon(f.icon), { className: 'size-3 shrink-0 fill-current' })}
+          {createElement(resolveLucideIcon(f.icon), { className: 'size-3 shrink-0' })}
           <span className="truncate">{f.value}</span>
         </span>
       ))}

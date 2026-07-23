@@ -81,7 +81,13 @@ export function ContextCaptureForm({
 
       {childSchema.length > 0 && <CaptureFields parentId={nodeId} childSchema={childSchema} />}
 
-      <CaptureDateField key={`${defaultDay}:${resetSignal}`} defaultDay={defaultDay} />
+      {/* the date the NEW captured child gets — labeled so it doesn't read as a
+          second "happened" for this node (that one control lives in the header,
+          editing node.eventDate) */}
+      <span className="flex items-center gap-1.5">
+        <span className="text-muted-foreground text-xs">new entry date:</span>
+        <CaptureDateField key={`${defaultDay}:${resetSignal}`} defaultDay={defaultDay} />
+      </span>
       {error && <p className="text-destructive text-xs">{error}</p>}
     </form>
   );
