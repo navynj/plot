@@ -29,7 +29,12 @@ export function FieldInputs({ defs, values, displays, schemaOwnerId }: FieldInpu
         <div key={def.key} className="flex flex-col gap-1.5">
           <Label htmlFor={def.key}>
             {def.label}
-            {def.required && <span className="text-muted-foreground text-xs"> (required)</span>}
+            {def.required && (
+              <span className="text-destructive" aria-label="required">
+                {' '}
+                *
+              </span>
+            )}
           </Label>
           {getFieldUI(def.type).edit({
             def,

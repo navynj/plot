@@ -130,7 +130,7 @@ export function SelectableList({
                   {row.parent && (
                     <Link
                       href={`/node/${row.parent.id}`}
-                      className="border-border text-muted-foreground hover:bg-muted/50 flex max-w-32 shrink-0 items-center gap-1 truncate rounded-full border px-2 py-0.5 text-xs"
+                      className="border-border text-muted-foreground hover:bg-muted/50 flex max-w-24 shrink-0 items-center gap-1 truncate rounded-full border px-2 py-0.5 text-xs sm:max-w-32"
                     >
                       {row.parent.icon && <span>{row.parent.icon}</span>}
                       <span className="truncate">{row.parent.name}</span>
@@ -146,7 +146,11 @@ export function SelectableList({
                       <CornerLeftUp className="size-3.5" />
                     </Button>
                   </ParentPicker>
-                  <time className="text-muted-foreground shrink-0 text-xs">{row.time}</time>
+                  {/* allowed to shrink and wrap (not shrink-0) so a long
+                      timestamp never forces horizontal overflow on mobile */}
+                  <time className="text-muted-foreground shrink text-right text-xs">
+                    {row.time}
+                  </time>
                 </li>
               ))}
             </ul>

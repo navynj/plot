@@ -33,14 +33,7 @@ import { ChildSortToggle } from '@/components/node/ChildSortToggle';
 import { formatFieldValue } from '@/components/view/format';
 import { resolveView } from '@/service/view';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
-import {
-  dayInTz,
-  isValidMonth,
-  monthBoundsInTz,
-  monthLabel,
-  thisMonthInTz,
-  todayInTz,
-} from '@/lib/day';
+import { dayInTz, isValidMonth, monthBoundsInTz, monthLabel, thisMonthInTz } from '@/lib/day';
 import { getBudgetHolder, getLedgerLines, isMonthStampedLedger } from '@/service/budget';
 import { formatTimestamp } from '@/lib/formatTimestamp';
 import { displayName } from '@/lib/identity';
@@ -200,7 +193,6 @@ export default async function NodeDetailPage({
         nodeId={node.id}
         contextLabel={node.title ?? 'this node'}
         childSchema={node.childSchema ?? []}
-        defaultDay={todayInTz(tz)}
       />
 
       {/* own values */}

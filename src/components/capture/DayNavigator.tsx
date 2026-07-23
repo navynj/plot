@@ -33,7 +33,7 @@ export function DayNavigator({
   const dayHref = (d: string) => (d === today ? '/' : `/?day=${d}`);
 
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
       <div className="flex items-center gap-1">
         {mode === 'day' ? (
           <>

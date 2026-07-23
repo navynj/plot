@@ -96,7 +96,7 @@ export default async function TimelinePage({
   return (
     <>
       <div className="border-border -mx-4 flex flex-col gap-1 border-b px-4 py-2">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <DayNavigator viewingDay={viewingDay} today={today} mode={mode} />
           <HabitEditorSheet habits={habits} />
         </div>

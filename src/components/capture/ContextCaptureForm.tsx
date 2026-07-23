@@ -7,7 +7,6 @@ import { captureHere } from '@/app/node/[id]/actions';
 import type { FieldDef } from '@/db/schema';
 import { SubmitButton } from '@/components/ui/submit-button';
 
-import { CaptureDateField } from './CaptureDateField';
 import { CaptureFields } from './CaptureFields';
 import { CaptureTitleBody } from './CaptureTitleBody';
 
@@ -15,19 +14,17 @@ import { CaptureTitleBody } from './CaptureTitleBody';
  *  child of this node. "→ inbox" is the one-tap opt-out. Enter submits as "Add
  *  here" (the form's first submit button). When this node declares a
  *  childSchema, its fields render inline (optional; ignored on the inbox
- *  opt-out, where the entry wears no schema). */
+ *  opt-out, where the entry wears no schema). A capture has no date control — it
+ *  happens "now"; dating an entry is done later via its own "happened". */
 export function ContextCaptureForm({
   nodeId,
   contextLabel,
   childSchema,
-  defaultDay,
 }: {
   nodeId: string;
   contextLabel: string;
   childSchema: FieldDef[];
-  defaultDay: string;
 }) {
-  const [resetSignal, setResetSignal] = React.useState(0);
   const [error, setError] = React.useState<string | null>(null);
   const [icon, setIcon] = React.useState('');
   const [title, setTitle] = React.useState('');
@@ -48,7 +45,6 @@ export function ContextCaptureForm({
         setTitle((c) => (c === t ? '' : c));
         setBody((c) => (c === b ? '' : c));
         setIcon('');
-        setResetSignal((n) => n + 1);
       }}
       className="flex flex-col gap-2"
     >
@@ -81,13 +77,6 @@ export function ContextCaptureForm({
 
       {childSchema.length > 0 && <CaptureFields parentId={nodeId} childSchema={childSchema} />}
 
-      {/* the date the NEW captured child gets — labeled so it doesn't read as a
-          second "happened" for this node (that one control lives in the header,
-          editing node.eventDate) */}
-      <span className="flex items-center gap-1.5">
-        <span className="text-muted-foreground text-xs">new entry date:</span>
-        <CaptureDateField key={`${defaultDay}:${resetSignal}`} defaultDay={defaultDay} />
-      </span>
       {error && <p className="text-destructive text-xs">{error}</p>}
     </form>
   );

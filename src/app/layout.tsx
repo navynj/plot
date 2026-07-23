@@ -50,13 +50,13 @@ export default async function RootLayout({
   const session = await auth();
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="flex h-dvh flex-col">
+      <body className="flex h-dvh flex-col overflow-x-hidden">
         <PwaRegister />
         <TimezoneSync />
         <UndoHotkeys />
         <Toaster position="top-center" />
         <header className="border-border border-b">
-          <nav className="mx-auto flex w-full max-w-2xl items-center gap-4 px-4 py-2">
+          <nav className="mx-auto flex w-full max-w-2xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2">
             <span className="text-sm font-semibold tracking-wide">PLOT</span>
             <Link
               href="/"
@@ -83,8 +83,8 @@ export default async function RootLayout({
               Fields
             </Link>
             {session?.user && (
-              <span className="ml-auto flex items-center gap-2">
-                <span className="text-muted-foreground text-xs">{session.user.email}</span>
+              <span className="ml-auto flex min-w-0 items-center gap-2">
+                <span className="text-muted-foreground truncate text-xs">{session.user.email}</span>
                 <form
                   action={async () => {
                     'use server';

@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 
 import { requireUserId } from '@/app/_auth/requireUser';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
-import { explicitEventDate, isValidDay, startOfDayInTz } from '@/lib/day';
+import { isValidDay, startOfDayInTz } from '@/lib/day';
 import type { NodeCandidate } from '@/service/candidates';
 import { loadBudgetMonth, saveBudget, type AllocationInput } from '@/service/budget';
 import {
@@ -116,13 +116,13 @@ export async function captureHere(nodeId: string, formData: FormData): Promise<v
   const body = s('body');
   if (!title && !body) return;
   const toInbox = formData.get('dest') === 'inbox';
-  const tz = await getRequestTimezone();
+  // no capture date: a capture happens "now" (falls back to capturedAt on the
+  // event axis). Dating an entry is later done via its own "happened" control.
   const node = await captureNode(userId, {
     title: title || undefined,
     body: body || undefined,
     icon: s('icon') || undefined,
     contextParentId: toInbox ? undefined : nodeId,
-    eventDate: explicitEventDate(s('captureDate') || undefined, tz),
   });
   // inline fields wear this node's childSchema — only meaningful when kept here
   if (!toInbox) {

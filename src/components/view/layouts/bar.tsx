@@ -106,9 +106,13 @@ registerLayout('bar', ({ view }) => {
                     style={{ bottom: `${zeroPct}%`, height: `${budgetPct - zeroPct}%` }}
                   />
                 )}
-                {/* black actual — up from the baseline, or down for a negative */}
+                {/* black actual — up from the baseline, or down for a negative.
+                    With a budget the top is SQUARE: under budget the grey's
+                    rounded top caps it; over budget the red over-cap sits flush
+                    on top, so black+red read as one continuous bar (not two
+                    pills). Only a plain (budget-less) bar keeps a rounded top. */}
                 <div
-                  className={`bg-foreground absolute inset-x-0 ${committed < 0 ? 'rounded-b-sm' : hasBudget && !over ? '' : 'rounded-t-sm'}`}
+                  className={`bg-foreground absolute inset-x-0 ${committed < 0 ? 'rounded-b-sm' : hasBudget ? '' : 'rounded-t-sm'}`}
                   style={black}
                 />
                 {/* overflow above the grey (over budget) in the status color */}

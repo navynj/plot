@@ -104,7 +104,7 @@ export function BulkBar({
       : undefined;
 
   return (
-    <div className="border-border bg-background sticky bottom-0 z-20 -mx-4 flex items-center gap-2 border-t px-4 py-2">
+    <div className="border-border bg-background sticky bottom-0 z-20 -mx-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t px-4 py-2">
       <span className="text-sm font-medium">{count} selected</span>
       <ParentPicker
         nodeIds={selectedIds}

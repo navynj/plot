@@ -29,7 +29,12 @@ export function CaptureFields({
         <div key={def.key} className="flex flex-col gap-1">
           <Label htmlFor={def.key} className="text-xs">
             {def.label}
-            {def.required && <span className="text-muted-foreground"> (required)</span>}
+            {def.required && (
+              <span className="text-destructive" aria-label="required">
+                {' '}
+                *
+              </span>
+            )}
           </Label>
           {getFieldUI(def.type).edit({ def, value: def.defaultValue, schemaOwnerId: parentId })}
         </div>
