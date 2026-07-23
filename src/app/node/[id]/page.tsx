@@ -33,7 +33,13 @@ import { ChildSortToggle } from '@/components/node/ChildSortToggle';
 import { formatFieldValue } from '@/components/view/format';
 import { resolveView } from '@/service/view';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
-import { dayInTz, isValidMonth, monthBoundsInTz, monthLabel, thisMonthInTz } from '@/lib/day';
+import {
+  instantToLocalDatetime,
+  isValidMonth,
+  monthBoundsInTz,
+  monthLabel,
+  thisMonthInTz,
+} from '@/lib/day';
 import { getBudgetHolder, getLedgerLines, isMonthStampedLedger } from '@/service/budget';
 import { formatTimestamp } from '@/lib/formatTimestamp';
 import { displayName } from '@/lib/identity';
@@ -181,7 +187,7 @@ export default async function NodeDetailPage({
           <span className="flex items-center gap-3">
             <EventDateControl
               nodeId={node.id}
-              value={node.eventDate ? dayInTz(node.eventDate, tz) : null}
+              value={node.eventDate ? instantToLocalDatetime(node.eventDate, tz) : null}
             />
             <TimelineVisibilityControl nodeId={node.id} value={node.timelineVisibility} />
           </span>

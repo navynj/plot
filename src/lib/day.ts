@@ -113,6 +113,47 @@ export function explicitEventDate(day: string | undefined, tz: string): Date | u
   return startOfDayInTz(day, tz);
 }
 
+/* ---------------- datetime granularity (the "happened" control) --------- */
+
+/** A `datetime-local` value: 'YYYY-MM-DDTHH:mm' (seconds optional). */
+export function isValidLocalDatetime(local: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(local);
+}
+
+/**
+ * A local wall-clock datetime ('YYYY-MM-DDTHH:mm') on tz's clock → the UTC
+ * instant it names. Same DST-safe two-pass offset correction as
+ * `startOfDayInTz`, generalized to a time of day — NEVER `new Date(local)`
+ * (that would assume the BROWSER's timezone). Throws on a malformed string.
+ */
+export function localDatetimeToInstant(local: string, tz: string): Date {
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(:\d{2})?$/.exec(local);
+  if (!m) throw new RangeError(`invalid local datetime: ${local}`);
+  const guess = Date.parse(`${m[1]}T${m[2]}${m[3] ?? ':00'}Z`); // read as if UTC
+  const offset = tzOffsetMs(tz, new Date(guess));
+  let instant = guess - offset;
+  const check = tzOffsetMs(tz, new Date(instant));
+  if (check !== offset) instant = guess - check; // DST edge second pass
+  return new Date(instant);
+}
+
+/** A stored instant → the 'YYYY-MM-DDTHH:mm' it reads as on tz's wall clock —
+ *  the value for a `datetime-local` input (the round-trip of the above). */
+export function instantToLocalDatetime(instant: Date, tz: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(instant);
+  const g = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+  const hour = g('hour') === '24' ? '00' : g('hour'); // some ICU emit 24 at midnight
+  return `${g('year')}-${g('month')}-${g('day')}T${hour}:${g('minute')}`;
+}
+
 /* ---------------- month granularity (A2 period navigator) --------------- */
 
 export function isValidMonth(month: string): boolean {

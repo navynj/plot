@@ -7,29 +7,31 @@ import { setEventDate } from '@/app/node/[id]/actions';
 import { Button } from '@/components/ui/button';
 
 /** eventDate — when it actually happened (optional for every node; date is
- *  storage, not identity). Clearable; capturedAt remains the fallback axis. */
+ *  storage, not identity). Captures date AND time of day (the value is a local
+ *  wall-clock datetime in the user's tz). Clearable; capturedAt remains the
+ *  fallback axis. */
 export function EventDateControl({ nodeId, value }: { nodeId: string; value: string | null }) {
-  const [day, setDay] = React.useState(value ?? '');
+  const [when, setWhen] = React.useState(value ?? '');
   return (
     <span className="text-muted-foreground flex items-center gap-1 text-xs">
       happened:
       <input
-        type="date"
-        value={day}
+        type="datetime-local"
+        value={when}
         onChange={(e) => {
-          setDay(e.target.value);
+          setWhen(e.target.value);
           if (e.target.value) void setEventDate(nodeId, e.target.value);
         }}
-        aria-label="event date"
+        aria-label="event date and time"
         className="border-input bg-background h-7 rounded-md border px-2 text-xs"
       />
-      {day !== '' && (
+      {when !== '' && (
         <Button
           variant="ghost"
           size="icon-sm"
           aria-label="clear event date"
           onClick={() => {
-            setDay('');
+            setWhen('');
             void setEventDate(nodeId, null);
           }}
         >

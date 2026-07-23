@@ -4,7 +4,10 @@ import {
   DEFAULT_TIMEZONE,
   dayInTz,
   explicitEventDate,
+  instantToLocalDatetime,
+  isValidLocalDatetime,
   isValidMonth,
+  localDatetimeToInstant,
   monthBoundsInTz,
   monthLabel,
   resolveTimezone,
@@ -117,5 +120,45 @@ describe('A2 month bounds respect the USER timezone — a month-edge instant lan
     const { start, end } = monthBoundsInTz('2026-02', 'UTC');
     expect(start.toISOString()).toBe('2026-02-01T00:00:00.000Z');
     expect(end.toISOString()).toBe('2026-03-01T00:00:00.000Z'); // 2026 is not a leap year
+  });
+});
+
+describe('the "happened" datetime — local wall clock ↔ UTC instant (tz-correct)', () => {
+  it('validates the datetime-local shape', () => {
+    expect(isValidLocalDatetime('2026-07-22T09:30')).toBe(true);
+    expect(isValidLocalDatetime('2026-07-22T09:30:00')).toBe(true);
+    expect(isValidLocalDatetime('2026-07-22')).toBe(false); // date only
+    expect(isValidLocalDatetime('garbage')).toBe(false);
+  });
+
+  it('maps a local datetime to the correct UTC instant per tz (not the browser tz)', () => {
+    // Vancouver is UTC-7 in July (PDT): 09:30 local = 16:30 UTC
+    expect(localDatetimeToInstant('2026-07-22T09:30', 'America/Vancouver').toISOString()).toBe(
+      '2026-07-22T16:30:00.000Z'
+    );
+    // Seoul is UTC+9: 09:30 local = 00:30 UTC
+    expect(localDatetimeToInstant('2026-07-22T09:30', 'Asia/Seoul').toISOString()).toBe(
+      '2026-07-22T00:30:00.000Z'
+    );
+  });
+
+  it('round-trips back to the same local string in the same tz', () => {
+    const tz = 'America/Vancouver';
+    const local = '2026-07-22T09:30';
+    const instant = localDatetimeToInstant(local, tz);
+    expect(instantToLocalDatetime(instant, tz)).toBe(local);
+    // the SAME instant reads as a different wall clock elsewhere (rollover)
+    expect(instantToLocalDatetime(instant, 'Asia/Seoul')).toBe('2026-07-23T01:30');
+  });
+
+  it('handles a midnight boundary and shows 00:00 for a start-of-day instant', () => {
+    const tz = 'America/Vancouver';
+    const instant = localDatetimeToInstant('2026-07-22T00:00', tz);
+    expect(instant.toISOString()).toBe('2026-07-22T07:00:00.000Z'); // 00:00 PDT = 07:00 UTC
+    expect(instantToLocalDatetime(instant, tz)).toBe('2026-07-22T00:00');
+    // an existing start-of-day eventDate renders as 00:00
+    expect(instantToLocalDatetime(startOfDayInTz('2026-07-22', 'Asia/Seoul'), 'Asia/Seoul')).toBe(
+      '2026-07-22T00:00'
+    );
   });
 });

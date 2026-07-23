@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 
 import { requireUserId } from '@/app/_auth/requireUser';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
-import { isValidDay, startOfDayInTz } from '@/lib/day';
+import { isValidLocalDatetime, localDatetimeToInstant } from '@/lib/day';
 import type { NodeCandidate } from '@/service/candidates';
 import { loadBudgetMonth, saveBudget, type AllocationInput } from '@/service/budget';
 import {
@@ -92,13 +92,14 @@ export async function setPin(
   revalidatePath('/', 'layout');
 }
 
-/** eventDate is optional for every node, exactly as the schema always said —
- *  set from a YYYY-MM-DD day, or null to clear. */
-export async function setEventDate(nodeId: string, day: string | null): Promise<void> {
+/** eventDate ("happened") is optional for every node — set from a local
+ *  wall-clock datetime ('YYYY-MM-DDTHH:mm'), converted to a UTC instant in the
+ *  user's tz, or null to clear. */
+export async function setEventDate(nodeId: string, local: string | null): Promise<void> {
   const userId = await requireUserId();
   const tz = await getRequestTimezone();
   await updateNode(userId, nodeId, {
-    eventDate: day !== null && isValidDay(day) ? startOfDayInTz(day, tz) : null,
+    eventDate: local !== null && isValidLocalDatetime(local) ? localDatetimeToInstant(local, tz) : null,
   });
   revalidatePath(`/node/${nodeId}`);
 }
