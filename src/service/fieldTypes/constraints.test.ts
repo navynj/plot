@@ -43,6 +43,38 @@ describe('number constraints — service validation (UI-bypass-proof)', () => {
   });
 });
 
+describe('number parse — arithmetic expressions (stored as the result)', () => {
+  it('evaluates an expression and stores only the result', () => {
+    expect(parse(free, '3+4')).toBe(7);
+    expect(parse(free, '1200*3')).toBe(3600);
+    expect(parse(free, '(2+3)*4')).toBe(20);
+    expect(parse(free, '1.5+2.5')).toBe(4);
+    expect(parse(free, '-3+5')).toBe(2);
+  });
+
+  it('plain numbers, commas, and empty still behave', () => {
+    expect(parse(free, '42')).toBe(42);
+    expect(parse(free, '1,200')).toBe(1200);
+    expect(parse(free, '')).toBeNull();
+    expect(parse(free, '   ')).toBeNull(); // whitespace-only clears, not 0
+    expect(parse(free, 90)).toBe(90); // a numeric value passes through
+  });
+
+  it('an invalid expression throws the typed field error', () => {
+    expect(() => parse(free, '1+')).toThrow(FieldTypeMismatchError);
+    expect(() => parse(free, 'abc')).toThrow(FieldTypeMismatchError);
+    expect(() => parse(free, '(2+3')).toThrow(FieldTypeMismatchError);
+    expect(() => parse(free, '1/0')).toThrow(FieldTypeMismatchError);
+  });
+
+  it('constraints apply to the EVALUATED value', () => {
+    // scale is -5..5 step 1; 2*3=6 is out of range, 1+1=2 is in range/on step
+    expect(() => parse(scale, '2*3')).toThrow(FieldTypeMismatchError);
+    expect(parse(scale, '1+1')).toBe(2);
+    expect(() => parse(scale, '1.5+0')).toThrow(FieldTypeMismatchError); // off-step
+  });
+});
+
 describe('schema-sheet constraint validation (service layer)', () => {
   beforeEach(() => {
     vi.mocked(nodeRepo.update)

@@ -34,13 +34,16 @@ registerFieldUI('number', {
         />
       );
     }
+    // a TEXT input (not type=number, which blocks + * ( ) ): the field accepts
+    // an arithmetic expression (1200*3) and stores the evaluated result. Entry
+    // correctness over the native spinner; constraints validate server-side.
     return (
       <Input
-        type="number"
-        step={def.step ?? 'any'}
-        min={def.min}
-        max={def.max}
+        type="text"
+        inputMode="text"
+        autoComplete="off"
         name={def.key}
+        placeholder="number or 1200*3"
         defaultValue={typeof value === 'number' ? value : undefined}
       />
     );
