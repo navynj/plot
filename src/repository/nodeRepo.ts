@@ -7,6 +7,11 @@ import { displayIcon, type NodeRow } from './displayIconSql';
 
 export type { NodeRow };
 
+/** How the node-detail Children section orders a node's children by date:
+ *  'happened' = the event axis (eventDate ?? capturedAt); 'captured' = strictly
+ *  capturedAt. (Manual `rank` order is the repo default, still used by triage.) */
+export type ChildSort = 'happened' | 'captured';
+
 export interface CreateNodeInput {
   userId: string;
   title?: string | null;
@@ -164,11 +169,27 @@ export const nodeRepo = {
       .orderBy(asc(node.rank), asc(node.capturedAt));
   },
 
-  /** The parent's RECORDS: normal (inheriting) tree children, rank order.
-   *  Attached children (appendages — no schema, not records) are excluded
-   *  here, which is what keeps them out of aggregates, walks, bulk, and grid
-   *  tiles for free (every one routes through this). */
-  async findChildren(userId: string, parentId: string): Promise<NodeRow[]> {
+  /** The parent's RECORDS: normal (inheriting) tree children. Attached children
+   *  (appendages — no schema, not records) are excluded here, which is what
+   *  keeps them out of aggregates, walks, bulk, and grid tiles for free (every
+   *  one routes through this).
+   *
+   *  Ordering: default is manual `rank` order (drag order — what triage, grid,
+   *  and chip drill-down rely on). The node-detail Children section passes an
+   *  explicit `sort` to order by DATE instead — 'happened' on the event axis
+   *  (coalesce(eventDate, capturedAt), like the timeline) or 'captured' strictly
+   *  by capturedAt. All ascending (oldest → newest), matching the stream. */
+  async findChildren(
+    userId: string,
+    parentId: string,
+    opts: { sort?: ChildSort } = {}
+  ): Promise<NodeRow[]> {
+    const order =
+      opts.sort === 'happened'
+        ? [sql`coalesce(${node.eventDate}, ${node.capturedAt}) asc`, asc(node.capturedAt)]
+        : opts.sort === 'captured'
+          ? [asc(node.capturedAt)]
+          : [asc(node.rank), asc(node.capturedAt)];
     return db
       .select(nodeWithIcon)
       .from(node)
@@ -180,7 +201,7 @@ export const nodeRepo = {
           notDeleted
         )
       )
-      .orderBy(asc(node.rank), asc(node.capturedAt));
+      .orderBy(...order);
   },
 
   /** The parent's APPENDAGES: attached children only (rendered in the quiet

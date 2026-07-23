@@ -19,7 +19,7 @@ import { NodeView } from '@/components/view/NodeView';
 import { PeriodNavigator } from '@/components/view/PeriodNavigator';
 import { Button } from '@/components/ui/button';
 import { getMembers, getMemberships } from '@/service/collection';
-import { getOwnValues, getValueDisplays } from '@/service/field';
+import { getMainFieldsByNode, getOwnValues, getValueDisplays } from '@/service/field';
 import { resolveSchema } from '@/service/inheritance';
 import {
   getAttachedChildren,
@@ -27,7 +27,10 @@ import {
   getNode,
   getSchemaScopeTargets,
   nodeChildCounts,
+  type ChildSort,
 } from '@/service/node';
+import { ChildSortToggle } from '@/components/node/ChildSortToggle';
+import { formatFieldValue } from '@/components/view/format';
 import { resolveView } from '@/service/view';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
 import {
@@ -54,10 +57,12 @@ export default async function NodeDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ period?: string }>;
+  searchParams: Promise<{ period?: string; csort?: string }>;
 }) {
   const { id } = await params;
-  const { period: periodParam } = await searchParams;
+  const { period: periodParam, csort: csortParam } = await searchParams;
+  // Children sort: happened (event axis, the default) | captured (capturedAt)
+  const childSort: ChildSort = csortParam === 'captured' ? 'captured' : 'happened';
   const userId = await requireUserId();
   const tz = await getRequestTimezone();
   const node = await getNode(userId, id);
@@ -81,7 +86,7 @@ export default async function NodeDetailPage({
       node.parentId ? getNode(userId, node.parentId) : Promise.resolve(null),
       getMemberships(userId, id),
       getMembers(userId, id),
-      getChildren(userId, id),
+      getChildren(userId, id, childSort),
       getAttachedChildren(userId, id),
       resolveView(userId, node, tz, period),
     ]);
@@ -97,10 +102,23 @@ export default async function NodeDetailPage({
   const displayChildren = isLedger
     ? await getLedgerLines(userId, node, activeMonth, tz)
     : children;
-  const grandchildCounts = await nodeChildCounts(
-    userId,
-    displayChildren.map((c) => c.id)
-  );
+  const [grandchildCounts, childMainFields] = await Promise.all([
+    nodeChildCounts(
+      userId,
+      displayChildren.map((c) => c.id)
+    ),
+    // show-on-main field chips under each child's title, like the stream (Task 2)
+    getMainFieldsByNode(userId, displayChildren),
+  ]);
+  // the Children sort tabs preserve any active period lens; 'happened' is the
+  // default, so it drops the param
+  const childSortHref = (sort: ChildSort) => {
+    const params = new URLSearchParams();
+    if (periodParam) params.set('period', periodParam);
+    if (sort !== 'happened') params.set('csort', sort);
+    const qs = params.toString();
+    return `/node/${node.id}${qs ? `?${qs}` : ''}`;
+  };
   // the schema relationships, made navigable (nothing stored): the worn
   // schema's link scopes (for the fields-section editor) and this node's own
   // childSchema scopes (the "related" line)
@@ -281,6 +299,11 @@ export default async function NodeDetailPage({
             <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
               {isLedger ? 'Lines' : 'Children'}
             </h2>
+            {/* normal children sort by date: happened (default) | captured. The
+                budget ledger keeps its month-scoped ordering. */}
+            {!isLedger && displayChildren.length > 0 && (
+              <ChildSortToggle sort={childSort} hrefFor={childSortHref} />
+            )}
             {isLedger && (
               <div className="flex flex-wrap items-center gap-2">
                 <PeriodNavigator
@@ -330,6 +353,10 @@ export default async function NodeDetailPage({
                     time: formatTimestamp(c.capturedAt),
                     parented: true,
                     childCount: grandchildCounts.get(c.id) ?? 0,
+                    fields: (childMainFields.get(c.id) ?? []).map((f) => ({
+                      icon: f.icon,
+                      value: formatFieldValue(f.def, f.value, f.display),
+                    })),
                   })),
                 },
               ]}

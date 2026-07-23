@@ -11,7 +11,9 @@ import {
   type ViewSpec,
 } from '@/db/schema';
 import { linkRepo } from '@/repository/linkRepo';
-import { nodeRepo, type NodeRow, type UpdateNodePatch } from '@/repository/nodeRepo';
+import { nodeRepo, type ChildSort, type NodeRow, type UpdateNodePatch } from '@/repository/nodeRepo';
+
+export type { ChildSort };
 
 import { dayInTz, isValidDay, shiftDay, startOfDayInTz } from '@/lib/day';
 import { displayName } from '@/lib/identity';
@@ -138,8 +140,15 @@ export async function bulkShiftEventDateByDays(
   await nodeRepo.setEventDates(userId, updates);
 }
 
-export function getChildren(userId: string, id: string): Promise<NodeRow[]> {
-  return nodeRepo.findChildren(userId, id);
+/** The node-detail Children list, ordered by date (default 'happened' — the
+ *  event axis, like the stream). Manual rank order stays the repo default for
+ *  triage/grid/chips; only this display surface sorts by date. */
+export function getChildren(
+  userId: string,
+  id: string,
+  sort: ChildSort = 'happened'
+): Promise<NodeRow[]> {
+  return nodeRepo.findChildren(userId, id, { sort });
 }
 
 /** A node's attached children (appendages — see A1): the quiet "Attached"
