@@ -67,6 +67,8 @@ export function SchemaFieldRow(props: SchemaFieldRowProps) {
         isDragging && 'opacity-40'
       )}
     >
+      {/* line 1: drag handle + the label input on its own full-width line, so it
+          never gets squeezed to an empty box by the trailing controls */}
       <div className="flex items-center gap-1.5">
         <button
           type="button"
@@ -82,8 +84,11 @@ export function SchemaFieldRow(props: SchemaFieldRowProps) {
           value={def.label}
           onChange={(e) => props.onChange({ ...def, label: e.target.value })}
           aria-label="field label"
-          className="h-8 flex-1"
+          className="h-8 min-w-0 flex-1"
         />
+      </div>
+      {/* line 2: type + req + main + icon + delete, wrapping under the label */}
+      <div className="flex flex-wrap items-center gap-1.5 pl-6">
         <Select
           value={def.type}
           disabled={row.persisted}
@@ -131,6 +136,7 @@ export function SchemaFieldRow(props: SchemaFieldRowProps) {
         <Button
           variant="ghost"
           size="icon-sm"
+          className="ml-auto"
           aria-label={`remove ${def.label}`}
           onClick={props.onRemove}
         >
