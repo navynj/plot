@@ -95,7 +95,10 @@ export function HabitToggleRow({
               title={h.title}
               className={cn(
                 'flex size-8 shrink-0 items-center justify-center rounded-full text-base transition',
-                on ? 'bg-primary/15 ring-primary/40 ring-1' : 'opacity-40 hover:opacity-75',
+                // ON: a solid primary (black) chip — unmistakably "on"; OFF: dimmed
+                on
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'opacity-40 hover:opacity-75',
                 h.disabled && 'cursor-not-allowed opacity-20'
               )}
             >

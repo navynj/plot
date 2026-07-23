@@ -2,9 +2,9 @@
 
 import * as React from 'react';
 
+import { EmojiPicker } from '@/components/ui/emoji-picker';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
 
 /** True for the Enter that only confirms an IME candidate (Korean/Japanese
  *  composition), which must never submit or insert a newline. */
@@ -68,10 +68,6 @@ export function CaptureTitleBody({
     // plain Enter: let the input submit the form naturally
   };
 
-  const onEmojiKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (isComposingEnter(e)) e.preventDefault();
-  };
-
   const onBodyKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key !== 'Enter') return;
     if (isComposingEnter(e)) return; // let the IME confirm; never submit
@@ -83,19 +79,16 @@ export function CaptureTitleBody({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-2">
-        <Input
+        {/* leading emoji slot: the shared picker in form mode (name="icon") +
+            controlled so the parent's reset-after-submit still clears it. The
+            inherited parent icon shows as the translucent placeholder. */}
+        <EmojiPicker
           name="icon"
           value={icon}
-          onChange={(e) => onIconChange(e.target.value)}
-          onKeyDown={onEmojiKey}
+          onChange={onIconChange}
           placeholder={iconPlaceholder}
           aria-label="icon"
-          autoComplete="off"
-          className={cn(
-            'w-11 shrink-0 text-center',
-            // the placeholder (inherited parent icon) reads as a translucent preview
-            iconPlaceholder && !icon && 'placeholder:opacity-40'
-          )}
+          className="border-input bg-background h-8 w-11 shrink-0 rounded-lg border text-center text-base"
         />
         <Input
           name="title"

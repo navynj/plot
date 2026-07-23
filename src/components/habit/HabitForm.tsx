@@ -11,10 +11,10 @@ import {
 import type { FieldDef, FieldPrimitive } from '@/db/schema';
 import { FieldInputs } from '@/components/field/FieldInputs';
 import { Button } from '@/components/ui/button';
+import { EmojiPicker } from '@/components/ui/emoji-picker';
 import { Input } from '@/components/ui/input';
 import { SubmitButton } from '@/components/ui/submit-button';
 
-import { EmojiPicker } from './EmojiPicker';
 import { HabitParentPicker } from './HabitParentPicker';
 
 /** Add / edit a habit: emoji icon, title, target parent, and the preset field
@@ -38,7 +38,8 @@ export function HabitForm({ habitId, onDone }: { habitId?: string; onDone(): voi
       setIcon(d.icon);
       setTitle(d.title);
       setLogParentId(d.logParentId);
-      setParentLabel(d.schema.length > 0 || d.logParentId ? 'current parent' : null);
+      // preselect the SAVED parent (its resolved name), not a generic default
+      setParentLabel(d.parentLabel);
       setValues(d.values);
       setSchema(d.schema);
       setLoading(false);
@@ -67,10 +68,14 @@ export function HabitForm({ habitId, onDone }: { habitId?: string; onDone(): voi
 
   return (
     <form action={submit} className="flex flex-col gap-3">
-      <input type="hidden" name="icon" value={icon ?? ''} />
       <input type="hidden" name="logParentId" value={logParentId} />
       <div className="flex items-end gap-2">
-        <EmojiPicker value={icon} onChange={setIcon} />
+        <EmojiPicker
+          name="icon"
+          value={icon}
+          onChange={setIcon}
+          className="border-input size-9 rounded-md border text-lg"
+        />
         <div className="flex flex-1 flex-col gap-1">
           <label className="text-muted-foreground text-xs">Title</label>
           <Input

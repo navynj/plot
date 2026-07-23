@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { requireUserId } from '@/app/_auth/requireUser';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
 import type { FieldDef } from '@/db/schema';
+import { displayName } from '@/lib/identity';
 import { DomainError } from '@/service/errors';
 import {
   createHabit,
@@ -96,11 +97,14 @@ export interface HabitFormData {
   title: string;
   icon: string | null;
   logParentId: string;
+  /** the saved parent's resolved name, so the edit form preselects it (null if
+   *  the parent was deleted) */
+  parentLabel: string | null;
   values: Record<string, string>;
   schema: FieldDef[];
 }
 
-/** The full habit + its parent schema, to prefill the edit form. */
+/** The full habit + its parent (schema + name), to prefill the edit form. */
 export async function habitForm(id: string): Promise<HabitFormData | null> {
   const userId = await requireUserId();
   const habit = await getHabit(userId, id);
@@ -110,6 +114,7 @@ export async function habitForm(id: string): Promise<HabitFormData | null> {
     title: habit.title,
     icon: habit.icon,
     logParentId: habit.logParentId,
+    parentLabel: parent ? displayName(parent) : null,
     values: habit.values,
     schema: parent?.childSchema ?? [],
   };
