@@ -5,7 +5,7 @@ import { formatTimestamp } from '@/lib/formatTimestamp';
 import { formatLens } from '../format';
 import { registerLayout } from '../registry';
 
-registerLayout('list', ({ view }) => {
+registerLayout('list', ({ view, tz }) => {
   if (view.kind !== 'items') return null;
   if (view.items.length === 0) {
     return <p className="text-muted-foreground py-4 text-sm">Nothing to show.</p>;
@@ -21,7 +21,7 @@ registerLayout('list', ({ view }) => {
             <span className="text-sm tabular-nums">{formatLens(item.lensValue)}</span>
           )}
           <time className="text-muted-foreground shrink-0 text-xs">
-            {formatTimestamp(item.capturedAt)}
+            {formatTimestamp(item.capturedAt, tz)}
           </time>
         </li>
       ))}

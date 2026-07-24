@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { requireUserId } from '@/app/_auth/requireUser';
+import { getRequestTimezone } from '@/app/_ctx/timezone';
 import { SelectableList } from '@/components/node/SelectableList';
 import { ScrollAnchor } from '@/components/ui/scroll-anchor';
 import { mainFieldChip } from '@/components/view/format';
@@ -16,6 +17,7 @@ export const dynamic = 'force-dynamic';
  *  drag board stays dormant behind the low-key link below. */
 export default async function InboxPage() {
   const userId = await requireUserId();
+  const tz = await getRequestTimezone();
   const nodes = await getInbox(userId);
   const [childCounts, mainFields] = await Promise.all([
     nodeChildCounts(
@@ -44,7 +46,7 @@ export default async function InboxPage() {
                 id: n.id,
                 label: displayName(n),
                 icon: n.displayIcon ?? null,
-                time: formatTimestamp(n.capturedAt),
+                time: formatTimestamp(n.capturedAt, tz),
                 parented: false,
                 childCount: childCounts.get(n.id) ?? 0,
                 fields: (mainFields.get(n.id) ?? []).map((f) =>

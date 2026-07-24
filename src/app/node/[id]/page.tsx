@@ -144,7 +144,9 @@ export default async function NodeDetailPage({
           parentLabel={parent ? displayName(parent) : null}
           pinned={node.pinned}
         />
-        <p className="text-muted-foreground text-xs">captured {formatTimestamp(node.capturedAt)}</p>
+        <p className="text-muted-foreground text-xs">
+          captured {formatTimestamp(node.capturedAt, tz)}
+        </p>
         {ownScopes.length > 0 && (
           <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
             {ownScopes.map((t) => (
@@ -271,7 +273,7 @@ export default async function NodeDetailPage({
               />
             </div>
           </div>
-          <NodeView view={view} />
+          <NodeView view={view} tz={tz} />
         </section>
       )}
 
@@ -348,7 +350,7 @@ export default async function NodeDetailPage({
                     id: c.id,
                     label: displayName(c),
                     icon: c.displayIcon ?? null,
-                    time: formatTimestamp(c.capturedAt),
+                    time: formatTimestamp(c.capturedAt, tz),
                     parented: true,
                     childCount: grandchildCounts.get(c.id) ?? 0,
                     fields: (childMainFields.get(c.id) ?? []).map((f) =>

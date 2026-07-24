@@ -10,7 +10,9 @@ import type { ResolvedView } from '@/service/view';
  * under `components/view/layouts/` — never a `switch`. Completeness over
  * VIEW_LAYOUTS is pinned by a test.
  */
-export type LayoutRenderer = (props: { view: ResolvedView }) => ReactNode;
+/** `tz`: the user's IANA zone, so a layout renders timestamps on the user's
+ *  wall clock (server-resolved, like the day helpers). */
+export type LayoutRenderer = (props: { view: ResolvedView; tz: string }) => ReactNode;
 
 const registry = new Map<ViewLayout, LayoutRenderer>();
 

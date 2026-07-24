@@ -66,7 +66,7 @@ export default async function TimelinePage({
       id: n.id,
       label: displayName(n),
       icon: n.displayIcon ?? null,
-      time: formatTimestamp(n.capturedAt),
+      time: formatTimestamp(n.capturedAt, tz),
       parented: n.parentId !== null,
       childCount: childCounts.get(n.id) ?? 0,
       // the current parent as a navigable chip (B2 item 5)
