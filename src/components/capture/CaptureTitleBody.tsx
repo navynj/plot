@@ -27,10 +27,12 @@ interface CaptureTitleBodyProps {
 
 /**
  * B1 capture body: a leading emoji slot + a title input + an auto-growing body
- * textarea. ONE key grammar across all three, IME-safe:
- *   Enter always submits; Shift+Enter inserts a newline in the body; Shift+
- *   Enter in the title drops focus to the body. The Enter that confirms an IME
- *   candidate never submits (isComposing / legacy keyCode 229).
+ * textarea. Key grammar, IME-safe:
+ *   - Title: plain Enter submits the form (native input behavior); Shift+Enter
+ *     drops focus to the body. The Enter that confirms an IME candidate never
+ *     submits (isComposing / legacy keyCode 229).
+ *   - Body: Enter inserts a NEWLINE (native textarea behavior) — it never
+ *     submits. Submission is the Capture / "Add here" button only.
  * The textarea grows from one line with content and never shows a scrollbar.
  */
 export function CaptureTitleBody({
@@ -53,8 +55,6 @@ export function CaptureTitleBody({
     ta.style.height = `${ta.scrollHeight}px`;
   }, [body]);
 
-  const submit = (e: React.KeyboardEvent) => e.currentTarget.closest('form')?.requestSubmit();
-
   const onTitleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return;
     if (isComposingEnter(e)) {
@@ -66,14 +66,6 @@ export function CaptureTitleBody({
       bodyRef.current?.focus();
     }
     // plain Enter: let the input submit the form naturally
-  };
-
-  const onBodyKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key !== 'Enter') return;
-    if (isComposingEnter(e)) return; // let the IME confirm; never submit
-    if (e.shiftKey) return; // newline (textarea default)
-    e.preventDefault(); // plain Enter submits (textareas would otherwise newline)
-    submit(e);
   };
 
   return (
@@ -104,12 +96,13 @@ export function CaptureTitleBody({
       {/* the body is the QUIET secondary area: no border, no focus ring, no
           background shift — it flows beneath the (bordered, primary) title so
           title-only captures feel complete and the body never pressures */}
+      {/* Enter here inserts a newline (native textarea) — never submits; the
+          IME confirm-Enter is handled natively too. Submit is the button. */}
       <Textarea
         ref={bodyRef}
         name="body"
         value={body}
         onChange={(e) => onBodyChange(e.target.value)}
-        onKeyDown={onBodyKey}
         placeholder="Details"
         aria-label="body"
         rows={1}
