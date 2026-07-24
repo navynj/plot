@@ -10,13 +10,8 @@ import { LUCIDE_DEFAULT_ICON, LUCIDE_ICON_NAMES, resolveLucideIcon } from '@/lib
 import { cn } from '@/lib/utils';
 
 // a common default set shown before the user types (lucide ships ~1500 icons —
-// the rest are one search away). Check/checkbox icons up front.
+// the rest are one search away)
 const DEFAULT_SET = [
-  'check',
-  'square-check',
-  'circle-check',
-  'list-todo',
-  'list-checks',
   'list',
   'clock',
   'timer',
@@ -39,6 +34,7 @@ const DEFAULT_SET = [
   'gauge',
   'bell',
   'bookmark',
+  'check',
   'circle',
 ];
 
