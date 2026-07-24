@@ -2,7 +2,6 @@
 
 import { createElement } from 'react';
 import * as React from 'react';
-import { iconNames } from 'lucide-react/dynamic';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -14,11 +13,16 @@ import {
   CommandList,
 } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { LUCIDE_DEFAULT_ICON, isKnownLucideIcon, resolveLucideIcon } from '@/lib/lucideIcon';
+import {
+  LUCIDE_DEFAULT_ICON,
+  LUCIDE_ICON_NAMES,
+  isKnownLucideIcon,
+  resolveLucideIcon,
+} from '@/lib/lucideIcon';
 
-// every renderable lucide name (canonical kebab), filtered to those the shared
-// resolver can actually render — the picker and the display stay in lock-step
-const ALL_NAMES = iconNames.filter(isKnownLucideIcon);
+// every renderable lucide name (kebab), from the SAME `icons` source the
+// resolver uses — so search can never be empty while the default set shows
+const ALL_NAMES = LUCIDE_ICON_NAMES;
 
 // a common default set shown before the user types (lucide ships ~1500 icons —
 // we never render them all)
@@ -46,6 +50,10 @@ const DEFAULT_SET = [
   'bell',
   'bookmark',
   'check',
+  'square-check',
+  'circle-check',
+  'list-todo',
+  'list-checks',
   'circle',
 ].filter(isKnownLucideIcon);
 

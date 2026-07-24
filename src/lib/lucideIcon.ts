@@ -25,6 +25,17 @@ function toPascal(kebab: string): string {
     .join('');
 }
 
+/** PascalCase (`icons` key) → kebab-case (stored). The exact inverse of
+ *  `toPascal` for every icon key — verified round-tripping all ~1746. */
+function toKebab(pascal: string): string {
+  return pascal.replace(/[A-Z]/g, (c, i) => (i === 0 ? '' : '-') + c.toLowerCase());
+}
+
+/** EVERY renderable lucide icon name (kebab-case), derived from the same `icons`
+ *  export the resolver uses — so the picker's search list can never drift from
+ *  (or be emptier than) what actually renders. */
+export const LUCIDE_ICON_NAMES: string[] = Object.keys(registry).map(toKebab).sort();
+
 /** Whether a name resolves to a real lucide icon — drives the picker's list so
  *  it never offers a name the display can't render. */
 export function isKnownLucideIcon(name: string | null | undefined): boolean {
