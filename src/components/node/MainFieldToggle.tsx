@@ -51,13 +51,13 @@ function MainFieldToggle({ icon, nodeId, fieldKey, checked: initial, label }: Ma
       aria-label={`${label}${checked ? ' — done' : ''}`}
       title={label}
       className={cn(
-        'flex size-5 shrink-0 items-center justify-center rounded border transition',
+        'flex size-4 shrink-0 items-center justify-center rounded-sm border transition',
         checked
           ? 'border-primary bg-primary text-primary-foreground'
           : 'border-input text-muted-foreground hover:bg-muted/50'
       )}
     >
-      {createElement(resolveLucideIcon(icon), { className: 'size-3' })}
+      {createElement(resolveLucideIcon(icon), { className: 'size-2.5' })}
     </button>
   );
 }
