@@ -171,7 +171,7 @@ export function ViewSpecEditor({
   // boolean filter (scheduled = false) is a real boolean, not "false"
   const typedValue = (r: FilterRow): boolean | number | string => {
     const def = childSchema.find((d) => d.key === r.key);
-    if (def && (def.type === 'boolean' || def.type === 'checkbox')) return r.value === 'true';
+    if (def && def.type === 'checkbox') return r.value === 'true';
     if (def && NUMBER_TYPES.has(def.type)) return Number(r.value);
     return r.value;
   };
@@ -295,7 +295,7 @@ export function ViewSpecEditor({
                 <div className="flex flex-col gap-2">
                   {form.filters.map((r, i) => {
                     const def = childSchema.find((d) => d.key === r.key);
-                    const isBool = def && (def.type === 'boolean' || def.type === 'checkbox');
+                    const isBool = def && def.type === 'checkbox';
                     return (
                       <div key={i} className="flex items-center gap-1">
                         <PickSelect

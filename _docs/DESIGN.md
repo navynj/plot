@@ -154,8 +154,10 @@ what the budget-vs-actual view needs.
 
 ### Field types
 
-`text, number, checkbox, boolean, option, date, timestamp, tag, link, url,
-duration, computed`
+`text, number, checkbox, option, date, timestamp, link, url, duration, computed`
+
+- `checkbox` is a toggle stored in `boolValue`. (It absorbed the old `boolean`
+  type — same storage, better name; `option` with `multiple` absorbed `tag`.)
 
 - `link` references another node (e.g. a transaction's `category` points at a
   child of the "budget categories" node). This is what keeps the budget axis and
@@ -435,7 +437,7 @@ Expense (node) — childSchema: {
     category   : link  -> child of "Budget categories"
     inOut      : option (expense | income)
     amount     : number (>= 0)
-    scheduled  : boolean
+    scheduled  : checkbox
   }
   ├─ Coffee   values: {category: 식비, inOut: expense, amount: 4500,  scheduled: false}  eventDate: 8/3
   └─ Taxi    values: {category: 교통, inOut: expense, amount: 12000, scheduled: true}   eventDate: 8/5
@@ -490,7 +492,7 @@ per-layer schema.
 
 ```
 Bass (node)
-  ├─ Songs (node) — childSchema: { bpm: number, genre: text, isCover: boolean }
+  ├─ Songs (node) — childSchema: { bpm: number, genre: text, isCover: checkbox }
   │    ├─ Rio Funk  own: {bpm:85, genre:Funk, isCover:true}
   │    │             childSchema: { practiceTime: number, date: date, memo: text }
   │    │    ├─ (practiceTime:30, date:8/3, memo:"slap")   ← session

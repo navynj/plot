@@ -53,6 +53,25 @@ export async function saveFields(nodeId: string, formData: FormData): Promise<Fi
   return { ok: true };
 }
 
+/** Toggle a single checkbox (boolean) field on a node — the show-on-main
+ *  toggle on the stream. Writes through the validated save path; revalidates
+ *  layout-wide so every surface reflects it. */
+export async function setBooleanFieldAction(
+  nodeId: string,
+  fieldKey: string,
+  checked: boolean
+): Promise<FieldSaveResult> {
+  const userId = await requireUserId();
+  try {
+    await saveOwnValues(userId, nodeId, { [fieldKey]: checked }, [fieldKey]);
+  } catch (err) {
+    if (err instanceof ValidationError) return { ok: false, error: err.message, key: err.key };
+    throw err;
+  }
+  revalidatePath('/', 'layout');
+  return { ok: true };
+}
+
 export async function saveNodeMeta(nodeId: string, formData: FormData): Promise<void> {
   const userId = await requireUserId();
   const text = (key: string) => {

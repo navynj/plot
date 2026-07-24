@@ -3,7 +3,6 @@
 import './text';
 import './number';
 import './checkbox';
-import './boolean';
 import './option';
 import './date';
 import './timestamp';

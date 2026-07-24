@@ -61,7 +61,7 @@ describe.skipIf(!hasDb)('month-stamped budgets (real DB)', () => {
     await nodeService.setChildSchema(uid, expense, [
       { key: 'amount', label: 'Amount', type: 'number' },
       { key: 'category', label: 'Category', type: 'link', linkTargetParentId: categories },
-      { key: 'scheduled', label: 'Scheduled', type: 'boolean' },
+      { key: 'scheduled', label: 'Scheduled', type: 'checkbox' },
     ]);
     await nodeService.setChildSchema(uid, budgetId, [
       { key: 'category', label: 'Category', type: 'link', linkTargetParentId: categories },

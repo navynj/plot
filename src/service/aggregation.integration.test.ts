@@ -60,7 +60,7 @@ describe.skipIf(!hasDb)('aggregation integration — DESIGN §8 worked examples'
       childSchema: [
         { key: 'category', label: 'Category', type: 'link', linkTargetParentId: cats },
         { key: 'amount', label: 'Amount', type: 'number' },
-        { key: 'scheduled', label: 'Scheduled', type: 'boolean' },
+        { key: 'scheduled', label: 'Scheduled', type: 'checkbox' },
       ],
     });
     const spend = async (title: string, category: string, amount: number, scheduled: boolean) => {

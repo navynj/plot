@@ -30,7 +30,7 @@ import {
   type ChildSort,
 } from '@/service/node';
 import { ChildSortToggle } from '@/components/node/ChildSortToggle';
-import { mainFieldChip } from '@/components/view/format';
+import { mainFieldRow } from '@/components/view/format';
 import { resolveView } from '@/service/view';
 import { getRequestTimezone } from '@/app/_ctx/timezone';
 import {
@@ -353,9 +353,7 @@ export default async function NodeDetailPage({
                     time: formatTimestamp(c.capturedAt, tz),
                     parented: true,
                     childCount: grandchildCounts.get(c.id) ?? 0,
-                    fields: (childMainFields.get(c.id) ?? []).map((f) =>
-                      mainFieldChip(f.def, f.value, f.display, f.icon)
-                    ),
+                    ...mainFieldRow(c.id, childMainFields.get(c.id) ?? []),
                   })),
                 },
               ]}

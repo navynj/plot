@@ -90,7 +90,9 @@ export async function ensureSeed(userId: string): Promise<boolean> {
      the eventDate META-AXIS (falls back to capturedAt), so a bare capture
      lands on today with zero field-filling. */
   const schemas: [string, FieldDef[]][] = [
-    [todo, [{ key: 'done', label: 'Done', type: 'checkbox' }]],
+    // Done is an ordinary checkbox, shown on main so it can be toggled right on
+    // the stream (no special uneditable field).
+    [todo, [{ key: 'done', label: 'Done', type: 'checkbox', showOnMain: true, icon: 'square-check' }]],
     [schedule, [{ key: 'when', label: 'When', type: 'timestamp' }]],
     [sleep, [{ key: 'duration', label: 'Duration', type: 'duration' }]],
     [
@@ -105,7 +107,7 @@ export async function ensureSeed(userId: string): Promise<boolean> {
           defaultValue: 'expense',
         },
         { key: 'category', label: 'Category', type: 'link', linkTargetParentId: categories },
-        { key: 'scheduled', label: 'Scheduled', type: 'boolean' },
+        { key: 'scheduled', label: 'Scheduled', type: 'checkbox' },
         // no `when` field: the expense's date is eventDate (capture date
         // control), and the date meta-axis covers aggregation
       ],

@@ -7,6 +7,7 @@ import * as React from 'react';
 import { ParentPicker } from '@/components/node/ParentPicker';
 import { BulkBar, toastWithUndo } from '@/components/node/BulkBar';
 import { MainFieldChips, type MainFieldChip } from '@/components/node/MainFieldChips';
+import { MainFieldChecks, type MainFieldCheck } from '@/components/node/MainFieldToggle';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -22,6 +23,8 @@ export interface SelectableRow {
   parent?: { id: string; icon: string | null; name: string } | null;
   /** show-on-main field values, shown small under the title (Task 2) */
   fields?: MainFieldChip[];
+  /** show-on-main checkbox fields, as toggleable squares under the title */
+  checks?: MainFieldCheck[];
 }
 
 export interface SelectableGroup {
@@ -122,6 +125,9 @@ export function SelectableList({
                       {row.icon && <span className="mr-1.5">{row.icon}</span>}
                       {row.label}
                     </Link>
+                    {row.checks && row.checks.length > 0 && (
+                      <MainFieldChecks checks={row.checks} />
+                    )}
                     {row.fields && row.fields.length > 0 && <MainFieldChips fields={row.fields} />}
                   </span>
                   {/* the current parent as a chip: tap = navigate to the room

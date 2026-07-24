@@ -1,4 +1,5 @@
 import type { FieldDef, FieldPrimitive } from '@/db/schema';
+import type { MainFieldValue } from '@/service/field';
 import { formatDuration } from '@/lib/formatDuration';
 
 /** Shared display formatting for layout renderers. Round every displayed
@@ -47,4 +48,38 @@ export function mainFieldChip(
     return { icon, values: values.length > 0 ? values : [''] };
   }
   return { icon, values: [formatFieldValue(def, value, display)] };
+}
+
+/** Split a node's show-on-main values into: text `fields` (chips) and `checks`
+ *  (checkbox fields → interactive toggles on the stream). One place so every
+ *  list surface renders them the same way. */
+export function mainFieldRow(
+  nodeId: string,
+  values: MainFieldValue[]
+): {
+  fields: { icon: string | null; values: string[] }[];
+  checks: { icon: string | null; nodeId: string; fieldKey: string; checked: boolean; label: string }[];
+} {
+  const fields: { icon: string | null; values: string[] }[] = [];
+  const checks: {
+    icon: string | null;
+    nodeId: string;
+    fieldKey: string;
+    checked: boolean;
+    label: string;
+  }[] = [];
+  for (const f of values) {
+    if (f.def.type === 'checkbox') {
+      checks.push({
+        icon: f.icon,
+        nodeId,
+        fieldKey: f.key,
+        checked: f.value === true,
+        label: f.def.label,
+      });
+    } else {
+      fields.push(mainFieldChip(f.def, f.value, f.display, f.icon));
+    }
+  }
+  return { fields, checks };
 }

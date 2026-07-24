@@ -181,7 +181,14 @@ export async function getMainFieldsByNode(
     const chips: MainFieldValue[] = [];
     for (const def of defs) {
       const value = values[def.key];
-      if (value === undefined) continue;
+      if (value === undefined) {
+        // a checkbox is ALWAYS shown (as a toggle), even unset — default false,
+        // so it can be checked right on the stream (no dash for "not set")
+        if (def.type === 'checkbox') {
+          chips.push({ key: def.key, icon: def.icon ?? null, def, value: false });
+        }
+        continue;
+      }
       const display =
         def.type === 'link' && typeof value === 'string' ? targets.get(value) : undefined;
       chips.push({ key: def.key, icon: def.icon ?? null, def, value, display });

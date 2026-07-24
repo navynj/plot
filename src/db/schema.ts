@@ -39,8 +39,7 @@ import { createId } from '@paralleldrive/cuid2';
 export const FIELD_TYPES = [
   'text',
   'number',
-  'checkbox',
-  'boolean',
+  'checkbox', // a toggle stored in boolValue (was also the deprecated 'boolean')
   'option', // choice(s) from a fixed list — single, or multi-select when def.multiple
   'date',
   'timestamp',
