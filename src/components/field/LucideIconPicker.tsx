@@ -95,16 +95,28 @@ export function LucideIconPicker({
           {createElement(resolveLucideIcon(current), { className: 'size-3.5' })}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 p-2">
+      <PopoverContent
+        align="start"
+        // bound to the viewport space Radix leaves, so the popover never
+        // collides/jitters (which ate the wheel and made the scrollbar blink)
+        className="flex max-h-(--radix-popover-content-available-height) w-64 flex-col p-2"
+      >
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search icons…"
           aria-label="search icons"
           autoComplete="off"
-          className="mb-2 h-8"
+          className="mb-2 h-8 shrink-0"
         />
-        <div className="max-h-64 overflow-y-auto overscroll-contain">
+        {/* stop the wheel/touch reaching Radix's reposition listeners so the
+            list scrolls natively (drag-only scroll = Radix was hijacking it);
+            min-h-0 lets this flex child actually shrink and scroll */}
+        <div
+          onWheelCapture={(e) => e.stopPropagation()}
+          onTouchMoveCapture={(e) => e.stopPropagation()}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        >
           {shown.length === 0 ? (
             <p className="text-muted-foreground py-4 text-center text-xs">No icon matches.</p>
           ) : (
