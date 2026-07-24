@@ -51,7 +51,7 @@ function MainFieldToggle({ icon, nodeId, fieldKey, checked: initial, label }: Ma
       aria-label={`${label}${checked ? ' — done' : ''}`}
       title={label}
       className={cn(
-        'flex size-4 shrink-0 items-center justify-center rounded-sm border transition',
+        'flex size-4 shrink-0 items-center justify-center rounded-xs border transition',
         checked
           ? 'border-primary bg-primary text-primary-foreground'
           : 'border-input text-muted-foreground hover:bg-muted/50'
